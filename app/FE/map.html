@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Tax revenues as a share of GDP — World Map</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+<link rel="stylesheet" href="/static/css/map.css" />
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tax revenues as a share of GDP</h1>
+    <p class="subtitle">
+      Total tax revenues raised by national governments, expressed as a percentage
+      of gross domestic product (GDP). Hover over a country to see the value.
+    </p>
+  </header>
+
+  <div class="chart-box">
+    <div class="chart-header">
+      <h2>Tax revenues as a share of GDP, 2023</h2>
+      <p>Direct and indirect taxes as well as social contributions included.</p>
+    </div>
+
+    <div id="map-container" style="position: relative;">
+      <svg id="map" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <div class="legend-wrap" id="legend"></div>
+
+    <div class="controls">
+      <div>Source: Tran Anh Tuan</div>
+      <div><a href="https://ourworldindata.org/grapher/tax-revenues-as-a-share-of-gdp-unu-wider" target="_blank" rel="noopener"></a></div>
+    </div>
+  </div>
+
+  <footer>
+    Note: Countries shown with a hatched pattern have no data available for the selected year.
+  </footer>
+</div>
+
+<script src="/static/js/map.js"></script>
+</body>
+</html>

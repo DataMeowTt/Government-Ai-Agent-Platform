@@ -1,0 +1,9 @@
+# connect to database (select only)
+mydb
+myuser
+123456
+
+cd app/BE
+uvicorn main:app --reload
+
+--> http://localhost:8000 (UI)
