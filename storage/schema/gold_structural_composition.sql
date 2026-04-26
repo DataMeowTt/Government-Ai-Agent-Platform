@@ -1,0 +1,23 @@
+CREATE TABLE gold_structural_composition (
+    country_code            VARCHAR(3)       NOT NULL,
+    country                 TEXT             NOT NULL,
+    year                    INTEGER          NOT NULL,
+    decade                  DOUBLE PRECISION,
+    "GDP_value"             DOUBLE PRECISION,
+    "GFCF_value"            DOUBLE PRECISION,
+    "GNI_value"             DOUBLE PRECISION,
+    "Agri_VA"               DOUBLE PRECISION,
+    "Manuf_VA"              DOUBLE PRECISION,
+    "VA_FoodBev"            DOUBLE PRECISION,
+    "GFCF_to_GDP"           DOUBLE PRECISION,
+    "GNI_to_GDP"            DOUBLE PRECISION,
+    agri_va_share           DOUBLE PRECISION,
+    manuf_va_share          DOUBLE PRECISION,
+    food_bev_share_manuf    DOUBLE PRECISION,
+    "GDP_growth_YoY"        DOUBLE PRECISION,
+    flag_score              DOUBLE PRECISION,
+    income_group            TEXT,
+    development_group       TEXT,
+    completeness_score      DOUBLE PRECISION,
+    PRIMARY KEY (country_code, year)
+);

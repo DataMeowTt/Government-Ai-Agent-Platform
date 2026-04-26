@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 
-from src.processing.processing_job import run
-from src.utils.logger import get_logger
+from pipeline.job import run
+from utils.logger import get_logger
 
 log = get_logger("main")
 

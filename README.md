@@ -56,3 +56,39 @@ Each table includes:
 
 - **AI Insights** — LLM-based analysis over Gold tables (growth anomaly detection, crisis early-warning, cross-country benchmarking)
 - **Dashboard** — Visualization layer consuming PostgreSQL Gold tables (handed off to dev team)
+
+---
+
+## How to Run
+
+**1. Setup**
+
+```bash
+git clone <repo>
+cd Government-Ai-Agent-Platform
+
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
+pip install -e ".[dev]"
+
+cp .env.example .env           # fill in POSTGRES_* values
+```
+
+**2. Bronze → Silver** (runs on Docker Spark cluster)
+
+```bash
+make silver
+```
+
+Reads raw CSVs from `/opt/dataset/`, outputs `processed.csv` to `/opt/workspace/data/processed_data/`.
+
+**3. Silver → Gold** (runs locally, requires Postgres)
+
+```bash
+make gold
+```
+
+Reads `processed.csv`, builds 5 analytical tables, loads them into PostgreSQL.
+
+To rebuild a single table: `make gold-table TABLE=crisis_risk`
