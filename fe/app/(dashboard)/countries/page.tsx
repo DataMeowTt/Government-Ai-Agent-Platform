@@ -1,12 +1,20 @@
 'use client';
-
 import { useCountries } from '@/lib/hooks/useCountries';
+import Link from 'next/link';
+
+interface Country {
+  country_code: string;
+  country_name: string;
+  region?: string;
+}
 
 export default function CountriesPage() {
   const { data: countries, isLoading, error } = useCountries();
 
   if (isLoading) return <div>Loading countries...</div>;
   if (error) return <div>Error: {error.message}</div>;
+
+  const countryList: Country[] = countries || [];
 
   return (
     <div>
@@ -17,13 +25,19 @@ export default function CountriesPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Country Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {countries?.map((country: any) => (
+            {countryList.map((country: Country) => (
               <tr key={country.country_code} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{country.country_code}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <Link href={`/countries/${country.country_code}`} className="text-blue-600 hover:underline">
+                    {country.country_code}
+                  </Link>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{country.country_name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{country.region || '-'}</td>
               </tr>
             ))}
           </tbody>

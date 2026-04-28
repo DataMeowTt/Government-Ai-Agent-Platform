@@ -11,3 +11,14 @@ export const useCountries = () => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+export const useCountryAnalytics = (code: string) => {
+  return useQuery({
+    queryKey: ['countryAnalytics', code],
+    queryFn: async () => {
+      const { data } = await countriesApi.getFullAnalytics(code);
+      return data;
+    },
+    enabled: !!code,
+  });
+};
