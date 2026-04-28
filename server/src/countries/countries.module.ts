@@ -4,9 +4,22 @@ import { CountriesController } from './countries.controller';
 import { CountriesService } from './countries.service';
 import { GoldGrowthDynamics } from '../entities/gold-growth-dynamics.entity';
 import { AnalyticsGoldGrowthDynamics } from '../entities/analytics-gold-growth-dynamics.entity';
+import { AnalyticsGoldFiscalMonetary } from '../entities/analytics-gold-fiscal-monetary.entity';
+import { AnalyticsGoldSocialWelfare } from '../entities/analytics-gold-social-welfare.entity';
+import { AnalyticsGoldStructuralComposition } from '../entities/analytics-gold-structural-composition.entity';
+import { AnalyticsClusters } from '../entities/analytics-clusters.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GoldGrowthDynamics, AnalyticsGoldGrowthDynamics])],
+  imports: [
+    TypeOrmModule.forFeature([
+      GoldGrowthDynamics,
+      AnalyticsGoldGrowthDynamics,
+      AnalyticsGoldFiscalMonetary,
+      AnalyticsGoldSocialWelfare,
+      AnalyticsGoldStructuralComposition,
+      AnalyticsClusters,
+    ]),
+  ],
   controllers: [CountriesController],
   providers: [CountriesService],
 })
