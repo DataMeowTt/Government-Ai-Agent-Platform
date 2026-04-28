@@ -1,0 +1,754 @@
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\app.controller.spec.ts ---
+==================================================
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\app.controller.ts ---
+==================================================
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\app.module.ts ---
+==================================================
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CountriesModule } from './countries/countries.module';
+import { IndicatorsModule } from './indicators/indicators.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('DB_HOST'),
+        port: config.get<number>('DB_PORT'),
+        username: config.get('DB_USER'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_NAME'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: false,
+        logging: true,
+      }),
+    }),
+    CountriesModule,
+    IndicatorsModule,
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\app.service.ts ---
+==================================================
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\main.ts ---
+==================================================
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\countries\countries.controller.spec.ts ---
+==================================================
+import { Test, TestingModule } from '@nestjs/testing';
+import { CountriesController } from './countries.controller';
+
+describe('CountriesController', () => {
+  let controller: CountriesController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [CountriesController],
+    }).compile();
+
+    controller = module.get<CountriesController>(CountriesController);
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+});
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\countries\countries.controller.ts ---
+==================================================
+import { Controller, Get } from '@nestjs/common';
+import { CountriesService } from './countries.service';
+
+@Controller('api/v1/countries')
+export class CountriesController {
+  constructor(private readonly countriesService: CountriesService) {}
+
+  @Get()
+  async getCountries() {
+    return this.countriesService.findAll();
+  }
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\countries\countries.module.ts ---
+==================================================
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CountriesController } from './countries.controller';
+import { CountriesService } from './countries.service';
+import { GoldGrowthDynamics } from '../entities/gold-growth-dynamics.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([GoldGrowthDynamics])],
+  controllers: [CountriesController],
+  providers: [CountriesService],
+})
+export class CountriesModule {}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\countries\countries.service.spec.ts ---
+==================================================
+import { Test, TestingModule } from '@nestjs/testing';
+import { CountriesService } from './countries.service';
+
+describe('CountriesService', () => {
+  let service: CountriesService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [CountriesService],
+    }).compile();
+
+    service = module.get<CountriesService>(CountriesService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+});
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\countries\countries.service.ts ---
+==================================================
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { GoldGrowthDynamics } from '../entities/gold-growth-dynamics.entity';
+
+@Injectable()
+export class CountriesService {
+  constructor(
+    @InjectRepository(GoldGrowthDynamics)
+    private growthRepo: Repository<GoldGrowthDynamics>,
+  ) {}
+
+  async findAll() {
+    const results = await this.growthRepo
+      .createQueryBuilder('g')
+      .select([
+        'g.country_code as country_code',
+        'g.country as country_name',
+      ])
+      .distinct(true)
+      .orderBy('g.country', 'ASC')
+      .getRawMany();
+
+    return results;
+  }
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\entities\gold-crisis-risk.entity.ts ---
+==================================================
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'gold_crisis_risk' })
+export class GoldCrisisRisk {
+  @PrimaryColumn({ type: 'varchar', length: 3 })
+  country_code: string;
+
+  @PrimaryColumn({ type: 'int' })
+  year: number;
+
+  @Column({ type: 'text' })
+  country: string;
+
+  @Column({ type: 'smallint', nullable: true, name: '"SovDebtCrisis"' })
+  SovDebtCrisis: number | null;
+
+  @Column({ type: 'smallint', nullable: true, name: '"CurrencyCrisis"' })
+  CurrencyCrisis: number | null;
+
+  @Column({ type: 'smallint', nullable: true, name: '"BankingCrisis"' })
+  BankingCrisis: number | null;
+
+  @Column({ type: 'smallint', nullable: true })
+  crisis_composite: number | null;
+
+  @Column({ type: 'smallint', nullable: true })
+  crisis_any: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"REER_deviation"' })
+  REER_deviation: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  spending_efficiency: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"govdebt_GDP"' })
+  govdebt_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"fiscal_balance_GDP"' })
+  fiscal_balance_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"rGDP_growth_YoY"' })
+  rGDP_growth_YoY: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  income_group: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  development_group: string | null;
+
+  @Column({ type: 'float' })
+  completeness_score: number;
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\entities\gold-fiscal-monetary.entity.ts ---
+==================================================
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'gold_fiscal_monetary' })
+export class GoldFiscalMonetary {
+  @PrimaryColumn({ type: 'varchar', length: 3 })
+  country_code: string;
+
+  @PrimaryColumn({ type: 'int' })
+  year: number;
+
+  @Column({ type: 'text' })
+  country: string;
+
+  @Column({ type: 'float', nullable: true, name: '"govdebt_GDP"' })
+  govdebt_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"debt_change_YoY"' })
+  debt_change_YoY: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"govrev_GDP"' })
+  govrev_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"govexp_GDP"' })
+  govexp_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"fiscal_balance_GDP"' })
+  fiscal_balance_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  cumulative_deficit_5yr: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  ltrate: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  infl: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  real_interest_rate: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"tax_revenue_pct_GDP"' })
+  tax_revenue_pct_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  inflation_cpi: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  inflation_deflator: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  inflation_gap: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  rolling_3yr_avg_cpi: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  income_group: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  development_group: string | null;
+
+  @Column({ type: 'float' })
+  completeness_score: number;
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\entities\gold-growth-dynamics.entity.ts ---
+==================================================
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'gold_growth_dynamics' })
+export class GoldGrowthDynamics {
+  @PrimaryColumn({ type: 'varchar', length: 3 })
+  country_code: string;
+
+  @PrimaryColumn({ type: 'int' })
+  year: number;
+
+  @Column({ type: 'text' })
+  country: string;
+
+  @Column({ type: 'float', nullable: true, name: '"rGDP_growth_YoY"' })
+  rGDP_growth_YoY: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  rolling_mean_5yr: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GDP_growth_YoY"' })
+  GDP_growth_YoY: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GDP_growth_trend_5yr"' })
+  GDP_growth_trend_5yr: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  trend_deviation: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GDP_pc_growth_gap"' })
+  GDP_pc_growth_gap: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"log_rGDP_pc_USD"' })
+  log_rGDP_pc_USD: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  income_group: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  development_group: string | null;
+
+  @Column({ type: 'float' })
+  completeness_score: number;
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\entities\gold-social-welfare.entity.ts ---
+==================================================
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'gold_social_welfare' })
+export class GoldSocialWelfare {
+  @PrimaryColumn({ type: 'varchar', length: 3 })
+  country_code: string;
+
+  @PrimaryColumn({ type: 'int' })
+  year: number;
+
+  @Column({ type: 'text' })
+  country: string;
+
+  @Column({ type: 'float', nullable: true })
+  unemployment_total: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  unemployment_youth: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  youth_unemployment_gap: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  youth_gap_ratio: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  self_employed_pct: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  poverty_headcount: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  poverty_change_5yr: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  urban_pop_pct: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  urban_pop_growth: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  pop_density: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  log_pop_density: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  pop_growth: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  hcons_share: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  hcons_growth: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  trade_pct_gdp: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  income_group: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  development_group: string | null;
+
+  @Column({ type: 'float' })
+  completeness_score: number;
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\entities\gold-structural-composition.entity.ts ---
+==================================================
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'gold_structural_composition' })
+export class GoldStructuralComposition {
+  @PrimaryColumn({ type: 'varchar', length: 3 })
+  country_code: string;
+
+  @PrimaryColumn({ type: 'int' })
+  year: number;
+
+  @Column({ type: 'text' })
+  country: string;
+
+  @Column({ type: 'float', nullable: true })
+  decade: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GDP_value"' })
+  GDP_value: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GFCF_value"' })
+  GFCF_value: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GNI_value"' })
+  GNI_value: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"Agri_VA"' })
+  Agri_VA: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"Manuf_VA"' })
+  Manuf_VA: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"VA_FoodBev"' })
+  VA_FoodBev: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GFCF_to_GDP"' })
+  GFCF_to_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GNI_to_GDP"' })
+  GNI_to_GDP: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  agri_va_share: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  manuf_va_share: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  food_bev_share_manuf: number | null;
+
+  @Column({ type: 'float', nullable: true, name: '"GDP_growth_YoY"' })
+  GDP_growth_YoY: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  flag_score: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  income_group: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  development_group: string | null;
+
+  @Column({ type: 'float' })
+  completeness_score: number;
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\indicators\indicators.controller.spec.ts ---
+==================================================
+import { Test, TestingModule } from '@nestjs/testing';
+import { IndicatorsController } from './indicators.controller';
+
+describe('IndicatorsController', () => {
+  let controller: IndicatorsController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [IndicatorsController],
+    }).compile();
+
+    controller = module.get<IndicatorsController>(IndicatorsController);
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+});
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\indicators\indicators.controller.ts ---
+==================================================
+import { Controller, Get, Query } from '@nestjs/common';
+import { IndicatorsService } from './indicators.service';
+
+@Controller('api/v1/indicators')
+export class IndicatorsController {
+  constructor(private readonly indicatorsService: IndicatorsService) {}
+
+  @Get()
+  getIndicators(@Query('category') category?: string) {
+    if (category) {
+      return this.indicatorsService.findByCategory(category);
+    }
+    return this.indicatorsService.findAll();
+  }
+}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\indicators\indicators.module.ts ---
+==================================================
+import { Module } from '@nestjs/common';
+import { IndicatorsController } from './indicators.controller';
+import { IndicatorsService } from './indicators.service';
+
+@Module({
+  controllers: [IndicatorsController],
+  providers: [IndicatorsService],
+  exports: [IndicatorsService],
+})
+export class IndicatorsModule {}
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\indicators\indicators.service.spec.ts ---
+==================================================
+import { Test, TestingModule } from '@nestjs/testing';
+import { IndicatorsService } from './indicators.service';
+
+describe('IndicatorsService', () => {
+  let service: IndicatorsService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [IndicatorsService],
+    }).compile();
+
+    service = module.get<IndicatorsService>(IndicatorsService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+});
+
+
+==================================================
+--- FILE: C:\Users\ADMIN\bigData\Government-Ai-Agent-Platform\server\src\indicators\indicators.service.ts ---
+==================================================
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+
+export interface Indicator {
+  code: string;
+  name: string;
+  category: string;
+  unit: string;
+  table: string;
+}
+
+@Injectable()
+export class IndicatorsService implements OnModuleInit {
+  private readonly logger = new Logger(IndicatorsService.name);
+  private indicators: Indicator[] = [];
+
+  private readonly goldTables = [
+    'gold_growth_dynamics',
+    'gold_fiscal_monetary',
+    'gold_crisis_risk',
+    'gold_social_welfare',
+    'gold_structural_composition',
+  ];
+
+  private readonly excludedColumns = new Set([
+    'country_code', 'country', 'year',
+    'income_group', 'development_group', 'completeness_score',
+  ]);
+
+  private readonly columnMetadata: Record<string, { category: string; unit: string; name?: string }> = {
+    // Growth
+    'rGDP_growth_YoY': { category: 'Growth', unit: '%', name: 'Real GDP Growth (YoY)' },
+    'rolling_mean_5yr': { category: 'Growth', unit: '%', name: '5-Year Rolling Mean Growth' },
+    'GDP_growth_YoY': { category: 'Growth', unit: '%', name: 'Nominal GDP Growth (YoY)' },
+    'GDP_growth_trend_5yr': { category: 'Growth', unit: '%', name: 'GDP Growth Trend (5-year)' },
+    'trend_deviation': { category: 'Growth', unit: '%', name: 'Trend Deviation' },
+    'GDP_pc_growth_gap': { category: 'Growth', unit: '%', name: 'GDP per Capita Growth Gap' },
+    'log_rGDP_pc_USD': { category: 'Growth', unit: 'log', name: 'Log Real GDP per Capita' },
+    // Fiscal & Monetary
+    'govdebt_GDP': { category: 'Fiscal', unit: '%', name: 'Government Debt (% GDP)' },
+    'debt_change_YoY': { category: 'Fiscal', unit: '%', name: 'Debt Change (YoY)' },
+    'govrev_GDP': { category: 'Fiscal', unit: '%', name: 'Government Revenue (% GDP)' },
+    'govexp_GDP': { category: 'Fiscal', unit: '%', name: 'Government Expenditure (% GDP)' },
+    'fiscal_balance_GDP': { category: 'Fiscal', unit: '%', name: 'Fiscal Balance (% GDP)' },
+    'cumulative_deficit_5yr': { category: 'Fiscal', unit: '%', name: 'Cumulative Deficit (5-year)' },
+    'ltrate': { category: 'Monetary', unit: '%', name: 'Long-term Interest Rate' },
+    'infl': { category: 'Monetary', unit: '%', name: 'Inflation Rate' },
+    'real_interest_rate': { category: 'Monetary', unit: '%', name: 'Real Interest Rate' },
+    'tax_revenue_pct_GDP': { category: 'Fiscal', unit: '%', name: 'Tax Revenue (% GDP)' },
+    'inflation_cpi': { category: 'Monetary', unit: '%', name: 'Inflation (CPI)' },
+    'inflation_deflator': { category: 'Monetary', unit: '%', name: 'Inflation (GDP Deflator)' },
+    'inflation_gap': { category: 'Monetary', unit: '%', name: 'Inflation Gap (CPI - Deflator)' },
+    'rolling_3yr_avg_cpi': { category: 'Monetary', unit: '%', name: '3-Year Avg CPI Inflation' },
+    // Crisis Risk
+    'SovDebtCrisis': { category: 'Risk', unit: 'flag', name: 'Sovereign Debt Crisis' },
+    'CurrencyCrisis': { category: 'Risk', unit: 'flag', name: 'Currency Crisis' },
+    'BankingCrisis': { category: 'Risk', unit: 'flag', name: 'Banking Crisis' },
+    'crisis_composite': { category: 'Risk', unit: '0-3', name: 'Crisis Composite Index' },
+    'crisis_any': { category: 'Risk', unit: 'flag', name: 'Any Crisis' },
+    'REER_deviation': { category: 'Risk', unit: '%', name: 'REER Deviation (%)' },
+    'spending_efficiency': { category: 'Risk', unit: 'ratio', name: 'Spending Efficiency' },
+    // Social Welfare
+    'unemployment_total': { category: 'Social', unit: '%', name: 'Unemployment Rate (Total)' },
+    'unemployment_youth': { category: 'Social', unit: '%', name: 'Youth Unemployment Rate' },
+    'youth_unemployment_gap': { category: 'Social', unit: '%', name: 'Youth Unemployment Gap' },
+    'youth_gap_ratio': { category: 'Social', unit: 'ratio', name: 'Youth Gap Ratio' },
+    'self_employed_pct': { category: 'Social', unit: '%', name: 'Self-Employed (% of employment)' },
+    'poverty_headcount': { category: 'Social', unit: '%', name: 'Poverty Headcount Ratio' },
+    'poverty_change_5yr': { category: 'Social', unit: '%', name: 'Poverty Change (5-year)' },
+    'urban_pop_pct': { category: 'Demographics', unit: '%', name: 'Urban Population (%)' },
+    'urban_pop_growth': { category: 'Demographics', unit: '%', name: 'Urban Population Growth' },
+    'pop_density': { category: 'Demographics', unit: 'people/km²', name: 'Population Density' },
+    'log_pop_density': { category: 'Demographics', unit: 'log', name: 'Log Population Density' },
+    'pop_growth': { category: 'Demographics', unit: '%', name: 'Population Growth (annual)' },
+    'hcons_share': { category: 'Social', unit: '%', name: 'Household Consumption Share' },
+    'hcons_growth': { category: 'Social', unit: '%', name: 'Household Consumption Growth' },
+    'trade_pct_gdp': { category: 'Trade', unit: '%', name: 'Trade (% GDP)' },
+    // Structural Composition
+    'decade': { category: 'Structure', unit: 'year', name: 'Decade' },
+    'GDP_value': { category: 'Structure', unit: 'current US$', name: 'GDP (current US$)' },
+    'GFCF_value': { category: 'Investment', unit: 'current US$', name: 'Gross Fixed Capital Formation (USD)' },
+    'GNI_value': { category: 'Structure', unit: 'current US$', name: 'GNI (current US$)' },
+    'Agri_VA': { category: 'Structure', unit: 'current US$', name: 'Agriculture Value Added (USD)' },
+    'Manuf_VA': { category: 'Structure', unit: 'current US$', name: 'Manufacturing Value Added (USD)' },
+    'VA_FoodBev': { category: 'Structure', unit: 'current US$', name: 'Food & Beverage Value Added (USD)' },
+    'GFCF_to_GDP': { category: 'Investment', unit: '%', name: 'GFCF (% GDP)' },
+    'GNI_to_GDP': { category: 'Structure', unit: 'ratio', name: 'GNI to GDP Ratio' },
+    'agri_va_share': { category: 'Structure', unit: '%', name: 'Agriculture Value Added (% GDP)' },
+    'manuf_va_share': { category: 'Structure', unit: '%', name: 'Manufacturing Value Added (% GDP)' },
+    'food_bev_share_manuf': { category: 'Structure', unit: '%', name: 'Food & Beverage Share of Manufacturing' },
+    'flag_score': { category: 'Quality', unit: '0-3', name: 'Data Quality Flag' },
+  };
+
+  constructor(@InjectDataSource() private dataSource: DataSource) {}
+
+  async onModuleInit() {
+    await this.loadIndicators();
+  }
+
+  private async loadIndicators() {
+    this.indicators = [];
+    for (const table of this.goldTables) {
+      const columns = await this.dataSource.query(
+        `SELECT column_name 
+         FROM information_schema.columns 
+         WHERE table_name = $1 
+         ORDER BY ordinal_position`,
+        [table]
+      );
+
+      for (const { column_name } of columns) {
+        if (this.excludedColumns.has(column_name)) continue;
+
+        const meta = this.columnMetadata[column_name] || {
+          category: 'Other',
+          unit: 'unknown',
+          name: column_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        };
+
+        this.indicators.push({
+          code: column_name,
+          name: meta.name || meta.category === 'Other' ? column_name : meta.name,
+          category: meta.category,
+          unit: meta.unit,
+          table: table,
+        });
+      }
+    }
+    this.logger.log(`Loaded ${this.indicators.length} indicators from ${this.goldTables.length} tables`);
+  }
+
+  findAll(): Indicator[] {
+    return this.indicators;
+  }
+
+  findByCategory(category: string): Indicator[] {
+    return this.indicators.filter(i => i.category.toLowerCase() === category.toLowerCase());
+  }
+
+  findByCode(code: string): Indicator | undefined {
+    return this.indicators.find(i => i.code === code);
+  }
+}
