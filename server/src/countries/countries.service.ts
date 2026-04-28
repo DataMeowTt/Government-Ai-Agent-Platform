@@ -6,7 +6,8 @@ import { AnalyticsGoldGrowthDynamics } from '../entities/analytics-gold-growth-d
 import { AnalyticsGoldFiscalMonetary } from '../entities/analytics-gold-fiscal-monetary.entity';
 import { AnalyticsGoldSocialWelfare } from '../entities/analytics-gold-social-welfare.entity';
 import { AnalyticsClusters } from '../entities/analytics-clusters.entity';
-
+import { AnalyticsGoldStructuralComposition } from '../entities/analytics-gold-structural-composition.entity';
+import { AnalyticsGoldCrisisRisk } from '../entities/analytics-gold-crisis-risk.entity';
 @Injectable()
 export class CountriesService {
   constructor(
@@ -34,12 +35,20 @@ export class CountriesService {
         // Social Group
         'an_social.poverty_headcount_actual as actual_poverty',
         'an_social.unemployment_total_actual as actual_unemployment',
+        // Structure Group
+        'an_struct.manuf_va_share_actual as actual_manuf_share',
+        'an_struct.agri_va_share_actual as actual_agri_share',
+        // Risk Group
+        'an_risk.REER_deviation_actual as actual_reer_deviation',
+        'an_risk.REER_deviation_anomaly_score as anomaly_reer_deviation',
         // Cluster Info
         'c.cluster_id as cluster_id'
       ])
       .leftJoin(AnalyticsGoldGrowthDynamics, 'an_growth', 'g.country_code = an_growth.country_code AND g.year = an_growth.year')
       .leftJoin(AnalyticsGoldFiscalMonetary, 'an_fiscal', 'g.country_code = an_fiscal.country_code AND g.year = an_fiscal.year')
       .leftJoin(AnalyticsGoldSocialWelfare, 'an_social', 'g.country_code = an_social.country_code AND g.year = an_social.year')
+      .leftJoin(AnalyticsGoldStructuralComposition, 'an_struct', 'g.country_code = an_struct.country_code AND g.year = an_struct.year')
+      .leftJoin(AnalyticsGoldCrisisRisk, 'an_risk', 'g.country_code = an_risk.country_code AND g.year = an_risk.year')
       .leftJoin(AnalyticsClusters, 'c', 'g.country_code = c.country_code AND g.year = c.year')
       .where('g.country_code = :countryCode', { countryCode })
       .orderBy('g.year', 'ASC')

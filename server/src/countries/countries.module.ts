@@ -7,6 +7,7 @@ import { AnalyticsGoldGrowthDynamics } from '../entities/analytics-gold-growth-d
 import { AnalyticsGoldFiscalMonetary } from '../entities/analytics-gold-fiscal-monetary.entity';
 import { AnalyticsGoldSocialWelfare } from '../entities/analytics-gold-social-welfare.entity';
 import { AnalyticsGoldStructuralComposition } from '../entities/analytics-gold-structural-composition.entity';
+import { AnalyticsGoldCrisisRisk } from '../entities/analytics-gold-crisis-risk.entity';
 import { AnalyticsClusters } from '../entities/analytics-clusters.entity';
 
 @Module({
@@ -17,6 +18,7 @@ import { AnalyticsClusters } from '../entities/analytics-clusters.entity';
       AnalyticsGoldFiscalMonetary,
       AnalyticsGoldSocialWelfare,
       AnalyticsGoldStructuralComposition,
+      AnalyticsGoldCrisisRisk,
       AnalyticsClusters,
     ]),
   ],
