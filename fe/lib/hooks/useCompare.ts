@@ -1,8 +1,9 @@
 import { useQueries } from '@tanstack/react-query';
 import { countriesApi } from '@/lib/api/endpoints';
-import { CompareGroupedData } from '@/lib/types';
+import { parseArray, countryAnalyticsRowSchema } from '@/lib/schemas';
+import { CountryAnalyticsRow, CompareGroupedData } from '@/lib/types';
 
-const INDICATOR_KEY_MAP: Record<string, string> = {
+const INDICATOR_KEY_MAP: Record<string, keyof CountryAnalyticsRow> = {
   rGDP_growth_YoY: 'actual_growth',
   govdebt_GDP: 'actual_debt',
   REER_deviation: 'actual_reer_deviation',
@@ -21,9 +22,10 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
       queryKey: ['compare', code, indicator],
       queryFn: async () => {
         const { data } = await countriesApi.getFullAnalytics(code);
-        return (data as any[]).map((item: any) => ({
+        const parsed = parseArray(countryAnalyticsRowSchema, data);
+        return parsed.map(item => ({
           year: item.year,
-          value: item[actualKey] ?? null,
+          value: (item[actualKey] as number | null | undefined) ?? null,
           country_code: code,
         }));
       },
@@ -33,16 +35,14 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
 
   const isLoading = results.some(r => r.isLoading);
   const error = results.find(r => r.error)?.error;
+
   const flatData = results
     .map(r => r.data ?? [])
-    .flat()
-    .filter(Boolean) as { year: number; value: number | null; country_code: string }[];
+    .flat() as { year: number; value: number | null; country_code: string }[];
 
   const grouped: CompareGroupedData = {};
   flatData.forEach(item => {
-    if (!grouped[item.country_code]) {
-      grouped[item.country_code] = [];
-    }
+    if (!grouped[item.country_code]) grouped[item.country_code] = [];
     grouped[item.country_code].push({ year: item.year, value: item.value });
   });
 
