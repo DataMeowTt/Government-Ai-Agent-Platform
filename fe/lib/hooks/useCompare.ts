@@ -1,9 +1,7 @@
-// lib/hooks/useCompare.ts (đã sửa)
 import { useQueries } from '@tanstack/react-query';
 import { countriesApi } from '@/lib/api/endpoints';
-import { CompareGroupedData } from '@/lib/types'; // Bạn cần thêm type này vào index.ts
+import { CompareGroupedData } from '@/lib/types';
 
-// Map indicator sang actual key trong full-analytics
 const INDICATOR_KEY_MAP: Record<string, string> = {
   rGDP_growth_YoY: 'actual_growth',
   govdebt_GDP: 'actual_debt',
@@ -23,7 +21,6 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
       queryKey: ['compare', code, indicator],
       queryFn: async () => {
         const { data } = await countriesApi.getFullAnalytics(code);
-        // data: CountryAnalyticsRow[] từ API (chưa parse) -> map thành CompareDataPoint[]
         return (data as any[]).map((item: any) => ({
           year: item.year,
           value: item[actualKey] ?? null,
