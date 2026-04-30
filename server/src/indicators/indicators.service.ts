@@ -92,7 +92,7 @@ export class IndicatorsService implements OnModuleInit {
     'flag_score': { category: 'Quality', unit: '0-3', name: 'Data Quality Flag' },
   };
 
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+  constructor(@InjectDataSource() private dataSource: DataSource) { }
 
   async onModuleInit() {
     await this.loadIndicators();
@@ -100,17 +100,24 @@ export class IndicatorsService implements OnModuleInit {
 
   private async loadIndicators() {
     this.indicators = [];
+    const seenCodes = new Set<string>();
+
     for (const table of this.goldTables) {
       const columns = await this.dataSource.query(
-        `SELECT column_name 
-         FROM information_schema.columns 
-         WHERE table_name = $1 
-         ORDER BY ordinal_position`,
+        `SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = $1
+      ORDER BY ordinal_position`,
         [table]
       );
 
       for (const { column_name } of columns) {
         if (this.excludedColumns.has(column_name)) continue;
+
+        if (seenCodes.has(column_name)) {
+          this.logger.debug(`Skipping duplicate indicator: ${column_name} in ${table}`);
+          continue;
+        }
 
         const meta = this.columnMetadata[column_name] || {
           category: 'Other',
@@ -120,14 +127,17 @@ export class IndicatorsService implements OnModuleInit {
 
         this.indicators.push({
           code: column_name,
-          name: meta.name || meta.category === 'Other' ? column_name : meta.name,
+          name: meta.name || column_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           category: meta.category,
           unit: meta.unit,
           table: table,
         });
+
+        seenCodes.add(column_name);
       }
     }
-    this.logger.log(`Loaded ${this.indicators.length} indicators from ${this.goldTables.length} tables`);
+
+    this.logger.log(`Loaded ${this.indicators.length} unique indicators from ${this.goldTables.length} tables`);
   }
 
   findAll(): Indicator[] {

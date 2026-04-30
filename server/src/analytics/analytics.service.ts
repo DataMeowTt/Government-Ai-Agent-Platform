@@ -29,7 +29,7 @@ export class AnalyticsService {
     private riskAnalyticsRepo: Repository<AnalyticsGoldCrisisRisk>,
     @InjectRepository(GoldGrowthDynamics)
     private growthRepo: Repository<GoldGrowthDynamics>,
-  ) {}
+  ) { }
 
   async getClusters(year: number) {
     return this.clustersRepo.find({
@@ -45,6 +45,7 @@ export class AnalyticsService {
     limit: number = 100,
   ) {
     const anomalySources: AnomalyItem[] = [];
+
     if (!indicator || indicator === 'growth') {
       const growthAnomalies = await this.growthAnalyticsRepo.find({
         where: {
@@ -114,8 +115,10 @@ export class AnalyticsService {
       country_name: nameMap.get(item.country_code) || item.country_code,
     }));
 
-    return results
-      .sort((a, b) => (b.anomaly_score || 0) - (a.anomaly_score || 0))
-      .slice(0, limit);
+    const sorted = results.sort((a, b) => (b.anomaly_score || 0) - (a.anomaly_score || 0));
+    return {
+      items: sorted.slice(0, limit),
+      meta: { total_count: sorted.length },
+    };
   }
 }

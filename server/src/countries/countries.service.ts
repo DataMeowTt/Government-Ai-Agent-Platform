@@ -58,14 +58,15 @@ export class CountriesService {
   }
   async findAll() {
     const results = await this.growthRepo
-      .createQueryBuilder('g')
-      .select([
-        'g.country_code as country_code',
-        'g.country as country_name',
-      ])
-      .distinct(true)
-      .orderBy('g.country', 'ASC')
-      .getRawMany();
+        .createQueryBuilder('g')
+        .select([
+            'g.country_code as country_code',
+            'g.country as country_name',
+            'g.income_group as region',
+        ])
+        .distinct(true)
+        .orderBy('g.country', 'ASC')
+        .getRawMany();
     return results;
   }
   async getFullCountryAnalytics(countryCode: string) {
