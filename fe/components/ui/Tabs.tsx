@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
-import { CheckCircle2, AlertTriangle, XCircle, LucideIcon } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
 interface Tab {
   id: string;

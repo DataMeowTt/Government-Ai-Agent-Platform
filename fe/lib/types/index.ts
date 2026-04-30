@@ -1,7 +1,7 @@
 export interface Country {
   country_code: string;
   country_name: string;
-  region?: string;
+  region?: string | null;
 }
 
 export interface Indicator {

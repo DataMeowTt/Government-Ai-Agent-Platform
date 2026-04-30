@@ -12,6 +12,12 @@ export const indicatorsApi = {
 
 export const analyticsApi = {
   getClusters: (year: number) => apiClient.get(`/api/v1/analytics/clusters?year=${year}`),
-  getAnomalies: (params?: { country?: string; indicator?: string; threshold?: number; limit?: number }) =>
+  getAnomalies: (params?: { 
+    country?: string; 
+    indicator?: string; 
+    threshold?: number; 
+    limit?: number;
+    offset?: number;
+  }) =>
     apiClient.get('/api/v1/analytics/anomalies', { params }),
 };
