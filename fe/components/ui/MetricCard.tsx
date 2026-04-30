@@ -22,7 +22,7 @@ export default function MetricCard({ icon: Icon, title, value, trend, action, cl
     );
   }
   return (
-    <div className={cn('bg-white rounded-md border border-gray-200 p-6 flex flex-col justify-between transition-shadow hover:shadow-md', className)}>
+    <div className={cn('bg-white max-h-[200px] rounded-md border border-gray-200 p-6 flex flex-col justify-between transition-shadow hover:shadow-md', className)}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 rounded-md text-blue-600">
