@@ -10,7 +10,7 @@ export default function CountryKpiOverview({ data }: CountryKpiOverviewProps) {
   const latest = data.length > 0 ? data[data.length - 1] : null;
   const prev = data.length > 1 ? data[data.length - 2] : null;
 
-  const calcTrend = (curr: number | null | undefined, prevVal: number | null | undefined) => {
+  const calcTrend = (curr: number | null | undefined, prevVal: number | null | undefined): { dir: 'up' | 'down' | 'flat' | null; val: string | null } => {
     if (curr == null || prevVal == null || prevVal === 0) return { dir: null, val: null };
     const diff = curr - prevVal;
     const dir: 'up' | 'down' | 'flat' = diff > 0.1 ? 'up' : diff < -0.1 ? 'down' : 'flat';
