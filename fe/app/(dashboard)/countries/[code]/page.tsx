@@ -1,7 +1,7 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
 import { useCountryAnalytics, useCountries } from '@/lib/hooks/useCountries';
-import { ChartSkeleton, KpiCardSkeleton, PanelSkeleton } from '@/components/ui/Skeletons';
+import { ChartSkeleton, KpiCardSkeleton, PanelSkeleton, TableSkeleton } from '@/components/ui/Skeletons';
 import CountryHeader from '@/components/country/CountryHeader';
 import CountryKpiOverview from '@/components/country/CountryKpiOverview';
 import Tabs from '@/components/ui/Tabs';
@@ -12,7 +12,7 @@ import GrowthTabContent from '@/components/country/GrowthTabContent';
 import FiscalTabContent from '@/components/country/FiscalTabContent';
 import SocialTabContent from '@/components/country/SocialTabContent';
 import RiskTabContent from '@/components/country/RiskTabContent';
-import { BarChart3, Activity, TrendingUp } from 'lucide-react';
+import CountryDataTable from '@/components/country/CountryDataTable';
 import { useMemo } from 'react';
 
 interface TabItem { id: string; label: string; status?: 'ok' | 'warning' | 'error'; content: React.ReactNode; }
@@ -51,6 +51,7 @@ export default function CountryDetailPage() {
           <div className="lg:col-span-8"><ChartSkeleton /></div>
           <div className="lg:col-span-4 space-y-4"><PanelSkeleton rows={3} /><PanelSkeleton rows={4} /></div>
         </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
@@ -78,6 +79,7 @@ export default function CountryDetailPage() {
           <RecentAnomaliesPanel anomalies={anomalies} />
         </div>
       </div>
+      <CountryDataTable data={data} />
     </div>
   );
 }
