@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     internal_api_key: str = "dev-internal-key"
 
+    database_url: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
