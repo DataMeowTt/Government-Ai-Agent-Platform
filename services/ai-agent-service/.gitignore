@@ -12,4 +12,3 @@ env/
 ENV/
 .venv/
 .env
-__init__.py
