@@ -63,6 +63,8 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             source="mock",
             toolsUsed=["indicator_resolver", "country_resolver", "year_resolver"],
             indicators=metadata["indicators"],
+            analytics_indicators=metadata["analytics_indicators"],
+            raw_only_indicators=metadata["raw_only_indicators"],
             countries=metadata["countries"],
             years=metadata["years"],
             resolved=metadata["resolved"],

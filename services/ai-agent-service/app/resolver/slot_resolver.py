@@ -43,10 +43,23 @@ def resolve_slots(message: str) -> ResolvedSlots:
         clarification_questions=clarification_questions,
     )
 
-
 def resolved_slots_to_metadata(slots: ResolvedSlots) -> dict:
+    analytics_indicators = [
+        item["code"]
+        for item in slots.indicators
+        if item.get("analytics", {}).get("has_analytics")
+    ]
+
+    raw_only_indicators = [
+        item["code"]
+        for item in slots.indicators
+        if not item.get("analytics", {}).get("has_analytics")
+    ]
+
     return {
         "indicators": [item["code"] for item in slots.indicators],
+        "analytics_indicators": analytics_indicators,
+        "raw_only_indicators": raw_only_indicators,
         "countries": [item["code"] for item in slots.countries],
         "years": slots.years,
         "resolved": {

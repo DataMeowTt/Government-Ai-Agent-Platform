@@ -43,9 +43,10 @@ class AiAgentMetadata(BaseModel):
     source: Literal["template", "gemini", "mock"] = "mock"
     toolsUsed: list[str] = Field(default_factory=list)
     indicators: list[str] = Field(default_factory=list)
+    analytics_indicators: list[str] = Field(default_factory=list)
+    raw_only_indicators: list[str] = Field(default_factory=list)
     countries: list[str] = Field(default_factory=list)
     years: list[int] = Field(default_factory=list)
-
     resolved: dict[str, Any] | None = None
 
 

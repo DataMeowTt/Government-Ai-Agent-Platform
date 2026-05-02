@@ -3,7 +3,7 @@ import unicodedata
 from dataclasses import asdict, dataclass
 
 from app.catalog.indicator_catalog import INDICATORS, IndicatorMeta
-
+from app.catalog.analytics_catalog import get_indicator_analytics_metadata
 
 @dataclass(frozen=True)
 class IndicatorMatch:
@@ -87,6 +87,13 @@ def resolve_indicators(message: str, limit: int = 3) -> list[IndicatorMatch]:
 
 def indicator_match_to_dict(match: IndicatorMatch) -> dict:
     data = asdict(match.indicator)
+
+    analytics_metadata = get_indicator_analytics_metadata(match.indicator.code)
+
     data["confidence"] = match.confidence
     data["matched_alias"] = match.matched_alias
+    data["analytics"] = analytics_metadata
+    if analytics_metadata["analytics_table"]:
+        data["analytics_table"] = analytics_metadata["analytics_table"]
+
     return data
