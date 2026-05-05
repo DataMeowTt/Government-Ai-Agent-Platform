@@ -15,7 +15,11 @@ from typing import Any
 
 
 DEFAULT_TARGET_URL = "http://localhost:3000/api/v1/ai/chat"
-DEFAULT_OUTPUT_DIR = "eval_runs/chat_quality"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PIPELINE_ROOT = SCRIPT_DIR.parent
+RESULT_ROOT = PIPELINE_ROOT / "result"
+CASES_PATH = SCRIPT_DIR / "cases.v1.json"
+ENV_PATH = SCRIPT_DIR / ".env"
 INTERNAL_TERMS = (
     "Gemini Router",
     "router",
@@ -32,6 +36,22 @@ INTERNAL_TERMS = (
 RETRYABLE_HTTP_STATUSES = {429, 500, 502, 503, 504}
 
 
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def env_int(name: str, default: int) -> int:
     value = os.getenv(name)
     if not value:
@@ -44,11 +64,11 @@ def env_int(name: str, default: int) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect raw chat responses for Phase 9.1.")
-    parser.add_argument("--cases", default="evals/chat_quality/cases.v1.json")
+    parser.add_argument("--cases", default=str(CASES_PATH))
     parser.add_argument("--target-url", default=os.getenv("EVAL_TARGET_URL", DEFAULT_TARGET_URL))
     parser.add_argument("--direct-agent-url", default=None)
     parser.add_argument("--internal-api-key", default=os.getenv("EVAL_INTERNAL_API_KEY"))
-    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--output-dir", default=str(RESULT_ROOT))
     parser.add_argument("--run-dir", default=None, help="Existing run dir for --resume or explicit output location.")
     parser.add_argument("--timeout-ms", type=int, default=env_int("EVAL_TIMEOUT_MS", 120000))
     parser.add_argument("--max-retries", type=int, default=env_int("EVAL_MAX_RETRIES", 3))
@@ -101,9 +121,9 @@ def latest_run_dir(output_dir: Path) -> Path | None:
 
 
 def prepare_run_dir(args: argparse.Namespace) -> tuple[str, Path]:
-    output_root = Path(args.output_dir)
+    output_root = Path(args.output_dir).resolve()
     if args.run_dir:
-        run_dir = Path(args.run_dir)
+        run_dir = Path(args.run_dir).resolve()
         run_id = run_dir.name
     elif args.resume:
         run_dir = latest_run_dir(output_root) or output_root / run_id_now()
@@ -409,58 +429,6 @@ def _avg(values: list[int]) -> float | None:
     return round(sum(values) / len(values), 2)
 
 
-def write_summary_md(path: Path, summary: dict[str, Any], records: list[dict[str, Any]]) -> None:
-    failures = [record for record in records if not record.get("ok")]
-    slowest = sorted(
-        [record for record in records if isinstance(record.get("latency_ms"), int)],
-        key=lambda record: record["latency_ms"],
-        reverse=True,
-    )[:10]
-
-    lines = [
-        "# Chat Quality Response Collection",
-        "",
-        f"- Run ID: `{summary['run_id']}`",
-        f"- Target URL: `{summary['target_url']}`",
-        f"- Created at: `{summary['created_at']}`",
-        f"- Total scenarios: {summary['total_scenarios']}",
-        f"- Total turns: {summary['total_turns']}",
-        f"- OK turns: {summary['ok_turns']}",
-        f"- Failed turns: {summary['failed_turns']}",
-        f"- Skipped turns: {summary['skipped_turns']}",
-        f"- Avg latency ms: {summary['avg_latency_ms']}",
-        "",
-        "## Category Breakdown",
-        "",
-    ]
-    for category, stats in sorted(summary["by_category"].items()):
-        lines.append(
-            f"- {category}: scenarios={stats['scenarios']}, turns={stats['turns']}, "
-            f"ok={stats['ok_turns']}, failed={stats['failed_turns']}, skipped={stats['skipped_turns']}, "
-            f"avg_latency_ms={stats['avg_latency_ms']}"
-        )
-
-    lines.extend(["", "## Route Counts", "", "```json", json.dumps(summary["route_counts"], ensure_ascii=False, indent=2), "```"])
-    lines.extend(
-        ["", "## Parser Source Counts", "", "```json", json.dumps(summary["parser_source_counts"], ensure_ascii=False, indent=2), "```"]
-    )
-    lines.extend(["", "## Top Slowest 10 Calls", ""])
-    for record in slowest:
-        lines.append(f"- {record['latency_ms']} ms: {record['case_id']} turn {record['turn_index']} `{record['message']}`")
-
-    lines.extend(["", "## Failures", ""])
-    if not failures:
-        lines.append("- None")
-    else:
-        for record in failures:
-            lines.append(
-                f"- {record['case_id']} turn {record['turn_index']}: "
-                f"http={record.get('http_status')} error={record.get('error') or record.get('skip_reason')}"
-            )
-
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     target_url = args.direct_agent_url or args.target_url
     internal_key = args.internal_api_key if args.direct_agent_url or "/agent/chat" in target_url else args.internal_api_key
@@ -469,9 +437,13 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     run_id, run_dir = prepare_run_dir(args)
 
     raw_path = run_dir / "raw_results.jsonl"
-    errors_path = run_dir / "errors.jsonl"
     existing_records = read_existing_results(raw_path) if args.resume else []
     completed = {(record.get("case_id"), record.get("turn_index")) for record in existing_records if record.get("ok")}
+    conversation_id_by_case = {
+        str(record.get("case_id")): str(record.get("conversation_id"))
+        for record in existing_records
+        if record.get("case_id") and record.get("conversation_id")
+    }
     records = list(existing_records)
 
     write_json(run_dir / "cases_used.json", {"cases": cases})
@@ -483,7 +455,8 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         turns = case.get("turns", [])
         if not isinstance(turns, list):
             continue
-        conversation_id = f"eval-{case_id}-{uuid.uuid4().hex[:8]}"
+        conversation_id = conversation_id_by_case.get(case_id) or f"eval-{case_id}-{uuid.uuid4().hex[:8]}"
+        conversation_id_by_case[case_id] = conversation_id
         previous_turn_failed = False
 
         for index, turn in enumerate(turns):
@@ -529,7 +502,6 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
                     "assertions": compute_assertions(None, expected),
                 }
                 append_jsonl(raw_path, record)
-                append_jsonl(errors_path, record)
                 records.append(record)
                 continue
 
@@ -561,21 +533,22 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
             }
             append_jsonl(raw_path, record)
             if not record["ok"]:
-                append_jsonl(errors_path, record)
                 previous_turn_failed = True
             records.append(record)
 
             if args.sleep_ms > 0:
                 time.sleep(args.sleep_ms / 1000)
 
-    write_json(run_dir / "raw_results.pretty.json", records)
     summary = summarize(run_id, target_url, records, len(cases))
-    write_json(run_dir / "summary.json", summary)
-    write_summary_md(run_dir / "summary.md", summary, records)
+    summary["unique_case_ids"] = len({record.get("case_id") for record in records if record.get("case_id")})
+    write_json(run_dir / "collect_summary.json", summary)
     return run_dir, summary
 
 
 def main() -> int:
+    load_env_file(ENV_PATH)
+    if ENV_PATH.exists():
+        print(f"Loaded env file: {ENV_PATH}")
     args = parse_args()
     try:
         run_dir, summary = collect(args)

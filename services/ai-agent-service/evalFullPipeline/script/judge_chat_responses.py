@@ -18,11 +18,11 @@ from typing import Any
 
 
 DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
-DEFAULT_RUN_ROOT = Path("eval_runs/chat_quality")
-DEFAULT_ENV_FILES = [
-    Path("evals/chat_quality/.env"),
-    Path(".env"),
-]
+SCRIPT_DIR = Path(__file__).resolve().parent
+PIPELINE_ROOT = SCRIPT_DIR.parent
+RESULT_ROOT = PIPELINE_ROOT / "result"
+ENV_PATH = SCRIPT_DIR / ".env"
+DEFAULT_RUN_ROOT = RESULT_ROOT
 OUTPUT_FILE_NAME = "judge_results.json"
 
 INTERNAL_TERMS = [
@@ -71,8 +71,9 @@ def load_env_file(path: Path) -> None:
 
 
 def load_env_files() -> None:
-    for path in DEFAULT_ENV_FILES:
-        load_env_file(path)
+    load_env_file(ENV_PATH)
+    if ENV_PATH.exists():
+        print(f"Loaded env file: {ENV_PATH}")
 
 
 def now_iso() -> str:
@@ -89,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--run-dir",
         default=os.getenv("EVAL_RUN_DIR"),
-        help="Run directory containing raw_results.jsonl. Default: latest eval_runs/chat_quality/<run_id>.",
+        help="Run directory containing raw_results.jsonl. Default: latest evalFullPipeline/result/<run_id>.",
     )
     parser.add_argument(
         "--raw-results",
@@ -147,6 +148,8 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Ignore existing judge_results.json.",
     )
+    parser.add_argument("--resume", action="store_true", help="Keep existing successful results in judge_results.json.")
+    parser.add_argument("--dry-run", action="store_true", help="Build results with rule checks only; do not call Gemini.")
 
     return parser.parse_args()
 
@@ -177,7 +180,7 @@ def resolve_paths(args: argparse.Namespace) -> tuple[Path, Path]:
     else:
         run_dir = latest_run_dir()
         if run_dir is None:
-            raise FileNotFoundError("No run directory found under eval_runs/chat_quality.")
+            raise FileNotFoundError(f"No run directory found under {DEFAULT_RUN_ROOT}.")
         raw_path = run_dir / "raw_results.jsonl"
 
     if not raw_path.exists():
@@ -866,13 +869,6 @@ def main() -> int:
 
     raw_path, output_path = resolve_paths(args)
 
-    key_pool = KeyPool(args.api_keys)
-    if key_pool.count() == 0:
-        print("No Gemini API keys found.")
-        print("Put this in evals/chat_quality/.env:")
-        print("EVAL_GEMINI_API_KEYS=key1,key2,key3,key4,key5")
-        return 1
-
     records = read_jsonl(raw_path)
     grouped = group_by_case(records)
     selected = select_cases(grouped, args.case_id, args.limit)
@@ -880,6 +876,8 @@ def main() -> int:
     if not selected:
         print("No cases selected.")
         return 1
+
+    key_pool = KeyPool(args.api_keys)
 
     if args.overwrite or not output_path.exists():
         existing_results: list[dict[str, Any]] = []
@@ -897,7 +895,7 @@ def main() -> int:
     print(f"Output: {output_path}")
     print(f"Cases selected: {len(selected)}")
     print(f"Gemini keys configured: {key_pool.count()}")
-    print(f"Workers: {min(args.workers, len(selected), key_pool.count())}")
+    print(f"Workers: {min(args.workers, len(selected), max(key_pool.count(), 1))}")
     print(f"Max retries per case: {args.max_retries}")
 
     work_items: list[tuple[str, list[dict[str, Any]]]] = []
@@ -908,6 +906,53 @@ def main() -> int:
             results.append(existing_by_case[case_id])
         else:
             work_items.append((case_id, turns))
+
+    if args.dry_run:
+        for case_id, turns in work_items:
+            target = pick_target_turn(turns)
+            if target is None:
+                continue
+            rule_checks = compute_rule_checks(target)
+            judge = {
+                "judge_status": "DRY_RUN",
+                "score": 0.0,
+                "grade": "WARNING",
+                "major_issues": [],
+                "minor_issues": [],
+                "hallucination_risk": "unknown",
+                "internal_terms_present": not rule_checks.get("no_internal_terms", True),
+                "grounding_notes": "",
+                "should_block_release": False,
+                "recommendation": "",
+            }
+            results.append(make_result(judge_run_id, case_id, turns, target, judge, [], rule_checks))
+        final_results = sorted(results, key=lambda r: str(r.get("case_id") or ""))
+        final_payload = {
+            "metadata": {
+                "judge_run_id": judge_run_id,
+                "source_run_id": records[0].get("run_id") if records else None,
+                "run_dir": str(output_path.parent),
+                "raw_results_path": str(raw_path),
+                "output_file": str(output_path),
+                "model": args.model,
+                "gemini_key_count": key_pool.count(),
+                "workers": 0,
+                "max_retries": args.max_retries,
+                "mode": "dry_run",
+                "created_at": now_iso(),
+            },
+            "summary": summarize(final_results),
+            "results": final_results,
+        }
+        atomic_write_json(output_path, final_payload)
+        print(json.dumps(final_payload["summary"], ensure_ascii=False, indent=2, default=str))
+        print(f"Result file: {output_path}")
+        return 0
+
+    if key_pool.count() == 0:
+        print("No Gemini API keys found.")
+        print(f"Put EVAL_GEMINI_API_KEYS in {ENV_PATH}")
+        return 1
 
     lock = threading.Lock()
 
@@ -980,12 +1025,15 @@ def main() -> int:
                     payload = {
                         "metadata": {
                             "judge_run_id": judge_run_id,
-                            "source_raw_results": str(raw_path),
+                            "source_run_id": records[0].get("run_id") if records else None,
+                            "run_dir": str(output_path.parent),
+                            "raw_results_path": str(raw_path),
                             "output_file": str(output_path),
                             "model": args.model,
                             "gemini_key_count": key_pool.count(),
                             "workers": max_workers,
                             "max_retries": args.max_retries,
+                            "mode": "judge",
                             "created_at": now_iso(),
                         },
                         "summary": summary,
@@ -1007,12 +1055,15 @@ def main() -> int:
     final_payload = {
         "metadata": {
             "judge_run_id": judge_run_id,
-            "source_raw_results": str(raw_path),
+            "source_run_id": records[0].get("run_id") if records else None,
+            "run_dir": str(output_path.parent),
+            "raw_results_path": str(raw_path),
             "output_file": str(output_path),
             "model": args.model,
             "gemini_key_count": key_pool.count(),
             "workers": max_workers,
             "max_retries": args.max_retries,
+            "mode": "judge",
             "created_at": now_iso(),
         },
         "summary": final_summary,
