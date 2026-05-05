@@ -5,6 +5,25 @@ from dataclasses import asdict, dataclass
 from app.catalog.indicator_catalog import INDICATORS, IndicatorMeta
 from app.catalog.analytics_catalog import get_indicator_analytics_metadata
 
+
+UNSUPPORTED_INDICATOR_ALIASES: dict[str, tuple[str, ...]] = {
+    "cán cân vãng lai/GDP": (
+        "current account/GDP",
+        "current account GDP",
+        "current account",
+        "curr_account_GDP",
+        "cán cân vãng lai/GDP",
+        "can can vang lai/GDP",
+    ),
+    "nợ nước ngoài/GNI": (
+        "external debt/GNI",
+        "external debt",
+        "external_debt_GNI",
+        "nợ nước ngoài/GNI",
+        "no nuoc ngoai/GNI",
+    ),
+}
+
 @dataclass(frozen=True)
 class IndicatorMatch:
     indicator: IndicatorMeta
@@ -49,6 +68,16 @@ def _score_alias(normalized_text: str, alias: str) -> float:
 def resolve_indicator(message: str) -> IndicatorMatch | None:
     matches = resolve_indicators(message, limit=1)
     return matches[0] if matches else None
+
+
+def detect_unsupported_indicator_label(message: str) -> str | None:
+    normalized_message = normalize_text(message)
+    for label, aliases in UNSUPPORTED_INDICATOR_ALIASES.items():
+        for alias in aliases:
+            normalized_alias = normalize_text(alias)
+            if _contains_alias(normalized_message, normalized_alias):
+                return label
+    return None
 
 
 def resolve_indicators(message: str, limit: int = 3) -> list[IndicatorMatch]:

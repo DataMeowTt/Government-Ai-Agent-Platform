@@ -36,6 +36,15 @@ INTERNAL_TERMS = (
 RETRYABLE_HTTP_STATUSES = {429, 500, 502, 503, 504}
 
 
+def configure_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def load_env_file(path: Path) -> None:
     if not path.exists():
         return
@@ -546,6 +555,7 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
 
 
 def main() -> int:
+    configure_stdio()
     load_env_file(ENV_PATH)
     if ENV_PATH.exists():
         print(f"Loaded env file: {ENV_PATH}")

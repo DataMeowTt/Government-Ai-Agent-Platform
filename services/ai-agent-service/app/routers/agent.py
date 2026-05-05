@@ -9,6 +9,7 @@ from app.composer.chart_composer import (
     build_ranking_bar_chart_data,
     build_series_line_chart_data,
 )
+from app.composer.display_formatter import get_indicator_label, replace_indicator_codes
 from app.composer.followup_composer import compose_followup_analysis_answer
 from app.composer.gemini_composer import compose_gemini_answer, should_use_gemini
 from app.composer.template_composer import (
@@ -21,6 +22,7 @@ from app.composer.template_composer import (
     compose_ranking_answer,
     compose_trend_answer,
     compose_unsupported_answer,
+    sanitize_clarification_questions,
 )
 from app.conversation.context_store import (
     build_router_context,
@@ -142,7 +144,7 @@ def is_user_facing_answer(answer: str | None) -> bool:
 
 
 def sanitize_user_facing_answer(answer: str) -> str:
-    sanitized = answer
+    sanitized = replace_indicator_codes(answer)
     replacements = {
         "Gemini Router": "Trợ lý",
         "AI Agent Service": "dịch vụ",
@@ -168,7 +170,7 @@ def sanitize_user_facing_answer(answer: str) -> str:
 def local_followup_answer(previous_context: dict[str, Any], router_context: dict[str, Any], message: str) -> str:
     data_summary = router_context.get("last_data_summary") or {}
     row_count = data_summary.get("row_count")
-    indicator = data_summary.get("indicator") or "chỉ số đang xét"
+    indicator = get_indicator_label(data_summary.get("indicator")) if data_summary.get("indicator") else "chỉ số đang xét"
     years = data_summary.get("years") or []
     last_answer = previous_context.get("last_answer")
 
@@ -327,7 +329,7 @@ def _handle_router_clarification(
     router_decision: RouterDecision,
 ) -> AiChatResponse:
     question = router_decision.clarification_question or "Bạn muốn phân tích chỉ số, quốc gia và giai đoạn nào?"
-    questions = [question]
+    questions = sanitize_clarification_questions([question])
     answer = compose_need_clarification_answer(questions)
     response = AiChatResponse(
         answer=answer,
@@ -515,7 +517,7 @@ def _run_parser_db_flow(
         return response
 
     if plan.question_type == "NEED_CLARIFICATION":
-        clarification_questions = plan.warnings or slots.clarification_questions
+        clarification_questions = sanitize_clarification_questions(plan.warnings or slots.clarification_questions)
         response = AiChatResponse(
             answer=compose_need_clarification_answer(clarification_questions),
             questionType="NEED_CLARIFICATION",
@@ -549,7 +551,7 @@ def _run_parser_db_flow(
                 _base_data_item(payload, original_message, query_text, metadata, plan, router_decision)
             ],
             chart=AiAgentChartConfig(type="none"),
-            warnings=plan.warnings,
+            warnings=[],
             metadata=make_metadata(metadata, "template", base_tools),
             **response_debug,
         )
@@ -583,10 +585,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=AiAgentChartConfig(type="none"),
-            warnings=[
-                "Tool execution failed.",
-                str(error),
-            ],
+            warnings=["Có lỗi khi xử lý dữ liệu."],
             metadata=make_metadata(metadata, "template", base_tools),
             **response_debug,
         )
@@ -638,7 +637,7 @@ def _run_parser_db_flow(
 
         chart = AiAgentChartConfig(
             type="line" if rows else "none",
-            title=f"{indicator_code} comparison",
+            title=f"So sánh {get_indicator_label(indicator_code)}",
             xKey="year",
             yKeys=country_codes,
             data=chart_data,
@@ -672,6 +671,8 @@ def _run_parser_db_flow(
             indicator_code=indicator_code,
             year=year,
             rows=rows,
+            limit=plan.arguments.get("limit"),
+            order=plan.arguments.get("order"),
         )
 
         result_payload = {
@@ -693,7 +694,7 @@ def _run_parser_db_flow(
 
         chart = AiAgentChartConfig(
             type="bar" if rows else "none",
-            title=f"Top countries by {indicator_code} in {year}",
+            title=f"Top quốc gia theo {get_indicator_label(indicator_code)} năm {year}",
             xKey="country_code",
             yKeys=["value"],
             data=build_ranking_bar_chart_data(rows),
@@ -744,7 +745,7 @@ def _run_parser_db_flow(
 
         chart = AiAgentChartConfig(
             type="table" if rows else "none",
-            title=f"Coverage for {indicator_code}",
+            title=f"Coverage dữ liệu {get_indicator_label(indicator_code)}",
             xKey=None,
             yKeys=None,
             data=rows,
@@ -801,7 +802,7 @@ def _run_parser_db_flow(
 
         chart = AiAgentChartConfig(
             type="bar" if rows else "none",
-            title=f"Anomalies for {indicator_code}",
+            title=f"Điểm bất thường của {get_indicator_label(indicator_code)}",
             xKey="year",
             yKeys=["anomaly_score"],
             data=build_anomaly_bar_chart_data(rows),
@@ -835,11 +836,11 @@ def _run_parser_db_flow(
         if is_analytics_series:
             chart_data = rows
             y_keys = ["actual_value", "trend_value"]
-            chart_title = f"{indicator_code} actual vs trend"
+            chart_title = f"Xu hướng {get_indicator_label(indicator_code)}"
         else:
             chart_data = build_series_line_chart_data(rows)
             y_keys = ["value"]
-            chart_title = f"{indicator_code} trend"
+            chart_title = f"Xu hướng {get_indicator_label(indicator_code)}"
 
         template_answer = compose_trend_answer(
             indicator_code=indicator_code,

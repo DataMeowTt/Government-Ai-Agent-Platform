@@ -3,11 +3,13 @@ import logging
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from app.core.config import settings
+from app.composer.display_formatter import get_indicator_label
 from app.llm.gemini_client import generate_gemini_text, is_gemini_enabled
+from app.resolver.country_resolver import COUNTRIES, resolve_countries
 from app.resolver.indicator_resolver import normalize_text
 
 
@@ -73,7 +75,8 @@ def route_message(
     for attempt in range(1, max_attempts + 1):
         try:
             text = _generate_with_timeout(prompt)
-            return _parse_router_response(text, attempts=attempt)
+            decision = _parse_router_response(text, attempts=attempt)
+            return _post_process_router_decision(message, router_context, decision)
         except Exception as error:
             last_error = error
 
@@ -114,6 +117,19 @@ def route_message_local_fallback(
     router_context = router_context or {}
     normalized = normalize_text(message)
     has_previous_result = _has_previous_result(router_context)
+
+    if _is_followup_modify(normalized) and not _has_previous_query_context(router_context):
+        return RouterDecision(
+            route="NEED_CLARIFICATION",
+            confidence=0.55,
+            needs_parser=False,
+            needs_db=False,
+            uses_previous_result=False,
+            clarification_question="Mình chưa có kết quả trước đó để chỉnh sửa. Bạn hãy gửi lại câu hỏi đầy đủ.",
+            reason="missing_previous_query_context",
+            source="local_router_fallback",
+            attempts=attempts,
+        )
 
     if _is_followup_modify(normalized) and has_previous_result:
         return RouterDecision(
@@ -286,6 +302,34 @@ def _parse_router_response(text: str, attempts: int = 1) -> RouterDecision:
     )
 
 
+def _post_process_router_decision(
+    message: str,
+    router_context: dict[str, Any],
+    decision: RouterDecision,
+) -> RouterDecision:
+    if decision.route != "FOLLOW_UP_MODIFY_QUERY":
+        return decision
+
+    if not _has_previous_query_context(router_context):
+        return RouterDecision(
+            route="NEED_CLARIFICATION",
+            confidence=decision.confidence,
+            needs_parser=False,
+            needs_db=False,
+            uses_previous_result=False,
+            clarification_question="Mình chưa có kết quả trước đó để chỉnh sửa. Bạn hãy gửi lại câu hỏi đầy đủ.",
+            reason="missing_previous_query_context",
+            source=decision.source,
+            attempts=decision.attempts,
+        )
+
+    normalized = normalize_text(message)
+    rewritten_query = _rewrite_followup_query(message, normalized, router_context)
+    if rewritten_query:
+        return replace(decision, rewritten_query=rewritten_query)
+    return decision
+
+
 def _sleep_before_retry(attempt: int) -> None:
     backoff_seconds = max(settings.gemini_router_retry_backoff_ms, 0) / 1000
     time.sleep(backoff_seconds * (2 ** max(0, attempt - 1)))
@@ -337,6 +381,16 @@ def _has_previous_result(router_context: dict[str, Any]) -> bool:
     )
 
 
+def _has_previous_query_context(router_context: dict[str, Any]) -> bool:
+    parsed_query = router_context.get("last_parsed_query") or {}
+    data_summary = router_context.get("last_data_summary") or {}
+    return bool(
+        parsed_query.get("indicators")
+        or data_summary.get("indicator")
+        or router_context.get("last_rows")
+    )
+
+
 def _is_followup_analysis(normalized: str) -> bool:
     keywords = (
         "phan tich",
@@ -376,6 +430,11 @@ def _is_direct_answer(normalized: str) -> bool:
             "y nghia",
             "cach hieu",
             "giai thich chi so",
+            "phan anh dieu gi",
+            "dung de danh gia",
+            "dung de hieu",
+            "cho biet dieu gi",
+            "khac gi",
         )
     )
 
@@ -402,38 +461,123 @@ def _rewrite_followup_query(
 ) -> str:
     base_query = router_context.get("last_user_message") or ""
     parsed_query = router_context.get("last_parsed_query") or {}
-    indicator_text = _indicator_text(parsed_query, base_query)
-    order_text = "cao nhất" if (parsed_query.get("ranking_order") or "desc") == "desc" else "thấp nhất"
+    data_summary = router_context.get("last_data_summary") or {}
+    indicator_text = _indicator_text(parsed_query, base_query, data_summary)
 
-    year_match = re.search(r"\b((?:19|20)\d{2})\b", normalized)
+    countries = _country_codes_from_context(parsed_query, data_summary)
+    for match in resolve_countries(message):
+        if match.country.code not in countries:
+            countries.append(match.country.code)
+    country_text = _country_list_text(countries)
+
+    years = [int(year) for year in re.findall(r"\b((?:19|20)\d{2})\b", normalized)]
+    if len(years) >= 2:
+        start_year, end_year = years[0], years[-1]
+    elif len(years) == 1:
+        start_year = end_year = years[0]
+    else:
+        start_year = parsed_query.get("start_year")
+        end_year = parsed_query.get("end_year")
+        summary_years = data_summary.get("years") or []
+        if start_year is None and summary_years:
+            start_year = min(summary_years)
+        if end_year is None and summary_years:
+            end_year = max(summary_years)
+
     limit_match = re.search(r"\btop\s+(\d+)\b", normalized)
-    year = year_match.group(1) if year_match else parsed_query.get("end_year") or parsed_query.get("start_year")
-    limit = limit_match.group(1) if limit_match else parsed_query.get("limit") or 10
+    limit = int(limit_match.group(1)) if limit_match else parsed_query.get("limit") or 10
 
-    if parsed_query.get("intent") == "RANKING" or "top" in normalize_text(base_query):
+    order = parsed_query.get("ranking_order") or "desc"
+    if any(token in normalized for token in ("thap nhat", "lowest", "nho nhat")):
+        order = "asc"
+    elif any(token in normalized for token in ("cao nhat", "highest", "lon nhat")):
+        order = "desc"
+    order_text = "cao nhất" if order == "desc" else "thấp nhất"
+
+    intent = parsed_query.get("intent") or ""
+    base_is_ranking = intent == "RANKING" or "top" in normalize_text(base_query)
+    if base_is_ranking:
+        year = end_year or start_year
         return f"Top {limit} nước có {indicator_text} {order_text} năm {year}".strip()
 
-    period_match = re.findall(r"\b((?:19|20)\d{2})\b", normalized)
-    if len(period_match) >= 2:
-        return f"{base_query} giai đoạn {period_match[0]}-{period_match[-1]}".strip()
+    period_text = _period_text(start_year, end_year)
+    if intent in {"TIME_SERIES", "TREND_ANALYSIS", "VALUE_LOOKUP"} or "xu huong" in normalize_text(base_query):
+        return f"Xu hướng {indicator_text}{_of_country_text(country_text)} {period_text}".strip()
+
+    if countries:
+        return f"So sánh {indicator_text} của {country_text} {period_text}".strip()
 
     return f"{base_query} {message}".strip()
 
 
-def _indicator_text(parsed_query: dict[str, Any], base_query: str) -> str:
+def _indicator_text(parsed_query: dict[str, Any], base_query: str, data_summary: dict[str, Any] | None = None) -> str:
     indicators = parsed_query.get("indicators") or []
+    if not indicators and data_summary:
+        indicator = data_summary.get("indicator")
+        if indicator:
+            indicators = [indicator]
     normalized_base = normalize_text(base_query)
     if "inflation_cpi" in indicators or "lam phat" in normalized_base or "cpi" in normalized_base:
         return "lạm phát CPI"
     if "govdebt_GDP" in indicators or "no cong" in normalized_base:
         return "nợ công/GDP"
     if indicators:
-        return str(indicators[0])
+        return get_indicator_label(str(indicators[0]))
     return "chỉ số"
 
 
+def _country_codes_from_context(parsed_query: dict[str, Any], data_summary: dict[str, Any]) -> list[str]:
+    codes: list[str] = []
+    for value in parsed_query.get("countries") or data_summary.get("countries") or []:
+        code = str(value).upper()
+        if code and code not in codes:
+            codes.append(code)
+    return codes
+
+
+def _country_list_text(country_codes: list[str]) -> str:
+    labels = [COUNTRIES.get(code).name if COUNTRIES.get(code) else code for code in country_codes]
+    if not labels:
+        return ""
+    if len(labels) == 1:
+        return labels[0]
+    return ", ".join(labels[:-1]) + " và " + labels[-1]
+
+
+def _period_text(start_year: Any, end_year: Any) -> str:
+    if start_year and end_year:
+        if start_year == end_year:
+            return f"năm {start_year}"
+        return f"từ {start_year} đến {end_year}"
+    if start_year:
+        return f"từ {start_year}"
+    if end_year:
+        return f"đến {end_year}"
+    return ""
+
+
+def _of_country_text(country_text: str) -> str:
+    return f" của {country_text}" if country_text else ""
+
+
 def _direct_answer_fallback(normalized: str) -> str:
-    if "no cong" in normalized or "debt" in normalized:
+    if "gdp per capita" in normalized or "binh quan dau nguoi" in normalized or "income per capita" in normalized:
+        return "GDP per capita là GDP bình quân đầu người: GDP tổng chia cho dân số. Trong dữ liệu hiện có, chỉ số gần nhất là GDP thực bình quân đầu người ở dạng log, nên giá trị dùng để so sánh là thang log chứ không phải USD trực tiếp."
+    if "trade openness" in normalized or "do mo thuong mai" in normalized:
+        return "Trade openness là tỷ lệ tổng thương mại so với GDP. Chỉ số này thường cho biết nền kinh tế phụ thuộc nhiều hay ít vào trao đổi hàng hóa và dịch vụ với bên ngoài."
+    if "current account" in normalized or "can can vang lai" in normalized:
+        return "Current account/GDP là cán cân vãng lai so với GDP, phản ánh thặng dư hoặc thâm hụt giao dịch vãng lai so với quy mô nền kinh tế."
+    if "external debt" in normalized or "no nuoc ngoai" in normalized:
+        return "External debt/GNI là nợ nước ngoài so với tổng thu nhập quốc dân, thường dùng để nhìn rủi ro phụ thuộc vốn bên ngoài và khả năng trả nợ ngoại tệ."
+    if "fiscal balance" in normalized or "budget balance" in normalized or "can can ngan sach" in normalized:
+        return "Fiscal balance/GDP là cán cân ngân sách so với GDP. Giá trị dương thường là thặng dư ngân sách, còn giá trị âm thường là thâm hụt ngân sách."
+    if "gfcf" in normalized or "gross fixed capital formation" in normalized or "dau tu co dinh" in normalized:
+        return "GFCF to GDP là đầu tư cố định gộp so với GDP, phản ánh phần sản lượng được dành cho tài sản cố định như máy móc, nhà xưởng và hạ tầng."
+    if "real interest rate" in normalized or "lai suat thuc" in normalized:
+        return "Real interest rate là lãi suất thực sau khi điều chỉnh lạm phát, giúp nhìn chi phí vay hoặc lợi suất tiết kiệm theo sức mua thực tế."
+    if "coverage" in normalized:
+        return "Coverage dữ liệu cho biết một chỉ số có dữ liệu ở những quốc gia, năm bắt đầu, năm kết thúc và số quan sát nhiều hay ít."
+    if "no cong" in normalized or "public debt" in normalized or "government debt" in normalized:
         return (
             "Nợ công/GDP là tỷ lệ nợ công so với GDP, dùng để đánh giá quy mô nợ của khu vực công "
             "so với quy mô nền kinh tế."
@@ -443,13 +587,17 @@ def _direct_answer_fallback(normalized: str) -> str:
             "Lạm phát CPI là mức tăng của chỉ số giá tiêu dùng, phản ánh thay đổi giá của rổ hàng hóa "
             "và dịch vụ tiêu dùng theo thời gian."
         )
+    if "that nghiep" in normalized or "unemployment" in normalized:
+        return "Tỷ lệ thất nghiệp phản ánh phần lực lượng lao động đang không có việc làm nhưng có nhu cầu và sẵn sàng làm việc."
+    if "tax revenue" in normalized or "thu thue" in normalized:
+        return "Tax revenue/GDP là thu thuế so với GDP, thường dùng để đánh giá năng lực huy động nguồn thu thuế của một nền kinh tế."
     return "Đây là câu hỏi giải thích khái niệm, không cần dữ liệu mới. Bạn có thể nêu rõ chỉ số để mình giải thích cụ thể hơn."
 
 
 def _local_contextual_followup_answer(router_context: dict[str, Any]) -> str:
     data_summary = router_context.get("last_data_summary") or {}
     row_count = data_summary.get("row_count")
-    indicator = data_summary.get("indicator") or "chỉ số đang xét"
+    indicator = get_indicator_label(data_summary.get("indicator")) if data_summary.get("indicator") else "chỉ số đang xét"
     years = data_summary.get("years") or []
     top_rows = data_summary.get("top_rows") or router_context.get("last_rows") or []
 

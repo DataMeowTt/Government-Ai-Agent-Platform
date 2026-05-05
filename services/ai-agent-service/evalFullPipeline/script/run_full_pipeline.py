@@ -19,6 +19,16 @@ COLLECT_SCRIPT = SCRIPT_DIR / "collect_chat_responses.py"
 JUDGE_SCRIPT = SCRIPT_DIR / "judge_chat_responses.py"
 
 
+def configure_stdio() -> None:
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def load_env_file(path: Path) -> None:
     if not path.exists():
         return
@@ -128,6 +138,7 @@ def run_command(command: list[str]) -> int:
 
 
 def main() -> int:
+    configure_stdio()
     load_env_file(ENV_PATH)
     if ENV_PATH.exists():
         print(f"Loaded env file: {ENV_PATH}")
