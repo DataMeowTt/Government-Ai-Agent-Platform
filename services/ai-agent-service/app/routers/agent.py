@@ -22,10 +22,9 @@ from app.composer.template_composer import (
 )
 from app.core.security import verify_internal_api_key
 from app.executor.tool_executor import execute_query_plan
+from app.parser.hybrid_parser import parse_with_hybrid_parser
 from app.planner.plan_schema import QueryPlan
-from app.planner.query_planner import create_query_plan
-from app.resolver.slot_resolver import resolve_slots, resolved_slots_to_metadata
-from app.router.rule_router import classify_question
+from app.resolver.slot_resolver import resolved_slots_to_metadata
 from app.schemas.chat import (
     AiAgentChartConfig,
     AiAgentMetadata,
@@ -99,19 +98,32 @@ def maybe_gemini_answer(
 def chat(payload: AiChatRequest) -> AiChatResponse:
     normalized_message = payload.message.strip()
 
-    slots = resolve_slots(normalized_message)
+    parse_result = parse_with_hybrid_parser(normalized_message, payload.context)
+    slots = parse_result.slots
     metadata = resolved_slots_to_metadata(slots)
 
-    question_type = classify_question(normalized_message, slots)
-    plan = create_query_plan(question_type, slots)
+    question_type = parse_result.question_type
+    plan = parse_result.plan
 
-    base_tools = [
-        "indicator_resolver",
-        "country_resolver",
-        "year_resolver",
-        "rule_router",
-        "query_planner",
-    ]
+    if parse_result.parser_debug.get("source") == "model_parser":
+        base_tools = [
+            "parser_model_service",
+            "model_parser_adapter",
+            "query_planner",
+        ]
+    else:
+        base_tools = [
+            "indicator_resolver",
+            "country_resolver",
+            "year_resolver",
+            "rule_router",
+            "query_planner",
+        ]
+
+    response_debug = {
+        "parsedQuery": parse_result.parsed_query,
+        "parserDebug": parse_result.parser_debug,
+    }
 
     indicator_code = metadata["indicators"][0] if metadata["indicators"] else None
     country_codes = metadata["countries"]
@@ -122,6 +134,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=compose_off_topic_answer(),
             questionType="OFF_TOPIC",
+            status=parse_result.status or "off_topic",
             data=[
                 {
                     "message": normalized_message,
@@ -134,6 +147,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             chart=AiAgentChartConfig(type="none"),
             warnings=[],
             metadata=make_metadata(metadata, "template", base_tools),
+            **response_debug,
         )
 
     if plan.question_type == "NEED_CLARIFICATION":
@@ -142,6 +156,8 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=compose_need_clarification_answer(clarification_questions),
             questionType="NEED_CLARIFICATION",
+            status="needs_clarification",
+            clarificationQuestions=clarification_questions,
             data=[
                 {
                     "message": normalized_message,
@@ -154,13 +170,15 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             chart=AiAgentChartConfig(type="none"),
             warnings=clarification_questions,
             metadata=make_metadata(metadata, "template", base_tools),
+            **response_debug,
         )
 
     
-    if plan.question_type == "UNSUPPORTED_DATA_QUERY":
+    if plan.question_type in {"UNSUPPORTED_DATA_QUERY", "UNSUPPORTED"}:
         return AiChatResponse(
             answer=compose_unsupported_answer(plan.warnings),
-            questionType="UNSUPPORTED_DATA_QUERY",
+            questionType=plan.question_type,
+            status="unsupported",
             data=[
                 {
                     "message": normalized_message,
@@ -173,6 +191,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             chart=AiAgentChartConfig(type="none"),
             warnings=plan.warnings,
             metadata=make_metadata(metadata, "template", base_tools),
+            **response_debug,
         )
 
     try:
@@ -186,6 +205,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
                 ]
             ),
             questionType="UNSUPPORTED_DATA_QUERY",
+            status="unsupported",
             data=[
                 {
                     "message": normalized_message,
@@ -202,6 +222,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
                 str(error),
             ],
             metadata=make_metadata(metadata, "template", base_tools),
+            **response_debug,
         )
 
     result = executed["result"]
@@ -241,6 +262,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=answer,
             questionType="VALID_COMPARE_QUERY",
+            status="success",
             data=[
                 {
                     "message": normalized_message,
@@ -263,6 +285,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             ),
             warnings=[] if rows else ["Không tìm thấy dữ liệu phù hợp."],
             metadata=make_metadata(metadata, source, tools_used),
+            **response_debug,
         )
 
     
@@ -294,6 +317,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=answer,
             questionType="VALID_RANKING_QUERY",
+            status="success",
             data=[
                 {
                     "message": normalized_message,
@@ -315,6 +339,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             ),
             warnings=[] if rows else ["Không tìm thấy dữ liệu ranking phù hợp."],
             metadata=make_metadata(metadata, source, tools_used),
+            **response_debug,
         )
 
     
@@ -343,6 +368,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=answer,
             questionType="VALID_COVERAGE_QUERY",
+            status="success",
             data=[
                 {
                     "message": normalized_message,
@@ -363,6 +389,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             ),
             warnings=[] if rows else ["Không tìm thấy coverage phù hợp."],
             metadata=make_metadata(metadata, source, tools_used),
+            **response_debug,
         )
 
     
@@ -398,6 +425,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=answer,
             questionType="VALID_ANOMALY_QUERY",
+            status="success",
             data=[
                 {
                     "message": normalized_message,
@@ -420,6 +448,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             ),
             warnings=[] if rows else ["Không tìm thấy điểm bất thường phù hợp."],
             metadata=make_metadata(metadata, source, tools_used),
+            **response_debug,
         )
 
     
@@ -465,6 +494,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         return AiChatResponse(
             answer=answer,
             questionType="VALID_TREND_QUERY",
+            status="success",
             data=[
                 {
                     "message": normalized_message,
@@ -487,6 +517,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             ),
             warnings=[] if rows else ["Không tìm thấy dữ liệu chuỗi thời gian phù hợp."],
             metadata=make_metadata(metadata, source, tools_used),
+            **response_debug,
         )
 
     
@@ -498,6 +529,7 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
             }
         ),
         questionType="UNSUPPORTED_DATA_QUERY",
+        status="unsupported",
         data=[
             {
                 "message": normalized_message,
@@ -510,4 +542,5 @@ def chat(payload: AiChatRequest) -> AiChatResponse:
         chart=AiAgentChartConfig(type="none"),
         warnings=["Missing response composer for this plan type."],
         metadata=make_metadata(metadata, "template", tools_used),
+        **response_debug,
     )

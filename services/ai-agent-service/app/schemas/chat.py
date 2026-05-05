@@ -12,6 +12,7 @@ QuestionType = Literal[
     "VALID_TREND_QUERY",
     "VALID_ANOMALY_QUERY",
     "VALID_COVERAGE_QUERY",
+    "UNSUPPORTED",
     "UNSUPPORTED_DATA_QUERY",
 ]
 
@@ -53,8 +54,12 @@ class AiAgentMetadata(BaseModel):
 class AiChatResponse(BaseModel):
     answer: str
     questionType: QuestionType = "VALID_SIMPLE_QUERY"
+    status: str = "success"
     data: list[dict[str, Any]] = Field(default_factory=list)
     chart: AiAgentChartConfig = Field(default_factory=AiAgentChartConfig)
+    parsedQuery: dict[str, Any] | None = None
+    parserDebug: dict[str, Any] | None = None
+    clarificationQuestions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     metadata: AiAgentMetadata = Field(default_factory=AiAgentMetadata)
 
