@@ -60,8 +60,7 @@ def run_parser_agent(
             *(rule_draft.draft_countries if rule_draft else []),
             *(front_draft.draft_countries if front_draft else []),
             *[match.country.code for match in resolve_countries(user_message)],
-            *(_string_list(model_parsed.get("countries")) if isinstance(model_parsed, dict) else []),
-        ]
+            *(_normalize_model_countries(model_parsed, user_message) if isinstance(model_parsed, dict) else []),        ]
     )
 
     start_year, end_year = _extract_year_range(user_message, rule_draft, front_draft, model_parsed)
@@ -131,6 +130,26 @@ def run_parser_agent(
         },
     )
 
+def _normalize_model_countries(model_parsed: dict[str, Any], user_message: str) -> list[str]:
+    raw_codes = _string_list(model_parsed.get("countries"))
+    normalized_message = normalize_catalog_text(user_message)
+
+    result: list[str] = []
+    mentions_vietnam = "vietnam" in normalized_message or "viet nam" in normalized_message
+    mentions_namibia = "namibia" in normalized_message
+
+    for raw in raw_codes:
+        code = str(raw or "").upper().strip()
+        if not code:
+            continue
+
+        if code == "NAM" and mentions_vietnam and not mentions_namibia:
+            continue
+
+        if code not in result:
+            result.append(code)
+
+    return result
 
 def _infer_intent(
     normalized: str,
@@ -143,6 +162,12 @@ def _infer_intent(
     model_parsed: dict[str, Any] | None,
 ) -> str:
     if unsupported_terms:
+        return "UNSUPPORTED"
+
+    if rule_draft and rule_draft.route == "UNSUPPORTED":
+        return "UNSUPPORTED"
+
+    if front_draft and front_draft.route == "UNSUPPORTED":
         return "UNSUPPORTED"
     for intent in (
         rule_draft.intent_hint if rule_draft else None,

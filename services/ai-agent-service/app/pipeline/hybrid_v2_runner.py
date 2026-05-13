@@ -9,7 +9,15 @@ from app.composer.chart_composer import (
     build_series_line_chart_data,
 )
 from app.composer.deterministic_guard import append_result_warnings
-from app.composer.display_formatter import get_indicator_label, sanitize_user_facing_text
+from app.composer.display_formatter import (
+    format_value,
+    get_country_label,
+    get_direction_text,
+    get_indicator_label,
+    get_indicator_unit,
+    safe_number,
+    sanitize_user_facing_text,
+)
 from app.composer.template_composer import (
     compose_anomaly_answer,
     compose_compare_answer,
@@ -251,15 +259,7 @@ def _followup_analysis_response(
     rule_draft: Any,
     router_debug: dict[str, Any] | None = None,
 ) -> AiChatResponse:
-    summary = router_context.get("last_data_summary") or {}
-    indicator = get_indicator_label(summary.get("indicator")) if summary.get("indicator") else "kết quả trước đó"
-    row_count = summary.get("row_count")
-    detail = f" với {row_count} dòng dữ liệu" if row_count else ""
-    answer = (
-        f"Dựa trên {indicator}{detail}, có thể nhận xét định tính rằng khác biệt trong kết quả thường phản ánh "
-        "bối cảnh kinh tế, cấu trúc chính sách và chất lượng dữ liệu của từng nước. "
-        "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
-    )
+    answer = _compose_followup_analysis_from_context(router_context)
     response = AiChatResponse(
         answer=sanitize_user_facing_text(answer),
         questionType="VALID_SIMPLE_QUERY",
@@ -284,6 +284,125 @@ def _followup_analysis_response(
     )
     return response
 
+def _compose_followup_analysis_from_context(router_context: dict[str, Any]) -> str:
+    summary = router_context.get("last_data_summary") or {}
+    rows = summary.get("top_rows") or router_context.get("last_rows") or []
+    question_type = router_context.get("last_question_type")
+    indicator_code = summary.get("indicator")
+    indicator_label = get_indicator_label(indicator_code) if indicator_code else "kết quả trước đó"
+    unit = get_indicator_unit(indicator_code)
+
+    row_count = summary.get("row_count")
+    period = _context_period_text(summary)
+
+    if not rows:
+        detail = f" với {row_count} dòng dữ liệu" if row_count else ""
+        return sanitize_user_facing_text(
+            f"Dựa trên {indicator_label}{detail}, có thể nhận xét định tính rằng khác biệt trong kết quả thường phản ánh "
+            "bối cảnh kinh tế, cấu trúc chính sách và chất lượng dữ liệu của từng nước. "
+            "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+        )
+
+    if question_type == "VALID_RANKING_QUERY":
+        first_row = _first_numeric_row(rows)
+        if first_row:
+            country = get_country_label(first_row)
+            value = format_value(_context_row_value(first_row), unit)
+            order = summary.get("order")
+            order_text = "cao nhất" if order == "desc" else "thấp nhất" if order == "asc" else "nổi bật"
+            return sanitize_user_facing_text(
+                f"Kết quả trước là xếp hạng {indicator_label}{period}. "
+                f"Nhóm đứng {order_text} bắt đầu với {country} ở mức {value}. "
+                "Sự khác biệt giữa các nước có thể phản ánh cấu trúc kinh tế, chính sách và chất lượng dữ liệu khác nhau. "
+                "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+            )
+
+    grouped = _context_rows_by_country(rows)
+    final_rows: list[dict] = []
+
+    for country_code, country_rows in grouped.items():
+        numeric_rows = [row for row in country_rows if safe_number(_context_row_value(row)) is not None]
+        if not numeric_rows:
+            continue
+        numeric_rows.sort(key=lambda row: int(row.get("year") or 0))
+        first = numeric_rows[0]
+        last = numeric_rows[-1]
+        final_rows.append(last)
+        country = get_country_label(last, country_code=country_code)
+        direction = get_direction_text(_context_row_value(first), _context_row_value(last))
+
+        if len(grouped) == 1:
+            return sanitize_user_facing_text(
+                f"Kết quả trước cho thấy {indicator_label} của {country}{period} "
+                f"đi từ {format_value(_context_row_value(first), unit)} năm {first.get('year')} "
+                f"đến {format_value(_context_row_value(last), unit)} năm {last.get('year')}, xu hướng chung là {direction}. "
+                "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+            )
+
+    if len(final_rows) >= 2:
+        highest = max(final_rows, key=lambda row: safe_number(_context_row_value(row)) or float("-inf"))
+        lowest = min(final_rows, key=lambda row: safe_number(_context_row_value(row)) or float("inf"))
+
+        high_country = get_country_label(highest)
+        low_country = get_country_label(lowest)
+        high_value = format_value(_context_row_value(highest), unit)
+        low_value = format_value(_context_row_value(lowest), unit)
+        year = highest.get("year") or lowest.get("year")
+
+        return sanitize_user_facing_text(
+            f"Kết quả trước cho thấy ở cuối kỳ {year}, {high_country} có {indicator_label} cao hơn "
+            f"({high_value}), còn {low_country} thấp hơn ({low_value}) trong nhóm dữ liệu đã hiển thị. "
+            "Chênh lệch này nên được hiểu như mô tả dữ liệu, không tự động chứng minh nguyên nhân. "
+            "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+        )
+
+    return sanitize_user_facing_text(
+        f"Dựa trên kết quả đã hiển thị cho {indicator_label}{period}, có thể rút ra nhận xét định tính nhưng chưa đủ dữ liệu "
+        "để kết luận nguyên nhân. Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+    )
+
+
+def _context_period_text(summary: dict[str, Any]) -> str:
+    start_year = summary.get("start_year")
+    end_year = summary.get("end_year")
+    year = summary.get("year")
+
+    if year:
+        return f" năm {year}"
+    if start_year and end_year:
+        if start_year == end_year:
+            return f" năm {start_year}"
+        return f" giai đoạn {start_year}-{end_year}"
+    if start_year:
+        return f" từ năm {start_year}"
+    if end_year:
+        return f" đến năm {end_year}"
+    return ""
+
+
+def _context_row_value(row: dict[str, Any]) -> Any:
+    if row.get("value") is not None:
+        return row.get("value")
+    if row.get("actual_value") is not None:
+        return row.get("actual_value")
+    return None
+
+
+def _first_numeric_row(rows: list[dict]) -> dict | None:
+    for row in rows:
+        if safe_number(_context_row_value(row)) is not None:
+            return row
+    return None
+
+
+def _context_rows_by_country(rows: list[dict]) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        code = row.get("country_code")
+        if not code:
+            continue
+        grouped.setdefault(str(code), []).append(row)
+    return grouped
 
 def _direct_explanation_response(
     payload: AiChatRequest,
@@ -510,6 +629,103 @@ def _no_data_response(
     _update_basic(payload.conversationId, message, answer, "DATA_QUERY", "no_data", response.questionType)
     return response
 
+def _empty_result_no_data_response(
+    payload: AiChatRequest,
+    message: str,
+    candidate: Any,
+    validation: Any,
+    plan: Any,
+    rows: list[dict],
+    result_validation: dict[str, Any],
+    rule_draft: Any,
+    router_debug: dict[str, Any],
+    warnings: list[str],
+) -> AiChatResponse:
+    validated_query = validation.validated_query or {}
+
+    answer = compose_no_data_answer(
+        validation_reason="Không tìm thấy dữ liệu phù hợp trong kết quả truy vấn.",
+        warnings=warnings,
+        validated_query=validated_query,
+    )
+
+    data_item = {
+        "message": message,
+        "conversationId": payload.conversationId,
+        "resolved": _resolved_metadata(validated_query),
+        "plan": _plan_to_dict(plan),
+        "route": validated_query.get("route"),
+        "indicator": validated_query.get("indicator"),
+        "countries": validated_query.get("countries") or [],
+        "rows": rows,
+        "resultValidation": result_validation,
+    }
+
+    response = AiChatResponse(
+        answer=sanitize_user_facing_text(answer),
+        questionType="NO_DATA",
+        status="no_data",
+        data=[data_item],
+        chart=AiAgentChartConfig(type="none"),
+        warnings=warnings,
+        metadata=_metadata(
+            "template",
+            ["rule_first_router", "parser_agent", "query_validator", "validated_plan_adapter", plan.tool_name, "result_validator"],
+            rule_draft=rule_draft,
+            candidate=candidate,
+            validation=validation,
+            result_validation=result_validation,
+            unsupported_terms=validation.unsupported_terms,
+            missing_countries=result_validation.get("missing_countries", []),
+            validated_query=validated_query,
+        ),
+        parsedQuery=asdict(candidate),
+        parserDebug=asdict(candidate),
+        routerDebug={
+            **router_debug,
+            "route": validated_query.get("route"),
+            "executed_parser_agent": True,
+            "executed_db": True,
+            "status": "no_data",
+            "needs_parser": bool(rule_draft.needs_parser_agent),
+            "needs_db": bool(rule_draft.needs_db),
+        },
+    )
+
+    update_conversation_context(
+        payload.conversationId,
+        {
+            "last_user_message": message,
+            "last_answer": response.answer,
+            "last_route": validated_query.get("route") or "DATA_QUERY",
+            "last_status": "no_data",
+            "last_question_type": response.questionType,
+            "last_parsed_query": asdict(candidate),
+            "last_validated_query": validated_query,
+            "last_query_plan": _plan_to_dict(plan),
+            "last_rows": [],
+            "last_chart": {},
+            "last_result_validation": result_validation,
+            "last_data_summary": {
+                "indicator": validated_query.get("indicator"),
+                "countries": validated_query.get("countries") or [],
+                "years": [
+                    year
+                    for year in (
+                        validated_query.get("effective_start_year"),
+                        validated_query.get("effective_end_year"),
+                    )
+                    if year
+                ],
+                "start_year": validated_query.get("effective_start_year"),
+                "end_year": validated_query.get("effective_end_year"),
+                "row_count": 0,
+                "top_rows": [],
+            },
+        },
+    )
+
+    return response
 
 def _data_response(
     payload: AiChatRequest,
@@ -531,6 +747,20 @@ def _data_response(
     end_year = validated_query.get("effective_end_year")
     warnings = _dedupe_strings([*validation.warnings, *plan.warnings, *result_validation.get("warnings", [])])
     question_type = plan.question_type
+
+    if result_validation.get("is_empty"):
+        return _empty_result_no_data_response(
+            payload=payload,
+            message=message,
+            candidate=candidate,
+            validation=validation,
+            plan=plan,
+            rows=rows,
+            result_validation=result_validation,
+            rule_draft=rule_draft,
+            router_debug=router_debug,
+            warnings=warnings,
+        )
 
     if question_type == "VALID_COMPARE_QUERY":
         result_rows = result.get("rows", rows) if isinstance(result, dict) else rows

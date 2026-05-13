@@ -336,17 +336,12 @@ def _normalize_country_groups(raw_groups: list[Any]) -> tuple[list[str], list[st
 
 def _normalize_country_codes(raw_countries: list[Any]) -> tuple[list[str], list[str]]:
     normalized_codes = [str(value or "").upper().strip() for value in raw_countries]
-    valid_candidates = [code for code in normalized_codes if code in COUNTRIES]
-    drop_nam = "NAM" in normalized_codes and any(code != "NAM" for code in valid_candidates)
 
     valid: list[str] = []
     invalid: list[str] = []
 
     for code in normalized_codes:
         if not code:
-            continue
-        if code == "NAM" and drop_nam:
-            invalid.append(code)
             continue
         if code in COUNTRIES:
             if code not in valid:

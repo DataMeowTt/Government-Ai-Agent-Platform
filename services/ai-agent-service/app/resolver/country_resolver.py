@@ -145,8 +145,6 @@ def resolve_countries(message: str) -> list[CountryMatch]:
     matches: list[CountryMatch] = []
 
     for country in COUNTRIES.values():
-        if country.code == "NAM" and any(token in normalized_message for token in ("viet nam", "vietnam")):
-            continue
         if _contains_iso3_token(message, country.code):
             matches.append(CountryMatch(country=country, matched_alias=country.code))
             continue

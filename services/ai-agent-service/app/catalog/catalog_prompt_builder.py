@@ -3,10 +3,22 @@ from app.catalog.canonical_indicator_catalog import (
     get_unsupported_indicators_compact,
 )
 from app.catalog.country_group_catalog import list_country_groups
+from app.resolver.country_resolver import COUNTRIES
 
 
 def build_compact_indicator_catalog_for_prompt(max_aliases_per_indicator: int = 8) -> list[dict]:
     return get_supported_indicators_compact(max_aliases_per_indicator=max_aliases_per_indicator)
+
+
+def build_compact_country_catalog_for_prompt(max_aliases_per_country: int = 6) -> list[dict]:
+    return [
+        {
+            "code": country.code,
+            "name": country.name,
+            "aliases": list(country.aliases[:max_aliases_per_country]),
+        }
+        for country in COUNTRIES.values()
+    ]
 
 
 def build_compact_country_group_catalog_for_prompt() -> list[dict]:

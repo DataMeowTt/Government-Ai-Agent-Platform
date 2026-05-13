@@ -75,6 +75,7 @@ def create_query_plan(question_type: str, slots: ResolvedSlots) -> QueryPlan:
                 "year": year,
                 "limit": 10,
                 "order": "desc",
+                "country_codes": country_codes,
             },
         )
 

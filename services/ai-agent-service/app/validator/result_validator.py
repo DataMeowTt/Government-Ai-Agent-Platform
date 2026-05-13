@@ -22,6 +22,7 @@ def validate_tool_result(
         "TREND_ANALYSIS",
         "VALUE_LOOKUP",
         "ANOMALY_DETECTION",
+        "COVERAGE",
     }
 
     missing_countries = (

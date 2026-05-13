@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
 
     pipeline_mode: str = "hybrid_v2"
-    enable_hybrid_v2_fallback: bool = True
+    enable_hybrid_v2_fallback: bool = False
     hybrid_v2_debug: bool = True
 
     enable_rule_first_router: bool = True

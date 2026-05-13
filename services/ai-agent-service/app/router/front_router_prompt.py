@@ -3,6 +3,7 @@ from dataclasses import asdict
 from typing import Any
 
 from app.catalog.catalog_prompt_builder import (
+    build_compact_country_catalog_for_prompt,
     build_compact_country_group_catalog_for_prompt,
     build_compact_indicator_catalog_for_prompt,
     build_compact_unsupported_indicator_catalog_for_prompt,
@@ -47,6 +48,7 @@ def build_front_router_prompt(
         "rule_route_draft": asdict(rule_route_draft) if rule_route_draft else None,
         "supported_indicator_catalog_compact": build_compact_indicator_catalog_for_prompt(max_aliases_per_indicator=8),
         "unsupported_indicator_catalog_compact": build_compact_unsupported_indicator_catalog_for_prompt(),
+        "country_catalog_compact": build_compact_country_catalog_for_prompt(max_aliases_per_country=6),
         "country_group_catalog_compact": build_compact_country_group_catalog_for_prompt(),
         "allowed_routes": ALLOWED_FRONT_ROUTES,
         "allowed_intents": ALLOWED_FRONT_INTENTS,
@@ -67,9 +69,10 @@ Nhiệm vụ:
 2. Nếu là follow-up, dùng conversation_context để rewrite hoặc tạo draft.
 3. Nếu là data query mới, trích xuất draft intent/indicator/country/year nếu thấy rõ.
 4. Chỉ chọn indicator code có trong supported_indicator_catalog_compact.
-5. Nếu user hỏi chỉ số không có trong supported catalog nhưng có trong unsupported catalog, đưa vào unsupported_terms.
-6. Nếu thiếu slot quan trọng, route NEED_CLARIFICATION.
-7. Output JSON object duy nhất, không markdown, không code fence.
+5. Chỉ chọn country code có trong country_catalog_compact.
+6. Nếu user hỏi chỉ số không có trong supported catalog nhưng có trong unsupported catalog, đưa vào unsupported_terms.
+7. Nếu thiếu slot quan trọng, route NEED_CLARIFICATION.
+8. Output JSON object duy nhất, không markdown, không code fence.
 
 Schema output bắt buộc:
 {{
