@@ -18,7 +18,8 @@ INDICATOR_LABELS: dict[str, str] = {
     "GDP_growth_YoY": "tăng trưởng GDP danh nghĩa",
     "GDP_growth_trend_5yr": "xu hướng tăng trưởng GDP 5 năm",
     "GDP_pc_growth_gap": "chênh lệch tăng trưởng GDP bình quân đầu người",
-    "log_rGDP_pc_USD": "GDP thực bình quân đầu người",
+    "log_rGDP_pc_USD": "GDP bình quân đầu người",
+    "GDP_per_capita": "GDP bình quân đầu người",
     "tax_revenue_pct_GDP": "thu thuế/GDP",
     "fiscal_balance_GDP": "cán cân ngân sách/GDP",
     "govrev_GDP": "thu ngân sách/GDP",
@@ -33,10 +34,13 @@ INDICATOR_LABELS: dict[str, str] = {
     "hcons_share": "tiêu dùng hộ gia đình/GDP",
     "REER_deviation": "độ lệch REER",
     "spending_efficiency": "hiệu quả chi tiêu công",
-    "agri_va_share": "tỷ trọng nông nghiệp trong GDP",
-    "manuf_va_share": "tỷ trọng công nghiệp chế biến trong GDP",
+    "agri_va_share": "tỷ trọng nông nghiệp/GDP",
+    "manuf_va_share": "tỷ trọng công nghiệp chế biến/GDP",
     "food_bev_share_manuf": "tỷ trọng thực phẩm/đồ uống trong sản xuất chế biến",
-    "trade_pct_gdp": "thương mại/GDP",
+    "trade_pct_gdp": "độ mở thương mại",
+    "trade_openness": "độ mở thương mại",
+    "current_account_GDP": "cán cân vãng lai/GDP",
+    "external_debt_GNI": "nợ nước ngoài/GNI",
     "urban_pop_pct": "tỷ lệ dân số đô thị",
     "urban_pop_growth": "tăng trưởng dân số đô thị",
     "pop_density": "mật độ dân số",
@@ -92,6 +96,9 @@ PERCENT_INDICATORS = {
     "manuf_va_share",
     "food_bev_share_manuf",
     "trade_pct_gdp",
+    "trade_openness",
+    "current_account_GDP",
+    "external_debt_GNI",
     "urban_pop_pct",
     "urban_pop_growth",
     "pop_growth",
@@ -113,6 +120,7 @@ INDICATOR_UNITS: dict[str, str] = {
     "pop_density": "người/km²",
     "log_pop_density": "log",
     "log_rGDP_pc_USD": "log",
+    "GDP_per_capita": "USD",
     "crisis_any": "0/1",
     "SovDebtCrisis": "0/1",
     "CurrencyCrisis": "0/1",
@@ -223,3 +231,50 @@ def replace_indicator_codes(text: str) -> str:
             flags=re.IGNORECASE,
         )
     return output
+
+
+INTERNAL_TERM_REPLACEMENTS: dict[str, str] = {
+    "Gemini Router": "trợ lý",
+    "AI Agent Service": "dịch vụ dữ liệu",
+    "AI Agent": "trợ lý",
+    "parsedQuery": "diễn giải yêu cầu",
+    "query planner": "bước xử lý",
+    "model parser": "bước xử lý",
+    "database": "dữ liệu",
+    "DB": "dữ liệu",
+    "ngrok": "kết nối",
+    "Kaggle": "môi trường xử lý",
+    "router": "bước xử lý",
+    "parser": "bước xử lý",
+    "tool": "công cụ xử lý",
+}
+
+
+TECHNICAL_ANSWER_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"Đã\s+query\s+dữ\s+liệu\s+thật[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+    (r"Đã\s+so\s+sánh\s+dữ\s+liệu\s+thật[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+    (r"Tìm\s+thấy\s+\d+\s+dòng\s+dữ\s+liệu[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+    (r"Da\s+query\s+du\s+lieu\s+that[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+    (r"Da\s+so\s+sanh\s+du\s+lieu\s+that[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+    (r"Tim\s+thay\s+\d+\s+dong\s+du\s+lieu[^.。!?\n]*(?:[.。!?]\s*)?", ""),
+)
+
+
+def sanitize_user_facing_text(text: str) -> str:
+    output = replace_indicator_codes(str(text or ""))
+
+    for pattern, replacement in TECHNICAL_ANSWER_PATTERNS:
+        output = re.sub(pattern, replacement, output, flags=re.IGNORECASE)
+
+    for old, new in sorted(INTERNAL_TERM_REPLACEMENTS.items(), key=lambda item: len(item[0]), reverse=True):
+        output = re.sub(
+            rf"(?<![A-Za-z0-9_]){re.escape(old)}(?![A-Za-z0-9_])",
+            new,
+            output,
+            flags=re.IGNORECASE,
+        )
+
+    output = re.sub(r"[ \t]+", " ", output)
+    output = re.sub(r"\s*\n\s*", "\n", output)
+    output = re.sub(r"\n{3,}", "\n\n", output)
+    return output.strip()

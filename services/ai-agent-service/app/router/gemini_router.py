@@ -386,6 +386,7 @@ def _has_previous_query_context(router_context: dict[str, Any]) -> bool:
     data_summary = router_context.get("last_data_summary") or {}
     return bool(
         parsed_query.get("indicators")
+        or parsed_query.get("unsupported_indicator")
         or data_summary.get("indicator")
         or router_context.get("last_rows")
     )
@@ -411,9 +412,13 @@ def _is_followup_modify(normalized: str) -> bool:
         "doi sang",
         "lay top",
         "them",
+        "add",
         "so sanh them",
         "chi lay",
         "giai doan",
+        "remove",
+        "bo ",
+        "xoa ",
     )
     if any(keyword in normalized for keyword in explicit_keywords):
         return True
@@ -465,9 +470,19 @@ def _rewrite_followup_query(
     indicator_text = _indicator_text(parsed_query, base_query, data_summary)
 
     countries = _country_codes_from_context(parsed_query, data_summary)
-    for match in resolve_countries(message):
-        if match.country.code not in countries:
-            countries.append(match.country.code)
+    mentioned_countries = [match.country.code for match in resolve_countries(message)]
+    if mentioned_countries:
+        if _is_remove_country(normalized):
+            countries = [code for code in countries if code not in mentioned_countries]
+        elif _is_replace_field(normalized):
+            countries = []
+            for code in mentioned_countries:
+                if code not in countries:
+                    countries.append(code)
+        else:
+            for code in mentioned_countries:
+                if code not in countries:
+                    countries.append(code)
     country_text = _country_list_text(countries)
 
     years = [int(year) for year in re.findall(r"\b((?:19|20)\d{2})\b", normalized)]
@@ -485,9 +500,9 @@ def _rewrite_followup_query(
             end_year = max(summary_years)
 
     limit_match = re.search(r"\btop\s+(\d+)\b", normalized)
-    limit = int(limit_match.group(1)) if limit_match else parsed_query.get("limit") or 10
+    limit = int(limit_match.group(1)) if limit_match else parsed_query.get("limit") or data_summary.get("limit") or 10
 
-    order = parsed_query.get("ranking_order") or "desc"
+    order = parsed_query.get("ranking_order") or data_summary.get("order") or "desc"
     if any(token in normalized for token in ("thap nhat", "lowest", "nho nhat")):
         order = "asc"
     elif any(token in normalized for token in ("cao nhat", "highest", "lon nhat")):
@@ -510,12 +525,23 @@ def _rewrite_followup_query(
     return f"{base_query} {message}".strip()
 
 
+def _is_replace_field(normalized: str) -> bool:
+    return any(token in normalized for token in ("doi sang", "thay bang", "thay thanh", "chuyen sang"))
+
+
+def _is_remove_country(normalized: str) -> bool:
+    return any(token in normalized for token in ("bo ", "xoa ", "loai ", "remove", "without"))
+
+
 def _indicator_text(parsed_query: dict[str, Any], base_query: str, data_summary: dict[str, Any] | None = None) -> str:
     indicators = parsed_query.get("indicators") or []
     if not indicators and data_summary:
         indicator = data_summary.get("indicator")
         if indicator:
             indicators = [indicator]
+    unsupported_indicator = parsed_query.get("unsupported_indicator")
+    if not indicators and unsupported_indicator:
+        return str(unsupported_indicator)
     normalized_base = normalize_text(base_query)
     if "inflation_cpi" in indicators or "lam phat" in normalized_base or "cpi" in normalized_base:
         return "lạm phát CPI"

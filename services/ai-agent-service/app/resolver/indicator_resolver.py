@@ -9,14 +9,17 @@ from app.catalog.analytics_catalog import get_indicator_analytics_metadata
 UNSUPPORTED_INDICATOR_ALIASES: dict[str, tuple[str, ...]] = {
     "cán cân vãng lai/GDP": (
         "current account/GDP",
+        "current account balance/GDP",
         "current account GDP",
         "current account",
+        "current_account_GDP",
         "curr_account_GDP",
         "cán cân vãng lai/GDP",
         "can can vang lai/GDP",
     ),
     "nợ nước ngoài/GNI": (
         "external debt/GNI",
+        "external debt to GNI",
         "external debt",
         "external_debt_GNI",
         "nợ nước ngoài/GNI",
@@ -72,7 +75,12 @@ def resolve_indicator(message: str) -> IndicatorMatch | None:
 
 def detect_unsupported_indicator_label(message: str) -> str | None:
     normalized_message = normalize_text(message)
-    for label, aliases in UNSUPPORTED_INDICATOR_ALIASES.items():
+    unavailable_labels = {
+        label: aliases
+        for label, aliases in UNSUPPORTED_INDICATOR_ALIASES.items()
+        if not any(normalize_text(code) in {normalize_text(alias) for alias in aliases} for code in INDICATORS)
+    }
+    for label, aliases in unavailable_labels.items():
         for alias in aliases:
             normalized_alias = normalize_text(alias)
             if _contains_alias(normalized_message, normalized_alias):

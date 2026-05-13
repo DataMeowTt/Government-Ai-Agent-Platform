@@ -9,7 +9,7 @@ from app.composer.chart_composer import (
     build_ranking_bar_chart_data,
     build_series_line_chart_data,
 )
-from app.composer.display_formatter import get_indicator_label, replace_indicator_codes
+from app.composer.display_formatter import get_indicator_label, sanitize_user_facing_text
 from app.composer.followup_composer import compose_followup_analysis_answer
 from app.composer.gemini_composer import compose_gemini_answer, should_use_gemini
 from app.composer.template_composer import (
@@ -94,6 +94,33 @@ def plan_to_dict(plan: QueryPlan) -> dict:
     }
 
 
+def apply_query_text_overrides(plan: QueryPlan, query_text: str, original_message: str) -> QueryPlan:
+    if plan.question_type != "VALID_RANKING_QUERY":
+        return plan
+
+    normalized = f"{query_text} {original_message}".lower()
+    arguments = dict(plan.arguments)
+
+    limit_match = re.search(r"\btop\s+(\d+)\b", normalized)
+    if limit_match:
+        arguments["limit"] = int(limit_match.group(1))
+
+    if any(token in normalized for token in ("thấp nhất", "thap nhat", "lowest", "nhỏ nhất", "nho nhat")):
+        arguments["order"] = "asc"
+    elif any(token in normalized for token in ("cao nhất", "cao nhat", "highest", "lớn nhất", "lon nhat")):
+        arguments["order"] = "desc"
+
+    if arguments == plan.arguments:
+        return plan
+
+    return QueryPlan(
+        question_type=plan.question_type,
+        tool_name=plan.tool_name,
+        arguments=arguments,
+        warnings=plan.warnings,
+    )
+
+
 FORBIDDEN_FINAL_ANSWER_TERMS = (
     "Gemini Router",
     "router",
@@ -138,33 +165,30 @@ def is_user_facing_answer(answer: str | None) -> bool:
         "Gemini Router có thể",
         "hệ thống có thể",
         "model có thể",
+        "Đã query dữ liệu thật",
+        "Đã so sánh dữ liệu thật",
+        "Tìm thấy",
+        "dòng dữ liệu",
     )
     lowered = normalized.lower()
     return not any(phrase.lower() in lowered for phrase in system_phrases)
 
 
 def sanitize_user_facing_answer(answer: str) -> str:
-    sanitized = replace_indicator_codes(answer)
-    replacements = {
-        "Gemini Router": "Trợ lý",
-        "AI Agent Service": "dịch vụ",
-        "AI Agent": "trợ lý",
-        "parsedQuery": "phần diễn giải",
-        "query planner": "bước xử lý",
-        "model parser": "bước xử lý",
-        "database": "dữ liệu",
-        "DB": "dữ liệu",
-        "ngrok": "kết nối",
-        "Kaggle": "môi trường xử lý",
-    }
-    for old, new in replacements.items():
-        sanitized = re.sub(rf"\b{re.escape(old)}\b", new, sanitized, flags=re.IGNORECASE)
+    return sanitize_user_facing_text(answer)
 
-    sanitized = re.sub(r"\brouter\b", "bước định hướng", sanitized, flags=re.IGNORECASE)
-    sanitized = re.sub(r"\bparser\b", "bước xử lý", sanitized, flags=re.IGNORECASE)
-    sanitized = re.sub(r"\btool\b", "công cụ xử lý", sanitized, flags=re.IGNORECASE)
-    sanitized = re.sub(r"\s+", " ", sanitized).strip()
-    return sanitized
+
+def sanitize_warnings(warnings: list[str] | None) -> list[str]:
+    cleaned: list[str] = []
+    for warning in warnings or []:
+        text = sanitize_user_facing_text(str(warning or ""))
+        if not text:
+            continue
+        if any(term.lower() in text.lower() for term in ("planner", "parser", "router", "parsedquery", "database", "db", "tool")):
+            continue
+        if text not in cleaned:
+            cleaned.append(text)
+    return cleaned
 
 
 def local_followup_answer(previous_context: dict[str, Any], router_context: dict[str, Any], message: str) -> str:
@@ -470,7 +494,7 @@ def _run_parser_db_flow(
     metadata = resolved_slots_to_metadata(slots)
 
     question_type = parse_result.question_type
-    plan = parse_result.plan
+    plan = apply_query_text_overrides(parse_result.plan, query_text, original_message)
 
     if parse_result.parser_debug.get("source") == "model_parser":
         base_tools = [
@@ -656,7 +680,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=chart,
-            warnings=[] if rows else ["Không tìm thấy dữ liệu phù hợp."],
+            warnings=[] if rows else sanitize_warnings(["Không tìm thấy dữ liệu phù hợp."]),
             metadata=make_metadata(metadata, source, tools_used),
             **response_debug,
         )
@@ -712,7 +736,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=chart,
-            warnings=[] if rows else ["Không tìm thấy dữ liệu ranking phù hợp."],
+            warnings=[] if rows else sanitize_warnings(["Không tìm thấy dữ liệu xếp hạng phù hợp."]),
             metadata=make_metadata(metadata, source, tools_used),
             **response_debug,
         )
@@ -745,7 +769,7 @@ def _run_parser_db_flow(
 
         chart = AiAgentChartConfig(
             type="table" if rows else "none",
-            title=f"Coverage dữ liệu {get_indicator_label(indicator_code)}",
+            title=f"Phạm vi dữ liệu {get_indicator_label(indicator_code)}",
             xKey=None,
             yKeys=None,
             data=rows,
@@ -762,7 +786,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=chart,
-            warnings=[] if rows else ["Không tìm thấy coverage phù hợp."],
+            warnings=[] if rows else sanitize_warnings(["Không tìm thấy phạm vi dữ liệu phù hợp."]),
             metadata=make_metadata(metadata, source, tools_used),
             **response_debug,
         )
@@ -821,7 +845,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=chart,
-            warnings=[] if rows else ["Không tìm thấy điểm bất thường phù hợp."],
+            warnings=[] if rows else sanitize_warnings(["Không tìm thấy điểm bất thường phù hợp."]),
             metadata=make_metadata(metadata, source, tools_used),
             **response_debug,
         )
@@ -890,7 +914,7 @@ def _run_parser_db_flow(
                 }
             ],
             chart=chart,
-            warnings=[] if rows else ["Không tìm thấy dữ liệu chuỗi thời gian phù hợp."],
+            warnings=[] if rows else sanitize_warnings(["Không tìm thấy dữ liệu chuỗi thời gian phù hợp."]),
             metadata=make_metadata(metadata, source, tools_used),
             **response_debug,
         )
@@ -910,7 +934,7 @@ def _run_parser_db_flow(
             _base_data_item(payload, original_message, query_text, metadata, plan, router_decision)
         ],
         chart=AiAgentChartConfig(type="none"),
-        warnings=["Missing response composer for this plan type."],
+        warnings=sanitize_warnings(["Dạng yêu cầu này hiện chưa được hỗ trợ trong dữ liệu hiện có."]),
         metadata=make_metadata(metadata, "template", tools_used),
         **response_debug,
     )
@@ -958,10 +982,11 @@ def _update_context_basic(
 ) -> None:
     patch: dict[str, Any] = {
         "last_user_message": message,
-        "last_answer": answer,
         "last_route": route,
         "last_status": status,
     }
+    if status not in {"off_topic", "error"}:
+        patch["last_answer"] = answer
     if parsed_query is not None:
         patch["last_parsed_query"] = parsed_query
     if parser_debug is not None:
@@ -998,6 +1023,11 @@ def _update_context_query_success(
                 "indicator": indicator_code,
                 "countries": country_codes,
                 "years": metadata.get("years", []),
+                "start_year": metadata.get("resolved", {}).get("start_year"),
+                "end_year": metadata.get("resolved", {}).get("end_year"),
+                "year": response.data[0].get("year") if response.data else None,
+                "limit": response.data[0].get("plan", {}).get("arguments", {}).get("limit") if response.data else None,
+                "order": response.data[0].get("plan", {}).get("arguments", {}).get("order") if response.data else None,
                 "row_count": row_summary["row_count"],
                 "top_rows": row_summary["top_rows"],
             },

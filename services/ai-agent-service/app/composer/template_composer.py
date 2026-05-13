@@ -12,6 +12,7 @@ from app.composer.display_formatter import (
     get_indicator_unit,
     replace_indicator_codes,
     safe_number,
+    sanitize_user_facing_text,
 )
 
 
@@ -62,48 +63,78 @@ def compose_off_topic_answer() -> str:
     )
 
 
-CLARIFICATION_FALLBACK = "Mình cần bạn nói rõ thêm chỉ số, quốc gia hoặc giai đoạn muốn phân tích."
+CLARIFICATION_FALLBACK = "Bạn có thể nói rõ chỉ số, quốc gia và giai đoạn muốn phân tích không?"
 
 
 def sanitize_clarification_questions(questions: list[str] | None) -> list[str]:
     sanitized: list[str] = []
     for question in questions or []:
-        text = replace_indicator_codes(str(question or "").strip())
+        text = sanitize_user_facing_text(str(question or "").strip())
         lowered = text.lower()
 
         if not text:
             continue
-        if "please clarify" in lowered or "missing or ambiguous slot" in lowered:
-            text = "Bạn có thể nói rõ hơn chỉ số, quốc gia và giai đoạn muốn phân tích không?"
+        if (
+            "please clarify" in lowered
+            or "missing or ambiguous slot" in lowered
+            or "need clarification" in lowered
+            or "chua xac dinh" in lowered
+            or "chưa xác định" in lowered
+        ):
+            if "indicator" in lowered or "chỉ số" in lowered:
+                text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, tỷ lệ thất nghiệp, tăng trưởng GDP thực."
+            elif "country" in lowered or "countries" in lowered or "quốc gia" in lowered:
+                text = "Bạn muốn xem cho quốc gia hoặc nhóm quốc gia nào?"
+            elif "time" in lowered or "year" in lowered or "period" in lowered or "năm" in lowered or "giai đoạn" in lowered:
+                text = "Bạn muốn xem năm hoặc giai đoạn nào?"
+            else:
+                text = "Bạn có thể nói rõ chỉ số, quốc gia và giai đoạn muốn phân tích không?"
         elif "which indicator" in lowered or "compare or analyze which indicator" in lowered:
-            text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, thất nghiệp, tăng trưởng GDP thực."
-        elif "please specify" in lowered and ("country" in lowered or "countries" in lowered):
+            text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, tỷ lệ thất nghiệp, tăng trưởng GDP thực."
+        elif "missing indicator" in lowered:
+            text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, tỷ lệ thất nghiệp, tăng trưởng GDP thực."
+        elif "missing country" in lowered or ("please specify" in lowered and ("country" in lowered or "countries" in lowered)):
             text = "Bạn muốn xem cho quốc gia hoặc nhóm quốc gia nào?"
-        elif "please specify" in lowered and ("time" in lowered or "year" in lowered or "period" in lowered):
+        elif "missing time" in lowered or "missing year" in lowered or ("please specify" in lowered and ("time" in lowered or "year" in lowered or "period" in lowered)):
             text = "Bạn muốn xem năm hoặc giai đoạn nào?"
         elif "please specify" in lowered:
-            text = "Bạn có thể nói rõ hơn chỉ số, quốc gia và giai đoạn muốn phân tích không?"
+            text = "Bạn có thể nói rõ chỉ số, quốc gia và giai đoạn muốn phân tích không?"
         elif "indicator" in lowered and "chỉ số" not in lowered:
-            text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, thất nghiệp, tăng trưởng GDP thực."
+            text = "Bạn muốn phân tích chỉ số nào? Ví dụ: nợ công/GDP, lạm phát CPI, tỷ lệ thất nghiệp, tăng trưởng GDP thực."
+        elif "country" in lowered and "quốc gia" not in lowered:
+            text = "Bạn muốn xem cho quốc gia hoặc nhóm quốc gia nào?"
+        elif ("year" in lowered or "period" in lowered or "time" in lowered) and not any(token in lowered for token in ("năm", "giai đoạn")):
+            text = "Bạn muốn xem năm hoặc giai đoạn nào?"
 
-        sanitized.append(text)
+        cleaned = sanitize_user_facing_text(text)
+        if cleaned and cleaned not in sanitized:
+            sanitized.append(cleaned)
 
-    return sanitized
+    return sanitized or [CLARIFICATION_FALLBACK]
 
 
 def compose_need_clarification_answer(questions: list[str] | None) -> str:
     cleaned = sanitize_clarification_questions(questions)
     if not cleaned:
         return CLARIFICATION_FALLBACK
-    return "Mình cần bạn làm rõ thêm: " + " ".join(cleaned)
+    return sanitize_user_facing_text("Mình cần bạn làm rõ thêm: " + " ".join(cleaned))
 
 
 def _sanitize_warning(text: str) -> str | None:
-    text = replace_indicator_codes(str(text or "").strip())
+    raw_text = str(text or "").strip()
+    text = sanitize_user_facing_text(raw_text)
     if not text:
         return None
 
     lowered = text.lower()
+    unsupported_match = re.search(
+        r"(?:unsupported indicator|indicator)\s+([A-Za-z0-9_./%-]+)\s+(?:chưa|is|not|không)",
+        raw_text,
+        flags=re.IGNORECASE,
+    )
+    if unsupported_match:
+        label = replace_indicator_codes(unsupported_match.group(1))
+        return f"Hiện hệ thống chưa có chỉ số {label} trong dữ liệu hiện có."
     if any(
         token in lowered
         for token in (
@@ -136,10 +167,10 @@ def compose_unsupported_answer(warnings: list[str] | None = None) -> str:
     if cleaned:
         prefix = " ".join(cleaned)
 
-    return (
+    return sanitize_user_facing_text(
         f"{prefix} Bạn có thể hỏi về các nhóm chỉ số đang hỗ trợ như GDP, nợ công/GDP, "
         "lạm phát CPI, thất nghiệp, thu thuế/GDP, cán cân ngân sách/GDP, đầu tư cố định gộp/GDP, "
-        "thương mại/GDP, dân số, nghèo đói hoặc khủng hoảng."
+        "độ mở thương mại, dân số, nghèo đói hoặc khủng hoảng."
     )
 
 
@@ -172,7 +203,7 @@ def compose_compare_answer(
         lines.append(
             "- "
             f"{country_label}: {first.get('year')} là {format_value(start_value, unit)}, "
-            f"đến {last.get('year')} là {format_value(end_value, unit)} -> {direction}."
+            f"đến {last.get('year')} là {format_value(end_value, unit)} → {direction}."
         )
 
     highest, lowest = _best_rows_by_value(final_rows)
@@ -184,7 +215,8 @@ def compose_compare_answer(
         else:
             lines.append(f"Ở cuối kỳ, {high_country} cao nhất và {low_country} thấp nhất trong nhóm này.")
 
-    return "\n\n".join([lines[0], "\n".join(lines[1:])])
+    lines.append("Biểu đồ và bảng bên dưới thể hiện chi tiết theo từng năm.")
+    return sanitize_user_facing_text("\n".join(lines))
 
 
 def compose_ranking_answer(
@@ -201,8 +233,8 @@ def compose_ranking_answer(
     if not rows:
         return f"Không tìm thấy dữ liệu xếp hạng cho {label} {year_text}."
 
-    display_rows = rows[: min(len(rows), 10)]
-    n = min(limit or len(display_rows), len(display_rows))
+    n = min(limit or len(rows), len(rows), 10)
+    display_rows = rows[:n]
     order_text = "theo dữ liệu trả về"
     if order == "desc":
         order_text = "cao nhất"
@@ -212,15 +244,11 @@ def compose_ranking_answer(
     lines = [f"Top {n} quốc gia có {label} {order_text} {year_text}:"]
     for index, row in enumerate(display_rows[:n], start=1):
         country = get_country_label(row)
-        lines.append(f"{index}. {country} - {format_value(row.get('value'), unit)}")
+        lines.append(f"{index}. {country} — {format_value(_row_value(row), unit)}")
 
-    top_country = get_country_label(display_rows[0])
-    if order in {"asc", "desc"}:
-        lines.append(f"Dựa trên dữ liệu trả về, {top_country} đứng đầu trong nhóm này.")
-    else:
-        lines.append(f"Dựa trên dữ liệu trả về, {top_country} là dòng đầu tiên trong nhóm này.")
+    lines.append("Bảng và biểu đồ bên dưới hiển thị các kết quả được trả về.")
 
-    return "\n".join(lines)
+    return sanitize_user_facing_text("\n".join(lines))
 
 
 def compose_coverage_answer(
@@ -230,7 +258,7 @@ def compose_coverage_answer(
     label = get_indicator_label(indicator_code)
 
     if not rows:
-        return f"Không tìm thấy thông tin coverage cho {label}."
+        return f"Không tìm thấy thông tin phạm vi dữ liệu cho {label}."
 
     if len(rows) == 1:
         row = rows[0]
@@ -240,11 +268,11 @@ def compose_coverage_answer(
             f"gồm {row.get('observations')} quan sát."
         )
 
-    lines = [f"Tìm thấy coverage dữ liệu {label} cho {len(rows)} quốc gia:"]
+    lines = [f"Phạm vi dữ liệu {label} theo quốc gia:"]
     for row in rows[:10]:
         country = get_country_label(row)
         lines.append(f"- {country}: {row.get('min_year')}-{row.get('max_year')}, {row.get('observations')} quan sát")
-    return "\n".join(lines)
+    return sanitize_user_facing_text("\n".join(lines))
 
 
 def compose_trend_answer(
@@ -289,13 +317,13 @@ def compose_trend_answer(
             lines.append(
                 "- "
                 f"{country_label}: {first.get('year')} là {format_value(_row_value(first), unit)}, "
-                f"đến {last.get('year')} là {format_value(_row_value(last), unit)} -> {direction}."
+                f"đến {last.get('year')} là {format_value(_row_value(last), unit)} → {direction}."
             )
 
     if is_analytics_series:
-        lines.append("Giá trị thực tế được dùng làm số chính; xu hướng là đường ước tính từ dữ liệu.")
+        lines.append("Giá trị thực tế là số chính; đường xu hướng là ước tính từ dữ liệu.")
 
-    return "\n".join(lines)
+    return sanitize_user_facing_text("\n".join(lines))
 
 
 def compose_anomaly_answer(
@@ -311,21 +339,22 @@ def compose_anomaly_answer(
     period = format_year_range(start_year, end_year)
 
     if not rows:
-        return f"Không tìm thấy điểm bất thường rõ ràng cho {label} trong {period} với ngưỡng anomaly_score >= {threshold}."
+        return f"Không tìm thấy điểm bất thường rõ ràng cho {label} trong {period} với ngưỡng {threshold}."
 
     lines = [f"Các điểm bất thường đáng chú ý của {label}:"]
     for index, row in enumerate(rows[:10], start=1):
         country = get_country_label(row)
         actual = format_value(row.get("actual_value"), unit)
         trend = format_value(row.get("trend_value"), unit)
+        residual = format_value(row.get("residual_value"), unit)
         score = format_value(row.get("anomaly_score"))
         lines.append(
             f"{index}. {country}, {row.get('year')}: thực tế {actual}, "
-            f"xu hướng ước tính {trend}, anomaly_score {score}."
+            f"xu hướng {trend}, độ lệch {residual}, điểm bất thường {score}."
         )
 
     lines.append("Các điểm này cho thấy độ lệch so với xu hướng trong dữ liệu, không tự động chứng minh nguyên nhân.")
-    return "\n".join(lines)
+    return sanitize_user_facing_text("\n".join(lines))
 
 
 def compose_fallback_answer(payload: dict[str, Any]) -> str:
@@ -336,6 +365,4 @@ def compose_fallback_answer(payload: dict[str, Any]) -> str:
 
 
 def strip_internal_terms(text: str) -> str:
-    text = replace_indicator_codes(text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return sanitize_user_facing_text(text)
