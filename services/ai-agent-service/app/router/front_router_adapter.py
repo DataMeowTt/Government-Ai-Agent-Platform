@@ -47,7 +47,7 @@ def build_front_router_draft_from_existing_router(
         draft_end_year=rule_draft.draft_end_year,
         draft_limit=rule_draft.draft_limit,
         draft_ranking_order=rule_draft.draft_ranking_order,
-        unsupported_terms=list(rule_draft.unsupported_terms),
+        unsupported_terms=[],
         clarification_questions=list(rule_draft.clarification_questions),
         uses_previous_context=rule_draft.uses_previous_context,
         confidence=rule_draft.confidence,

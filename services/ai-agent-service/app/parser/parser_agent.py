@@ -2,7 +2,6 @@ import re
 from typing import Any
 
 from app.catalog.canonical_indicator_catalog import (
-    detect_unsupported_indicator,
     is_supported_indicator,
     normalize_catalog_text,
     resolve_indicator_alias,
@@ -43,9 +42,6 @@ def run_parser_agent(
             *model_unsupported_terms,
         ]
     )
-    unsupported_match = detect_unsupported_indicator(user_message)
-    if unsupported_match and unsupported_match.label_vi not in unsupported_terms:
-        unsupported_terms.append(unsupported_match.label_vi)
 
     country_groups = _dedupe(
         [
@@ -133,17 +129,17 @@ def _choose_route(
     rule_route = rule_draft.route if rule_draft else None
     front_route = front_draft.route if front_draft else None
 
-    if front_route in {"FOLLOW_UP_ANALYSIS", "FOLLOW_UP_MODIFY_QUERY"}:
+    if front_route in {"FOLLOW_UP_ANALYSIS", "NEED_CLARIFICATION", "UNSUPPORTED", "OFF_TOPIC", "GENERAL_EXPLANATION"}:
         return front_route
 
-    if rule_route in {"FOLLOW_UP_ANALYSIS", "FOLLOW_UP_MODIFY_QUERY"}:
-        return rule_route
-
-    if rule_route in {"UNSUPPORTED", "OFF_TOPIC", "NEED_CLARIFICATION"}:
-        return rule_route
-
-    if front_route in {"UNSUPPORTED", "OFF_TOPIC", "NEED_CLARIFICATION"}:
+    if front_route in {"DATA_QUERY", "FOLLOW_UP_MODIFY_QUERY"}:
         return front_route
+
+    if rule_route == "FOLLOW_UP_MODIFY_QUERY":
+        return rule_route
+
+    if rule_route in {"FOLLOW_UP_ANALYSIS", "UNSUPPORTED", "OFF_TOPIC", "NEED_CLARIFICATION"}:
+        return "DATA_QUERY"
 
     return rule_route or front_route or "DATA_QUERY"
 
@@ -178,10 +174,10 @@ def _infer_intent(
     front_draft: FrontRouterDraft | None,
     model_parsed: dict[str, Any] | None,
 ) -> str:
-    if unsupported_terms:
-        return "UNSUPPORTED"
+    if front_draft and front_draft.route in {"OFF_TOPIC", "NEED_CLARIFICATION", "FOLLOW_UP_ANALYSIS", "GENERAL_EXPLANATION"}:
+        return front_draft.route
 
-    if rule_draft and rule_draft.route == "UNSUPPORTED":
+    if unsupported_terms:
         return "UNSUPPORTED"
 
     if front_draft and front_draft.route == "UNSUPPORTED":
@@ -216,7 +212,6 @@ def _infer_intent(
 
 def _normalize_model_indicators(model_parsed: dict[str, Any]) -> tuple[list[str], list[str]]:
     indicators: list[str] = []
-    unsupported_terms: list[str] = []
 
     for raw in _string_list(model_parsed.get("indicators")):
         text = str(raw).strip()
@@ -232,23 +227,7 @@ def _normalize_model_indicators(model_parsed: dict[str, Any]) -> tuple[list[str]
             indicators.append(alias_match.indicator.code)
             continue
 
-        unsupported = detect_unsupported_indicator(text)
-        if unsupported:
-            unsupported_terms.append(unsupported.label_vi)
-            continue
-
-    for raw in _string_list(model_parsed.get("unsupported_terms")):
-        unsupported = detect_unsupported_indicator(str(raw))
-        if unsupported:
-            unsupported_terms.append(unsupported.label_vi)
-
-    unsupported_indicator = model_parsed.get("unsupported_indicator")
-    if unsupported_indicator:
-        unsupported = detect_unsupported_indicator(str(unsupported_indicator))
-        if unsupported:
-            unsupported_terms.append(unsupported.label_vi)
-
-    return _dedupe(indicators), _dedupe(unsupported_terms)
+    return _dedupe(indicators), []
 
 
 def _extract_year_range(

@@ -2,7 +2,6 @@ import re
 from typing import Any
 
 from app.catalog.canonical_indicator_catalog import (
-    detect_unsupported_indicator,
     normalize_catalog_text,
     resolve_indicator_alias,
 )
@@ -162,7 +161,6 @@ def run_rule_first_router(
     context = conversation_context or {}
     normalized = normalize_catalog_text(user_message)
     indicator_match = resolve_indicator_alias(user_message)
-    unsupported_match = detect_unsupported_indicator(user_message)
     country_groups = [match.group.code for match in resolve_country_groups(user_message)]
     countries = [match.country.code for match in resolve_countries(user_message)]
     years = _extract_years(normalized)
@@ -193,17 +191,17 @@ def run_rule_first_router(
     if _contains_any(normalized, OFF_TOPIC_MARKERS):
         return RuleRouteDraft(
             matched=True,
-            route="OFF_TOPIC",
-            confidence=0.9,
-            needs_front_llm=False,
+            route="DATA_QUERY",
+            confidence=0.35,
+            needs_front_llm=True,
             needs_parser_agent=False,
             needs_db=False,
-            reason="Clear deterministic off-topic marker matched.",
+            reason="possible_off_topic_needs_front_llm",
         )
 
     if (
         has_definition_marker
-        and (indicator_match or unsupported_match)
+        and indicator_match
         and not countries
         and not country_groups
         and not years
@@ -217,26 +215,8 @@ def run_rule_first_router(
             needs_parser_agent=False,
             needs_db=False,
             intent_hint="GENERAL_EXPLANATION",
-            draft_indicators=[indicator_match.indicator.code] if indicator_match else [],
-            unsupported_terms=_unsupported_terms(unsupported_match),
+            draft_indicators=[indicator_match.indicator.code],
             reason="Definition query matched without data slots or data-query markers.",
-        )
-
-    if unsupported_match:
-        return RuleRouteDraft(
-            matched=True,
-            route="DATA_QUERY",
-            confidence=0.95,
-            needs_front_llm=False,
-            needs_parser_agent=True,
-            needs_db=False,
-            intent_hint="UNSUPPORTED",
-            unsupported_terms=_unsupported_terms(unsupported_match),
-            draft_countries=countries,
-            draft_country_groups=country_groups,
-            draft_start_year=years[0] if years else None,
-            draft_end_year=years[-1] if years else None,
-            reason="Exact unsupported indicator alias matched canonical unsupported catalog.",
         )
 
     if (
@@ -247,13 +227,13 @@ def run_rule_first_router(
     ):
         return RuleRouteDraft(
             matched=True,
-            route="FOLLOW_UP_ANALYSIS",
-            confidence=0.95,
-            needs_front_llm=False,
+            route="DATA_QUERY",
+            confidence=0.55,
+            needs_front_llm=True,
             needs_parser_agent=False,
             needs_db=False,
             uses_previous_context=True,
-            reason="Follow-up analysis signal matched with previous result and no new data slots.",
+            reason="possible_follow_up_analysis_needs_front_llm",
         )
 
     if has_previous_result and (has_analysis_marker or has_context_reference_marker) and has_new_data_slots:
@@ -604,14 +584,6 @@ def _contains_any(normalized_text: str, keywords: tuple[str, ...]) -> bool:
             return True
 
     return False
-
-
-def _unsupported_terms(unsupported_match: Any) -> list[str]:
-    if not unsupported_match:
-        return []
-    return [unsupported_match.label_vi or unsupported_match.matched_alias]
-
-
 def _extract_years(normalized_text: str) -> list[int]:
     years: list[int] = []
     for raw_year in re.findall(r"\b((?:19|20)\d{2})\b", normalized_text):

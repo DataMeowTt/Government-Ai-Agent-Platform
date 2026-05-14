@@ -1,7 +1,4 @@
-from app.catalog.canonical_indicator_catalog import (
-    get_supported_indicators_compact,
-    get_unsupported_indicators_compact,
-)
+from app.catalog.canonical_indicator_catalog import get_supported_indicators_compact
 from app.catalog.country_group_catalog import list_country_groups
 from app.resolver.country_resolver import COUNTRIES
 
@@ -32,7 +29,3 @@ def build_compact_country_group_catalog_for_prompt() -> list[dict]:
         }
         for group in list_country_groups()
     ]
-
-
-def build_compact_unsupported_indicator_catalog_for_prompt() -> list[dict]:
-    return get_unsupported_indicators_compact()

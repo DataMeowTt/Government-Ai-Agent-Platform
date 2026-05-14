@@ -75,21 +75,7 @@ def run_hybrid_v2_pipeline(
             "parserModelDebug": {},
         }
 
-        if rule_draft.route == "OFF_TOPIC" and rule_draft.confidence >= 0.9:
-            return _off_topic_response(
-                payload,
-                message,
-                rule_draft,
-                _router_debug(
-                    "OFF_TOPIC",
-                    rule_draft,
-                    front_draft,
-                    front_router_decision,
-                    executed_front_router,
-                    parser_model_debug,
-                ),
-            )
-        if _looks_like_general_explanation(message) or rule_draft.route == "GENERAL_EXPLANATION":
+        if rule_draft.route == "GENERAL_EXPLANATION" and not rule_draft.needs_front_llm:
             return _direct_explanation_response(
                 payload=payload,
                 message=message,
@@ -198,7 +184,7 @@ def run_hybrid_v2_pipeline(
             front_draft=front_draft,
         )
 
-        if front_draft.needs_parser or rule_draft.needs_parser_agent:
+        if _should_call_parser_model(message, rule_draft, front_draft):
             model_parsed, parser_model_debug = _call_parser_model_candidate(
                 standalone_query=standalone_query,
                 original_message=message,
@@ -703,17 +689,6 @@ def _compose_direct_explanation_template(message: str) -> str:
             "Chỉ số này thường cho biết mức độ nền kinh tế gắn với trao đổi hàng hóa và dịch vụ với bên ngoài."
         )
 
-    if "current account" in normalized or "cán cân vãng lai" in normalized or "can can vang lai" in normalized:
-        return (
-            "Current account/GDP là cán cân vãng lai so với GDP, phản ánh thặng dư hoặc thâm hụt "
-            "giao dịch vãng lai so với quy mô nền kinh tế. Hiện dữ liệu của hệ thống chưa có chỉ số này."
-        )
-
-    if "external debt" in normalized or "nợ nước ngoài" in normalized or "no nuoc ngoai" in normalized:
-        return (
-            "External debt/GNI là nợ nước ngoài so với tổng thu nhập quốc dân, thường dùng để nhìn rủi ro "
-            "phụ thuộc vốn bên ngoài và khả năng trả nợ ngoại tệ. Hiện dữ liệu của hệ thống chưa có chỉ số này."
-        )
     if (
         "tang truong gdp thuc" in normalized
         or "real gdp growth" in normalized
@@ -816,7 +791,11 @@ def _unsupported_response(
     validation: Any,
     router_debug: dict[str, Any] | None = None,
 ) -> AiChatResponse:
-    warnings = [f"Hiện hệ thống chưa có chỉ số {term} trong dữ liệu hiện có." for term in unsupported_terms] or [validation.reason]
+    warnings = (
+        ["Chỉ số này chưa có trong dữ liệu hiện tại hoặc chưa được hỗ trợ."]
+        if unsupported_terms
+        else [validation.reason]
+    )
     answer = compose_unsupported_answer(warnings)
     response = AiChatResponse(
         answer=answer,
@@ -1228,20 +1207,15 @@ def _decision_to_dict(decision: Any | None) -> dict[str, Any] | None:
 
 
 def _should_call_parser_model(message: str, rule_draft: Any, front_draft: Any) -> bool:
-    route = rule_draft.route
-    if route == "FOLLOW_UP_ANALYSIS":
+    front_route = getattr(front_draft, "route", None)
+    rule_route = getattr(rule_draft, "route", None)
+    route = front_route or rule_route
+
+    if front_route in {"OFF_TOPIC", "FOLLOW_UP_ANALYSIS", "NEED_CLARIFICATION", "UNSUPPORTED", "GENERAL_EXPLANATION"}:
         return False
-    if route == "OFF_TOPIC" and rule_draft.confidence >= 0.9:
+    if not (bool(getattr(front_draft, "needs_parser", False)) or bool(getattr(rule_draft, "needs_parser_agent", False))):
         return False
-    if route == "NEED_CLARIFICATION" and rule_draft.confidence >= 0.9:
-        return False
-    if rule_draft.unsupported_terms and rule_draft.confidence >= 0.9:
-        return False
-    if (
-        rule_draft.confidence >= 0.9
-        and (rule_draft.draft_indicators or rule_draft.unsupported_terms)
-        and not _has_complex_slots(message)
-    ):
+    if rule_draft.confidence >= 0.9 and rule_draft.draft_indicators and not _has_complex_slots(message):
         return False
     if _has_enough_deterministic_slots(message, rule_draft, front_draft):
         confidence = max(
@@ -1262,7 +1236,7 @@ def _should_call_parser_model(message: str, rule_draft: Any, front_draft: Any) -
         return True
     if front_draft.confidence < 0.85:
         return True
-    if (route in {"DATA_QUERY", "FOLLOW_UP_MODIFY_QUERY"} or intent) and not combined_indicators and not rule_draft.unsupported_terms:
+    if (route in {"DATA_QUERY", "FOLLOW_UP_MODIFY_QUERY"} or intent) and not combined_indicators:
         return True
     if intent == "COMPARE_COUNTRIES" and len(combined_countries) + len(combined_groups) < 2:
         return True
@@ -1360,8 +1334,6 @@ def _has_enough_deterministic_slots(message: str, rule_draft: Any, front_draft: 
     )
     intent = front_draft.intent_hint or rule_draft.intent_hint
 
-    if rule_draft.unsupported_terms:
-        return True
     if not indicators:
         return False
     if intent == "COMPARE_COUNTRIES":

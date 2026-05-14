@@ -1,7 +1,6 @@
 from typing import Any
 
 from app.catalog.canonical_indicator_catalog import (
-    detect_unsupported_indicator,
     get_indicator,
     indicator_supports_anomaly,
     indicator_supports_trend,
@@ -59,13 +58,6 @@ def validate_parsed_candidate(candidate: ParsedQueryCandidate) -> ValidationOutc
     warnings: list[str] = []
     indicators = _normalize_indicators(candidate.indicators, unsupported_terms)
 
-    for indicator_code in indicators:
-        unsupported = detect_unsupported_indicator(indicator_code)
-        if unsupported:
-            unsupported_terms.append(unsupported.label_vi)
-        elif indicator_code in {"current_account_GDP", "external_debt_GNI"}:
-            unsupported_terms.append(indicator_code)
-
     if unsupported_terms or intent == "UNSUPPORTED":
         return ValidationOutcome(
             ok=False,
@@ -73,7 +65,7 @@ def validate_parsed_candidate(candidate: ParsedQueryCandidate) -> ValidationOutc
             question_type="UNSUPPORTED_DATA_QUERY",
             validated_query=None,
             unsupported_terms=_dedupe(unsupported_terms),
-            reason="Requested indicator is not present in canonical DB-truth catalog.",
+            reason="Requested indicator or capability is not supported by the current data catalog.",
         )
 
     if intent in {"DIRECT_ANSWER", "GENERAL_EXPLANATION"}:
@@ -293,11 +285,6 @@ def _normalize_indicators(raw_indicators: list[Any], unsupported_terms: list[str
     for raw in raw_indicators or []:
         text = str(raw or "").strip()
         if not text:
-            continue
-
-        unsupported = detect_unsupported_indicator(text)
-        if unsupported:
-            unsupported_terms.append(unsupported.label_vi)
             continue
 
         normalized = normalize_catalog_text(text)

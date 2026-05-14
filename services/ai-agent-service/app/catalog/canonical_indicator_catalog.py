@@ -32,22 +32,6 @@ class IndicatorAliasMatch:
     confidence: float
 
 
-@dataclass(frozen=True)
-class UnsupportedIndicatorMatch:
-    label_vi: str
-    canonical_code: str | None
-    matched_alias: str
-    reason: str
-
-
-@dataclass(frozen=True)
-class UnsupportedIndicator:
-    label_vi: str
-    canonical_code: str | None
-    aliases: tuple[str, ...]
-    reason: str
-
-
 ANALYTICS_SUFFIXES: tuple[str, ...] = (
     "actual",
     "trend",
@@ -215,38 +199,6 @@ _INDICATOR_ROWS: tuple[CanonicalIndicator, ...] = (
 INDICATORS: dict[str, CanonicalIndicator] = {indicator.code: indicator for indicator in _INDICATOR_ROWS}
 
 
-UNSUPPORTED_INDICATORS: tuple[UnsupportedIndicator, ...] = (
-    UnsupportedIndicator(
-        label_vi="cán cân vãng lai/GDP",
-        canonical_code=None,
-        aliases=(
-            "current account/GDP",
-            "current account balance/GDP",
-            "current account GDP",
-            "current account",
-            "current_account_GDP",
-            "curr_account_GDP",
-            "cán cân vãng lai/GDP",
-            "can can vang lai/GDP",
-        ),
-        reason="Indicator này chưa có cột trong DB gold đã xác minh.",
-    ),
-    UnsupportedIndicator(
-        label_vi="nợ nước ngoài/GNI",
-        canonical_code=None,
-        aliases=(
-            "external debt/GNI",
-            "external debt to GNI",
-            "external debt",
-            "external_debt_GNI",
-            "nợ nước ngoài/GNI",
-            "no nuoc ngoai/GNI",
-        ),
-        reason="Indicator này chưa có cột trong DB gold đã xác minh.",
-    ),
-)
-
-
 AMBIGUOUS_NORMALIZED_ALIASES: set[str] = {
     "gdp",
     "debt",
@@ -356,34 +308,6 @@ def resolve_indicator_alias(text: str) -> IndicatorAliasMatch | None:
     return matches[0] if matches else None
 
 
-def detect_unsupported_indicator(text: str) -> UnsupportedIndicatorMatch | None:
-    supported_match = resolve_indicator_alias(text)
-    if supported_match and supported_match.confidence >= 0.9:
-        return None
-
-    normalized_text = normalize_catalog_text(text)
-    best_match: UnsupportedIndicatorMatch | None = None
-    best_score = 0.0
-    best_alias_length = 0
-
-    for unsupported in UNSUPPORTED_INDICATORS:
-        for alias in unsupported.aliases:
-            normalized_alias = normalize_catalog_text(alias)
-            score = _score_alias(normalized_text, alias)
-            alias_length = len(normalized_alias)
-            if score > best_score or (score == best_score and alias_length > best_alias_length):
-                best_score = score
-                best_alias_length = alias_length
-                best_match = UnsupportedIndicatorMatch(
-                    label_vi=unsupported.label_vi,
-                    canonical_code=unsupported.canonical_code,
-                    matched_alias=alias,
-                    reason=unsupported.reason,
-                )
-
-    return best_match if best_score >= 0.75 else None
-
-
 def get_analytics_columns(code: str) -> list[str]:
     if not indicator_has_analytics(code):
         return []
@@ -439,14 +363,4 @@ def get_supported_indicators_compact(max_aliases_per_indicator: int = 8) -> list
             "supports_anomaly": indicator.supports_anomaly,
         }
         for indicator in INDICATORS.values()
-    ]
-
-
-def get_unsupported_indicators_compact() -> list[dict]:
-    return [
-        {
-            "label_vi": indicator.label_vi,
-            "aliases": list(indicator.aliases),
-        }
-        for indicator in UNSUPPORTED_INDICATORS
     ]

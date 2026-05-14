@@ -1,7 +1,6 @@
 from dataclasses import asdict, dataclass
 
 from app.catalog.canonical_indicator_catalog import (
-    detect_unsupported_indicator,
     normalize_catalog_text,
     resolve_indicator_alias,
     resolve_indicator_aliases,
@@ -51,11 +50,6 @@ def resolve_indicators(message: str, limit: int = 3) -> list[IndicatorMatch]:
             )
         )
     return matches
-
-
-def detect_unsupported_indicator_label(message: str) -> str | None:
-    match = detect_unsupported_indicator(message)
-    return match.label_vi if match else None
 
 
 def indicator_match_to_dict(match: IndicatorMatch) -> dict:

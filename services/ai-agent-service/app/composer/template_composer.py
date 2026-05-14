@@ -214,14 +214,14 @@ def compose_unsupported_answer(warnings: list[str] | None = None) -> str:
     cleaned = [_sanitize_warning(warning) for warning in warnings or []]
     cleaned = [warning for warning in cleaned if warning]
 
-    prefix = "Hiện hệ thống chưa hỗ trợ yêu cầu này trong dữ liệu hiện có."
-    if cleaned:
+    prefix = "Chỉ số này chưa có trong dữ liệu hiện tại hoặc chưa được hỗ trợ."
+    if cleaned and not any("chỉ số" in warning.lower() or "indicator" in warning.lower() for warning in cleaned):
         prefix = " ".join(cleaned)
 
     return sanitize_user_facing_text(
-        f"{prefix} Bạn có thể hỏi về các nhóm chỉ số đang hỗ trợ như GDP, nợ công/GDP, "
-        "lạm phát CPI, thất nghiệp, thu thuế/GDP, cán cân ngân sách/GDP, đầu tư cố định gộp/GDP, "
-        "độ mở thương mại, dân số, nghèo đói hoặc khủng hoảng."
+        f"{prefix} Bạn có thể chọn một chỉ số trong danh mục hiện có như nợ công/GDP, "
+        "lạm phát CPI, tỷ lệ thất nghiệp, tăng trưởng GDP thực, thương mại/GDP, "
+        "thu thuế/GDP, cân đối ngân sách/GDP, đầu tư tài sản cố định/GDP, dân số, nghèo đói hoặc khủng hoảng."
     )
 
 

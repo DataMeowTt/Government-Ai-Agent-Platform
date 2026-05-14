@@ -39,8 +39,6 @@ INDICATOR_LABELS: dict[str, str] = {
     "food_bev_share_manuf": "tỷ trọng thực phẩm/đồ uống trong sản xuất chế biến",
     "trade_pct_gdp": "độ mở thương mại",
     "trade_openness": "độ mở thương mại",
-    "current_account_GDP": "cán cân vãng lai/GDP",
-    "external_debt_GNI": "nợ nước ngoài/GNI",
     "urban_pop_pct": "tỷ lệ dân số đô thị",
     "urban_pop_growth": "tăng trưởng dân số đô thị",
     "pop_density": "mật độ dân số",

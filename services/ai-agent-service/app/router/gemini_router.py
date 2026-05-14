@@ -591,17 +591,7 @@ def _direct_answer_fallback(normalized: str) -> str:
         return "GDP per capita là GDP bình quân đầu người: GDP tổng chia cho dân số. Trong dữ liệu hiện có, chỉ số gần nhất là GDP thực bình quân đầu người ở dạng log, nên giá trị dùng để so sánh là thang log chứ không phải USD trực tiếp."
     if "trade openness" in normalized or "do mo thuong mai" in normalized:
         return "Trade openness là tỷ lệ tổng thương mại so với GDP. Chỉ số này thường cho biết nền kinh tế phụ thuộc nhiều hay ít vào trao đổi hàng hóa và dịch vụ với bên ngoài."
-    if "current account" in normalized or "can can vang lai" in normalized:
-        return (
-            "Current account/GDP là cán cân vãng lai so với GDP, phản ánh thặng dư hoặc thâm hụt "
-            "giao dịch vãng lai so với quy mô nền kinh tế. Hiện dữ liệu của hệ thống chưa có chỉ số này."
-        )
-    if "external debt" in normalized or "no nuoc ngoai" in normalized:
-        return (
-            "External debt/GNI là nợ nước ngoài so với tổng thu nhập quốc dân, thường dùng để nhìn rủi ro "
-            "phụ thuộc vốn bên ngoài và khả năng trả nợ ngoại tệ. Hiện dữ liệu của hệ thống chưa có chỉ số này."
-        )
-    
+
     if (
         "tang truong gdp thuc" in normalized
         or "real gdp growth" in normalized

@@ -2,7 +2,6 @@ import re
 from typing import Any
 
 from app.catalog.canonical_indicator_catalog import (
-    detect_unsupported_indicator,
     is_supported_indicator,
     normalize_catalog_text,
     resolve_indicator_alias,
@@ -35,19 +34,6 @@ SUPPORTED_ALIAS_OVERRIDES = {
     "unemployment": "unemployment_total",
     "that nghiep": "unemployment_total",
     "poverty headcount": "poverty_headcount",
-}
-
-UNSUPPORTED_ALIAS_LABELS = {
-    "current account/gdp": "cán cân vãng lai/GDP",
-    "current account gdp": "cán cân vãng lai/GDP",
-    "current account": "cán cân vãng lai/GDP",
-    "current account gdp": "cán cân vãng lai/GDP",
-    "current_account_gdp": "cán cân vãng lai/GDP",
-    "external debt/gni": "nợ nước ngoài/GNI",
-    "external debt gni": "nợ nước ngoài/GNI",
-    "external debt": "nợ nước ngoài/GNI",
-    "external_debt_gni": "nợ nước ngoài/GNI",
-    "no nuoc ngoai/gni": "nợ nước ngoài/GNI",
 }
 
 ALLOWED_INTENTS = {
@@ -91,14 +77,6 @@ def normalize_parser_output(
         _append_unique(indicators, query_override)
         notes.append(f"indicator alias normalized to {query_override}")
 
-    unsupported_match = detect_unsupported_indicator(standalone_query)
-    if unsupported_match:
-        _append_unique(unsupported_terms, unsupported_match.label_vi)
-        notes.append(f"unsupported indicator detected: {unsupported_match.label_vi}")
-
-    for label in _unsupported_terms_from_text(normalized_query):
-        _append_unique(unsupported_terms, label)
-
     if not indicators and rule_draft and len(rule_draft.draft_indicators) == 1:
         indicator_code = rule_draft.draft_indicators[0]
         if is_supported_indicator(indicator_code):
@@ -136,7 +114,9 @@ def normalize_parser_output(
 
     if route == "GENERAL_EXPLANATION":
         intent = "GENERAL_EXPLANATION"
-    if unsupported_terms:
+    if _front_route(front_draft) in {"OFF_TOPIC", "NEED_CLARIFICATION", "FOLLOW_UP_ANALYSIS", "UNSUPPORTED"}:
+        intent = str(_front_route(front_draft))
+    elif unsupported_terms:
         intent = "UNSUPPORTED"
 
     start_year, end_year = _normalize_years(safe_parsed, normalized_query, intent)
@@ -163,7 +143,7 @@ def normalize_parser_output(
     elif intent == "RANKING" and start_year is not None and end_year is None:
         end_year = start_year
 
-    route_value = route or (front_draft.route if front_draft else None) or (rule_draft.route if rule_draft else None) or "DATA_QUERY"
+    route_value = _choose_route(route, front_draft, rule_draft)
     if route_value == "FOLLOW_UP_MODIFY_QUERY":
         route_value = "DATA_QUERY"
     if intent == "UNSUPPORTED":
@@ -173,7 +153,7 @@ def normalize_parser_output(
         _float(safe_parsed.get("confidence")),
         front_draft.confidence if front_draft else 0.0,
         rule_draft.confidence if rule_draft else 0.0,
-        0.85 if indicators or unsupported_terms else 0.55,
+        0.85 if indicators else 0.55,
     )
 
     return ParsedQueryCandidate(
@@ -201,9 +181,40 @@ def normalize_parser_output(
     )
 
 
+def _front_route(front_draft: FrontRouterDraft | None) -> str | None:
+    route = front_draft.route if front_draft else None
+    return str(route).upper().strip() if route else None
+
+
+def _rule_route(rule_draft: RuleRouteDraft | None) -> str | None:
+    route = rule_draft.route if rule_draft else None
+    return str(route).upper().strip() if route else None
+
+
+def _choose_route(
+    route: str | None,
+    front_draft: FrontRouterDraft | None,
+    rule_draft: RuleRouteDraft | None,
+) -> str:
+    front_route = _front_route(front_draft)
+    rule_route = _rule_route(rule_draft)
+    route_hint = str(route or "").upper().strip() or None
+
+    if front_route in {"OFF_TOPIC", "NEED_CLARIFICATION", "FOLLOW_UP_ANALYSIS", "UNSUPPORTED", "GENERAL_EXPLANATION"}:
+        return front_route
+    if front_route in {"DATA_QUERY", "FOLLOW_UP_MODIFY_QUERY"}:
+        return front_route
+    if rule_route == "FOLLOW_UP_MODIFY_QUERY":
+        return rule_route
+    if rule_route in {"OFF_TOPIC", "NEED_CLARIFICATION", "FOLLOW_UP_ANALYSIS", "UNSUPPORTED"}:
+        return "DATA_QUERY"
+    if route_hint in {"OFF_TOPIC", "NEED_CLARIFICATION", "FOLLOW_UP_ANALYSIS", "UNSUPPORTED", "GENERAL_EXPLANATION"}:
+        return route_hint
+    return route_hint or rule_route or "DATA_QUERY"
+
+
 def _normalize_model_indicators(parsed: dict[str, Any]) -> tuple[list[str], list[str]]:
     indicators: list[str] = []
-    unsupported_terms: list[str] = []
 
     raw_values = [
         *_string_list(parsed.get("indicators")),
@@ -215,19 +226,8 @@ def _normalize_model_indicators(parsed: dict[str, Any]) -> tuple[list[str], list
         if indicator_code:
             _append_unique(indicators, indicator_code)
             continue
-        unsupported = _unsupported_from_raw(raw)
-        if unsupported:
-            _append_unique(unsupported_terms, unsupported)
 
-    for raw in [
-        *_string_list(parsed.get("unsupported_terms")),
-        *_string_list(parsed.get("unsupported_indicator")),
-    ]:
-        unsupported = _unsupported_from_raw(raw)
-        if unsupported:
-            _append_unique(unsupported_terms, unsupported)
-
-    return indicators, unsupported_terms
+    return indicators, []
 
 
 def _normalize_indicator_text(value: Any) -> str | None:
@@ -260,26 +260,6 @@ def _indicator_override(normalized_query: str) -> str | None:
                 best_code = code
                 best_length = len(alias_norm)
     return best_code
-
-
-def _unsupported_terms_from_text(normalized_query: str) -> list[str]:
-    labels: list[str] = []
-    for alias, label in UNSUPPORTED_ALIAS_LABELS.items():
-        alias_norm = normalize_catalog_text(alias)
-        if alias_norm and alias_norm in normalized_query:
-            _append_unique(labels, label)
-    return labels
-
-
-def _unsupported_from_raw(value: Any) -> str | None:
-    text = str(value or "").strip()
-    if not text:
-        return None
-    normalized = normalize_catalog_text(text)
-    if normalized in UNSUPPORTED_ALIAS_LABELS:
-        return UNSUPPORTED_ALIAS_LABELS[normalized]
-    unsupported = detect_unsupported_indicator(text)
-    return unsupported.label_vi if unsupported else None
 
 
 def _normalize_model_countries(parsed: dict[str, Any], standalone_query: str) -> list[str]:
