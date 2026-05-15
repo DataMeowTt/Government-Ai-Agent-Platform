@@ -1,3 +1,7 @@
+-- Generated from contracts/*.yaml.
+-- Do not edit manually.
+-- Run: python scripts/generate_contract_artifacts.py
+
 CREATE SCHEMA IF NOT EXISTS `gov_ai_silver`;
 CREATE SCHEMA IF NOT EXISTS `gov_ai_gold`;
 CREATE SCHEMA IF NOT EXISTS `gov_ai_analytics`;
