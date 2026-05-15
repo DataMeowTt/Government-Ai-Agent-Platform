@@ -486,6 +486,371 @@ def audit_rules_defaults(state: AuditState, rules: dict[str, Any]) -> None:
         )
 
 
+def extract_declared_datasets(table_contract: dict[str, Any]) -> set[str]:
+    datasets: set[str] = set()
+
+    raw_datasets = table_contract.get("datasets")
+
+    if isinstance(raw_datasets, dict):
+        datasets.update(str(key) for key in raw_datasets.keys())
+    elif isinstance(raw_datasets, list):
+        for item in raw_datasets:
+            if isinstance(item, str):
+                datasets.add(item)
+            elif isinstance(item, dict):
+                name = item.get("name") or item.get("dataset")
+                if name:
+                    datasets.add(str(name))
+
+    for section_name in ("silver", "gold", "analytics", "ops"):
+        section = table_contract.get(section_name)
+        if not isinstance(section, dict):
+            continue
+
+        for table_spec in section.values():
+            if isinstance(table_spec, dict) and table_spec.get("dataset"):
+                datasets.add(str(table_spec["dataset"]))
+
+    return datasets
+
+
+def extract_declared_table_names(table_contract: dict[str, Any]) -> set[str]:
+    table_names: set[str] = set()
+
+    for section_name in ("silver", "gold", "analytics", "ops"):
+        section = table_contract.get(section_name)
+        if isinstance(section, dict):
+            table_names.update(str(table_name) for table_name in section.keys())
+
+    return table_names
+
+
+def get_nested_rule_list(
+    rules: dict[str, Any],
+    section_name: str,
+    rule_name: str,
+    field_name: str,
+) -> list[str]:
+    section = rules.get(section_name)
+    if not isinstance(section, dict):
+        return []
+
+    rule = section.get(rule_name)
+    if not isinstance(rule, dict):
+        return []
+
+    values = rule.get(field_name)
+    if not isinstance(values, list):
+        return []
+
+    return [str(value) for value in values]
+
+
+def audit_contract_rules_consistency_static(
+    state: AuditState,
+    indicators: dict[str, dict[str, Any]],
+    table_contract: dict[str, Any],
+    rules: dict[str, Any],
+) -> None:
+    public_indicators = get_public_indicators(indicators)
+    technical_entries = get_technical_entries(indicators)
+
+    declared_table_names = extract_declared_table_names(table_contract)
+    declared_datasets = extract_declared_datasets(table_contract)
+
+    required_bigquery_datasets = set(
+        get_nested_rule_list(
+            rules,
+            "bigquery_rules",
+            "datasets_must_exist",
+            "datasets",
+        )
+    )
+
+    if required_bigquery_datasets:
+        missing_datasets = sorted(required_bigquery_datasets - declared_datasets)
+
+        if missing_datasets:
+            state.add_error(
+                "contract_rules_bigquery_datasets_static",
+                "BigQuery datasets required by data_quality_rules.yaml are missing from table_contract.yaml.",
+                {
+                    "missing_datasets": missing_datasets,
+                    "required_datasets": sorted(required_bigquery_datasets),
+                    "declared_datasets": sorted(declared_datasets),
+                },
+            )
+        else:
+            state.add_info(
+                "contract_rules_bigquery_datasets_static",
+                "BigQuery datasets in data_quality_rules.yaml are declared in table_contract.yaml.",
+                {
+                    "required_datasets": sorted(required_bigquery_datasets),
+                    "declared_datasets": sorted(declared_datasets),
+                },
+            )
+    else:
+        state.add_warning(
+            "contract_rules_bigquery_datasets_static",
+            "No datasets_must_exist rule found under bigquery_rules.",
+        )
+
+    synced_tables = set(
+        get_nested_rule_list(
+            rules,
+            "postgres_sync_rules",
+            "synced_tables",
+            "tables",
+        )
+    )
+
+    if synced_tables:
+        missing_synced_tables = sorted(synced_tables - declared_table_names)
+
+        if missing_synced_tables:
+            state.add_error(
+                "contract_rules_postgres_synced_tables_static",
+                "postgres_sync_rules references tables missing from table_contract.yaml.",
+                {
+                    "missing_tables": missing_synced_tables,
+                    "synced_tables": sorted(synced_tables),
+                },
+            )
+        else:
+            state.add_info(
+                "contract_rules_postgres_synced_tables_static",
+                "All postgres_sync_rules synced tables exist in table_contract.yaml.",
+                {"synced_tables": sorted(synced_tables)},
+            )
+    else:
+        state.add_warning(
+            "contract_rules_postgres_synced_tables_static",
+            "No postgres_sync_rules.synced_tables rule found.",
+        )
+
+    public_gold_tables = {
+        str(entry.get("gold_table"))
+        for entry in public_indicators.values()
+        if entry.get("gold_table")
+    }
+
+    missing_public_gold_tables = sorted(public_gold_tables - declared_table_names)
+
+    if missing_public_gold_tables:
+        state.add_error(
+            "contract_rules_public_indicator_gold_tables_static",
+            "Some public indicators reference gold_table values missing from table_contract.yaml.",
+            {
+                "missing_gold_tables": missing_public_gold_tables,
+                "public_gold_tables": sorted(public_gold_tables),
+            },
+        )
+    else:
+        state.add_info(
+            "contract_rules_public_indicator_gold_tables_static",
+            "All public indicator gold_table values exist in table_contract.yaml.",
+            {"public_gold_tables": sorted(public_gold_tables)},
+        )
+
+    rule_technical_columns = set(
+        get_rule_columns(
+            rules,
+            "gold_rules",
+            "technical_columns_not_public",
+            key="technical_columns",
+        )
+    )
+
+    missing_technical_entries = sorted(rule_technical_columns - set(technical_entries.keys()))
+
+    if missing_technical_entries:
+        state.add_error(
+            "contract_rules_technical_columns_static",
+            "Technical columns in data_quality_rules.yaml are missing as technical entries in indicator_contract.yaml.",
+            {
+                "missing_technical_entries": missing_technical_entries,
+                "rule_technical_columns": sorted(rule_technical_columns),
+            },
+        )
+    else:
+        state.add_info(
+            "contract_rules_technical_columns_static",
+            "Technical columns in data_quality_rules.yaml are aligned with indicator_contract.yaml.",
+            {
+                "rule_technical_columns": sorted(rule_technical_columns),
+                "technical_entries": sorted(technical_entries.keys()),
+            },
+        )
+
+    non_technical_rule_entries = sorted(
+        code
+        for code in rule_technical_columns
+        if code in indicators and not indicators[code].get("technical")
+    )
+
+    if non_technical_rule_entries:
+        state.add_error(
+            "contract_rules_technical_columns_not_public_static",
+            "Some rule technical columns are not marked technical=true in indicator_contract.yaml.",
+            {"indicators": non_technical_rule_entries},
+        )
+    else:
+        state.add_info(
+            "contract_rules_technical_columns_not_public_static",
+            "Rule technical columns are marked technical=true when present in indicator_contract.yaml.",
+            {"checked_columns": sorted(rule_technical_columns)},
+        )
+
+    no_interpolate_rule_indicators = set(
+        get_rule_columns(
+            rules,
+            "gold_rules",
+            "preserve_null_for_no_interpolate_indicators",
+            key="indicators",
+        )
+    )
+
+    missing_no_interpolate_entries = sorted(
+        no_interpolate_rule_indicators - set(indicators.keys())
+    )
+
+    if missing_no_interpolate_entries:
+        state.add_error(
+            "contract_rules_no_interpolate_entries_static",
+            "No-interpolate indicators in data_quality_rules.yaml are missing from indicator_contract.yaml.",
+            {"missing_indicators": missing_no_interpolate_entries},
+        )
+    else:
+        state.add_info(
+            "contract_rules_no_interpolate_entries_static",
+            "No-interpolate indicators in data_quality_rules.yaml exist in indicator_contract.yaml.",
+            {"indicators": sorted(no_interpolate_rule_indicators)},
+        )
+
+    cluster_spec = get_section_table_spec(
+        table_contract,
+        "analytics",
+        ANALYTICS_CLUSTER_TABLE,
+    )
+    cluster_required_columns = set(get_table_columns(cluster_spec))
+
+    if not cluster_required_columns:
+        required_columns = cluster_spec.get("required_columns") if cluster_spec else []
+        if isinstance(required_columns, list):
+            cluster_required_columns = {str(column) for column in required_columns}
+
+    expected_cluster_columns = {
+        "country_code",
+        "country",
+        "year",
+        "cluster_id",
+        "latest_valid_year",
+    }
+
+    missing_cluster_columns = sorted(expected_cluster_columns - cluster_required_columns)
+
+    if missing_cluster_columns:
+        for column in missing_cluster_columns:
+            item = {
+                "table": ANALYTICS_CLUSTER_TABLE,
+                "column": column,
+                "source": "contract_rules_consistency",
+            }
+            state.mismatch_report["analytics_missing_columns"].append(item)
+            state.mismatch_report["cluster_mismatches"].append(item)
+
+        state.add_error(
+            "contract_rules_cluster_required_columns_static",
+            "analytics_clusters is missing required business/key columns in table_contract.yaml.",
+            {
+                "missing_columns": missing_cluster_columns,
+                "expected_columns": sorted(expected_cluster_columns),
+            },
+        )
+    else:
+        state.add_info(
+            "contract_rules_cluster_required_columns_static",
+            "analytics_clusters declares required key/business columns.",
+            {"required_columns": sorted(expected_cluster_columns)},
+        )
+
+    latest_valid_year_rule_columns = set(
+        get_rule_columns(
+            rules,
+            "analytics_rules",
+            "cluster_latest_valid_year_required",
+            key="required_columns",
+        )
+    )
+
+    if "latest_valid_year" not in latest_valid_year_rule_columns:
+        item = {
+            "table": ANALYTICS_CLUSTER_TABLE,
+            "column": "latest_valid_year",
+            "rule": "cluster_latest_valid_year_required",
+        }
+        state.mismatch_report["cluster_mismatches"].append(item)
+        state.add_error(
+            "contract_rules_cluster_latest_valid_year_static",
+            "data_quality_rules.yaml must require latest_valid_year for analytics_clusters.",
+            item,
+        )
+    else:
+        state.add_info(
+            "contract_rules_cluster_latest_valid_year_static",
+            "data_quality_rules.yaml requires latest_valid_year for analytics_clusters.",
+            {"required_columns": sorted(latest_valid_year_rule_columns)},
+        )
+
+    trend_suffixes = tuple(
+        get_rule_columns(
+            rules,
+            "analytics_rules",
+            "trend_columns_required_for_supported_indicators",
+            key="required_suffixes",
+        )
+    )
+    anomaly_suffixes = tuple(
+        get_rule_columns(
+            rules,
+            "analytics_rules",
+            "anomaly_columns_required_for_supported_indicators",
+            key="required_suffixes",
+        )
+    )
+
+    if trend_suffixes != EXPECTED_TREND_SUFFIXES:
+        state.add_error(
+            "contract_rules_trend_suffixes_static",
+            "Trend suffixes in data_quality_rules.yaml drifted from expected contract suffixes.",
+            {
+                "actual": list(trend_suffixes),
+                "expected": list(EXPECTED_TREND_SUFFIXES),
+            },
+        )
+    else:
+        state.add_info(
+            "contract_rules_trend_suffixes_static",
+            "Trend suffixes in data_quality_rules.yaml match expected contract suffixes.",
+            {"suffixes": list(trend_suffixes)},
+        )
+
+    if anomaly_suffixes != EXPECTED_ANOMALY_SUFFIXES:
+        state.add_error(
+            "contract_rules_anomaly_suffixes_static",
+            "Anomaly suffixes in data_quality_rules.yaml drifted from expected contract suffixes.",
+            {
+                "actual": list(anomaly_suffixes),
+                "expected": list(EXPECTED_ANOMALY_SUFFIXES),
+            },
+        )
+    else:
+        state.add_info(
+            "contract_rules_anomaly_suffixes_static",
+            "Anomaly suffixes in data_quality_rules.yaml match expected contract suffixes.",
+            {"suffixes": list(anomaly_suffixes)},
+        )
+
 def audit_indicator_contract_shape(
     state: AuditState,
     indicators: dict[str, dict[str, Any]],
@@ -1267,6 +1632,14 @@ def run_audit() -> tuple[dict[str, Any], dict[str, Any]]:
 
     if rules:
         audit_rules_defaults(state, rules)
+
+    if indicators and table_contract and rules:
+        audit_contract_rules_consistency_static(
+            state,
+            indicators,
+            table_contract,
+            rules,
+        )
 
     if indicators:
         audit_indicator_contract_shape(state, indicators)
