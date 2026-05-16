@@ -846,6 +846,206 @@ def build_fallback_gold_tables(
     return tables
 
 
+BQ_TYPE_ALIASES = {
+    "FLOAT": "FLOAT64",
+    "DOUBLE": "FLOAT64",
+    "DOUBLE PRECISION": "FLOAT64",
+    "INTEGER": "INT64",
+    "INT": "INT64",
+    "BIGINT": "INT64",
+    "BOOLEAN": "BOOL",
+    "TEXT": "STRING",
+    "VARCHAR": "STRING",
+    "STRING": "STRING",
+    "DATE": "DATE",
+    "TIMESTAMP": "TIMESTAMP",
+    "DATETIME": "DATETIME",
+    "JSON": "JSON",
+    "BOOL": "BOOL",
+    "FLOAT64": "FLOAT64",
+    "INT64": "INT64",
+}
+
+BQ_DEFAULT_COLUMN_TYPES = {
+    "country_code": "STRING",
+    "country": "STRING",
+    "year": "INT64",
+    "indicator": "STRING",
+    "value": "FLOAT64",
+    "source": "STRING",
+    "run_id": "STRING",
+    "run_date": "DATE",
+    "loaded_at": "TIMESTAMP",
+    "cluster_id": "INT64",
+    "latest_valid_year": "INT64",
+    "method": "STRING",
+    "status": "STRING",
+    "source_changed": "BOOL",
+    "raw_hashes": "JSON",
+    "silver_rows": "INT64",
+    "gold_rows": "JSON",
+    "analytics_rows": "JSON",
+    "started_at": "TIMESTAMP",
+    "finished_at": "TIMESTAMP",
+    "error_message": "STRING",
+    "source_name": "STRING",
+    "source_uri": "STRING",
+    "snapshot_uri": "STRING",
+    "sha256": "STRING",
+    "bytes": "INT64",
+    "created_at": "TIMESTAMP",
+    "job_name": "STRING",
+    "duration_seconds": "FLOAT64",
+    "check_name": "STRING",
+    "severity": "STRING",
+    "message": "STRING",
+    "details": "JSON",
+    "contract_version": "STRING",
+    "published_date": "DATE",
+}
+
+OPS_TABLES = {
+    "source_snapshots": {
+        "dataset": "gov_ai_ops",
+        "columns": {
+            "run_id": {"type": "STRING", "nullable": False},
+            "run_date": {"type": "DATE", "nullable": False},
+            "source_name": {"type": "STRING", "nullable": False},
+            "source_uri": {"type": "STRING", "nullable": True},
+            "snapshot_uri": {"type": "STRING", "nullable": True},
+            "sha256": {"type": "STRING", "nullable": True},
+            "bytes": {"type": "INT64", "nullable": True},
+            "status": {"type": "STRING", "nullable": False},
+            "created_at": {"type": "TIMESTAMP", "nullable": False},
+            "error_message": {"type": "STRING", "nullable": True},
+        },
+    },
+    "job_logs": {
+        "dataset": "gov_ai_ops",
+        "columns": {
+            "run_id": {"type": "STRING", "nullable": False},
+            "run_date": {"type": "DATE", "nullable": False},
+            "job_name": {"type": "STRING", "nullable": False},
+            "status": {"type": "STRING", "nullable": False},
+            "started_at": {"type": "TIMESTAMP", "nullable": False},
+            "finished_at": {"type": "TIMESTAMP", "nullable": True},
+            "duration_seconds": {"type": "FLOAT64", "nullable": True},
+            "error_message": {"type": "STRING", "nullable": True},
+        },
+    },
+    "data_quality_results": {
+        "dataset": "gov_ai_ops",
+        "columns": {
+            "run_id": {"type": "STRING", "nullable": False},
+            "run_date": {"type": "DATE", "nullable": False},
+            "check_name": {"type": "STRING", "nullable": False},
+            "severity": {"type": "STRING", "nullable": False},
+            "status": {"type": "STRING", "nullable": False},
+            "message": {"type": "STRING", "nullable": True},
+            "details": {"type": "JSON", "nullable": True},
+            "created_at": {"type": "TIMESTAMP", "nullable": False},
+        },
+    },
+    "indicator_contract_versions": {
+        "dataset": "gov_ai_ops",
+        "columns": {
+            "contract_version": {"type": "STRING", "nullable": False},
+            "published_date": {"type": "DATE", "nullable": False},
+            "sha256": {"type": "STRING", "nullable": True},
+            "source_uri": {"type": "STRING", "nullable": True},
+            "created_at": {"type": "TIMESTAMP", "nullable": False},
+        },
+    },
+}
+
+
+def to_bigquery_type(value: Any) -> str:
+    normalized = str(value or "STRING").strip().upper()
+    return BQ_TYPE_ALIASES.get(normalized, normalized)
+
+
+def default_column_spec(column_name: str, nullable: bool = True) -> dict[str, Any]:
+    return {
+        "type": BQ_DEFAULT_COLUMN_TYPES.get(column_name, "STRING"),
+        "nullable": nullable,
+    }
+
+
+def normalize_contract_table_spec(table_spec: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(table_spec)
+    columns = normalize_column_map(normalized.get("columns"))
+
+    if columns:
+        normalized["columns"] = {
+            column_name: {
+                **column_spec,
+                "type": to_bigquery_type(column_spec.get("type")),
+                "nullable": bool(column_spec.get("nullable", True)),
+            }
+            for column_name, column_spec in columns.items()
+        }
+    else:
+        required_columns = normalized.get("required_columns") or normalized.get("grain") or []
+        if isinstance(required_columns, list):
+            normalized["columns"] = {
+                str(column_name): default_column_spec(str(column_name), nullable=False)
+                for column_name in required_columns
+            }
+
+    return normalized
+
+
+def merge_table_specs(
+    base_spec: dict[str, Any] | None,
+    override_spec: dict[str, Any] | None,
+) -> dict[str, Any]:
+    merged = dict(base_spec or {})
+    override = normalize_contract_table_spec(override_spec or {})
+
+    for key, value in override.items():
+        if key != "columns":
+            merged[key] = value
+
+    merged_columns = normalize_column_map(merged.get("columns"))
+    override_columns = normalize_column_map(override.get("columns"))
+
+    for column_name, column_spec in override_columns.items():
+        merged_columns[column_name] = {
+            **column_spec,
+            "type": to_bigquery_type(column_spec.get("type")),
+            "nullable": bool(column_spec.get("nullable", True)),
+        }
+
+    for column_name in override.get("required_columns") or []:
+        merged_columns.setdefault(
+            str(column_name),
+            default_column_spec(str(column_name), nullable=False),
+        )
+
+    if merged_columns:
+        merged["columns"] = merged_columns
+
+    return merged
+
+
+def get_bigquery_datasets(raw_table_contract: dict[str, Any]) -> list[str]:
+    defaults = ["gov_ai_silver", "gov_ai_gold", "gov_ai_analytics", "gov_ai_ops"]
+    warehouse = raw_table_contract.get("warehouse")
+    if not isinstance(warehouse, dict):
+        return defaults
+
+    bigquery = warehouse.get("bigquery")
+    if not isinstance(bigquery, dict):
+        return defaults
+
+    datasets = bigquery.get("datasets")
+    if not isinstance(datasets, dict):
+        return defaults
+
+    values = [str(value) for value in datasets.values() if value]
+    return values or defaults
+
+
 def build_analytics_tables(
     payload: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
@@ -855,7 +1055,8 @@ def build_analytics_tables(
         analytics_table = f"analytics_{gold_table}"
         columns: dict[str, dict[str, Any]] = {
             "country_code": {"type": "STRING", "nullable": False},
-            "year": {"type": "INTEGER", "nullable": False},
+            "country": {"type": "STRING", "nullable": False},
+            "year": {"type": "INT64", "nullable": False},
         }
 
         for code in codes:
@@ -865,15 +1066,27 @@ def build_analytics_tables(
                     "nullable": True,
                 }
 
-        tables[analytics_table] = {"columns": columns}
+        columns["run_id"] = {"type": "STRING", "nullable": False}
+        columns["run_date"] = {"type": "DATE", "nullable": False}
+        columns["loaded_at"] = {"type": "TIMESTAMP", "nullable": False}
+
+        tables[analytics_table] = {
+            "dataset": "gov_ai_analytics",
+            "columns": columns,
+        }
 
     tables["analytics_clusters"] = {
+        "dataset": "gov_ai_analytics",
         "columns": {
-            "year": {"type": "INTEGER", "nullable": False},
             "country_code": {"type": "STRING", "nullable": False},
-            "cluster_id": {"type": "INTEGER", "nullable": False},
-            "method": {"type": "STRING", "nullable": False},
-        }
+            "country": {"type": "STRING", "nullable": False},
+            "year": {"type": "INT64", "nullable": False},
+            "cluster_id": {"type": "INT64", "nullable": False},
+            "latest_valid_year": {"type": "INT64", "nullable": False},
+            "run_id": {"type": "STRING", "nullable": False},
+            "run_date": {"type": "DATE", "nullable": False},
+            "loaded_at": {"type": "TIMESTAMP", "nullable": False},
+        },
     }
 
     return tables
@@ -891,24 +1104,28 @@ def render_bigquery_sql(
     all_tables: dict[str, dict[str, Any]] = {}
     all_tables.update(fallback_gold_tables)
     all_tables.update(analytics_tables)
+    all_tables.update(OPS_TABLES)
 
     for table_name, table_spec in contract_tables.items():
-        all_tables[table_name] = table_spec
+        all_tables[table_name] = merge_table_specs(
+            all_tables.get(table_name),
+            table_spec,
+        )
 
     lines: list[str] = [
         "-- Generated from contracts/*.yaml.",
         "-- Do not edit manually.",
         "-- Run: python scripts/generate_contract_artifacts.py",
         "",
-        "CREATE SCHEMA IF NOT EXISTS `gov_ai_silver`;",
-        "CREATE SCHEMA IF NOT EXISTS `gov_ai_gold`;",
-        "CREATE SCHEMA IF NOT EXISTS `gov_ai_analytics`;",
-        "CREATE SCHEMA IF NOT EXISTS `gov_ai_ops`;",
-        "",
     ]
 
+    for dataset in get_bigquery_datasets(raw_table_contract):
+        lines.append(f"CREATE SCHEMA IF NOT EXISTS `{dataset}`;")
+
+    lines.append("")
+
     for table_name in sorted(all_tables.keys()):
-        table_spec = all_tables[table_name]
+        table_spec = normalize_contract_table_spec(all_tables[table_name])
         columns = normalize_column_map(table_spec.get("columns"))
 
         if not columns:
