@@ -16,6 +16,9 @@ if SettingsConfigDict:
         ENVIRONMENT: str = "development"
         RUN_ID: str = f"analytics-{uuid4()}"
         RUN_DATE: str = datetime.now().date().isoformat()
+        BIGQUERY_ANALYTICS_DATASET: str = "gov_ai_analytics"
+        BIGQUERY_LOCATION: str = "asia-southeast1"
+        ANALYTICS_LATEST_VALID_YEAR: int | None = None
 
         model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 else:
@@ -26,6 +29,13 @@ else:
             self.ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
             self.RUN_ID = os.getenv("RUN_ID", f"analytics-{uuid4()}")
             self.RUN_DATE = os.getenv("RUN_DATE", datetime.now().date().isoformat())
+            self.BIGQUERY_ANALYTICS_DATASET = os.getenv(
+                "BIGQUERY_ANALYTICS_DATASET",
+                "gov_ai_analytics",
+            )
+            self.BIGQUERY_LOCATION = os.getenv("BIGQUERY_LOCATION", "asia-southeast1")
+            raw_latest_year = os.getenv("ANALYTICS_LATEST_VALID_YEAR")
+            self.ANALYTICS_LATEST_VALID_YEAR = int(raw_latest_year) if raw_latest_year else None
 
 settings = Settings()
 

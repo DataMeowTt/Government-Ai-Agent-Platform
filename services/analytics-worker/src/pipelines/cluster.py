@@ -13,7 +13,7 @@ from src.generated.indicator_contract import (
     PUBLIC_INDICATORS,
 )
 
-METADATA_COLUMNS = ("run_id", "run_date", "loaded_at")
+OPTIONAL_OUTPUT_COLUMNS = ("latest_valid_year", "run_id", "run_date", "loaded_at")
 
 
 def _get_supported_metadata_columns(engine, table_name: str) -> list[str]:
@@ -23,7 +23,7 @@ def _get_supported_metadata_columns(engine, table_name: str) -> list[str]:
         logger.warning(f"Could not inspect metadata columns for {table_name}: {e}")
         return []
 
-    return [column for column in METADATA_COLUMNS if column in columns]
+    return [column for column in OPTIONAL_OUTPUT_COLUMNS if column in columns]
 
 def find_table_for_indicator(indicator: str) -> str:
     indicator_meta = PUBLIC_INDICATORS.get(indicator)
@@ -93,6 +93,7 @@ def run_clustering(
     target_year: int,
     n_clusters: int = 5,
     runtime_metadata: dict[str, str] | None = None,
+    latest_valid_year: int | None = None,
 ):
     countries, X = prepare_cluster_matrix(target_year)
     
@@ -110,7 +111,7 @@ def run_clustering(
                 "year": target_year,
                 "country_code": ctry,
                 "cluster_id": int(cluster),
-                "method": "kmeans"
+                "method": "kmeans",
             })
             
         records_df = pd.DataFrame(records)
@@ -120,7 +121,11 @@ def run_clustering(
 
         if runtime_metadata and metadata_columns:
             for column in metadata_columns:
-                records_df[column] = runtime_metadata[column]
+                if column in runtime_metadata:
+                    records_df[column] = runtime_metadata[column]
+
+        if latest_valid_year is not None and "latest_valid_year" in metadata_columns:
+            records_df["latest_valid_year"] = latest_valid_year
 
         insert_metadata_columns = "".join(
             f", {column}" for column in metadata_columns

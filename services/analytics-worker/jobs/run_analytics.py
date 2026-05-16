@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 
+from src.core.config import settings
 from src.pipelines.batch import run_all_analytics
 
 
@@ -25,8 +27,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--target",
         default="postgres",
-        choices=["postgres"],
-        help="Analytics write target. Only postgres is supported in this chunk.",
+        choices=["postgres", "bigquery"],
+        help="Analytics write target.",
+    )
+    parser.add_argument("--project-id", help="BigQuery project id for target=bigquery.")
+    parser.add_argument(
+        "--dataset",
+        default=settings.BIGQUERY_ANALYTICS_DATASET,
+        help="BigQuery analytics dataset for target=bigquery.",
+    )
+    parser.add_argument(
+        "--location",
+        default=settings.BIGQUERY_LOCATION,
+        help="BigQuery location for target=bigquery.",
     )
     parser.add_argument(
         "--dry-run",
@@ -51,6 +64,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=5,
         help="Number of clusters for clustering tasks.",
     )
+    parser.add_argument(
+        "--latest-valid-year",
+        type=int,
+        help="Latest valid source year for cluster target-year resolution.",
+    )
     return parser
 
 
@@ -58,15 +76,24 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
-    result = run_all_analytics(
-        target=args.target,
-        dry_run=args.dry_run,
-        table=args.table,
-        indicator=args.indicator,
-        skip_clusters=args.skip_clusters,
-        cluster_years=_parse_cluster_years(args.cluster_year),
-        n_clusters=args.n_clusters,
-    )
+    try:
+        result = run_all_analytics(
+            target=args.target,
+            dry_run=args.dry_run,
+            table=args.table,
+            indicator=args.indicator,
+            skip_clusters=args.skip_clusters,
+            cluster_years=_parse_cluster_years(args.cluster_year),
+            n_clusters=args.n_clusters,
+            project_id=args.project_id,
+            dataset=args.dataset,
+            location=args.location,
+            latest_valid_year=args.latest_valid_year,
+        )
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
     return 1 if result.get("errors") else 0
 
