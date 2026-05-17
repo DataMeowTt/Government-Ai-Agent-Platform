@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -46,6 +47,10 @@ class _Settings:
     silver_output_uri: str = os.getenv(
         "SILVER_OUTPUT_URI",
         "/opt/workspace/data/processed_data/processed.csv",
+    )
+    source_registry_path: str = os.getenv(
+        "SOURCE_REGISTRY_PATH",
+        str(Path(__file__).with_name("source_registry.yaml")),
     )
 
 

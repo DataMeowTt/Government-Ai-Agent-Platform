@@ -1,0 +1,39 @@
+sources:
+  - source_name: wdi
+    source_type: api
+    enabled: true
+    description: World Bank WDI logical source placeholder. Exact endpoint and mapping are not yet configured.
+    license_note: null
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: null
+    indicator_mapping: null
+    output_format: json
+
+  - source_name: gmd
+    source_type: csv_url
+    enabled: true
+    description: GMD placeholder. Concrete CSV URL must be provided by the user.
+    license_note: null
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: null
+    indicator_mapping: null
+    output_format: csv
+
+  - source_name: macro
+    source_type: local_path
+    enabled: true
+    description: FAO/Macro placeholder. Concrete local path or CSV URL must be provided by the user.
+    license_note: null
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: null
+    indicator_mapping: null
+    output_format: csv
