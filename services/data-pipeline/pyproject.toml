@@ -12,6 +12,7 @@ dependencies = [
     "pyarrow>=15,<22",
     "numpy>=1.26,<3",
     "python-dotenv>=1.0",
+    "PyYAML>=6.0",
     "psycopg2-binary>=2.9",
     "sqlalchemy>=2.0,<3",
     "fastapi>=0.111,<1",
@@ -29,7 +30,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["config*", "gold*", "pipeline*", "storage*", "utils*"]
+include = ["config*", "gold*", "pipeline*", "storage*", "utils*", "warehouse*"]
 exclude = ["tests*"]
 
 [tool.pytest.ini_options]
