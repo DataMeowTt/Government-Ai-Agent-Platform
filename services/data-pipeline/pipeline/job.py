@@ -6,33 +6,28 @@ from pyspark.sql import functions as F
 from config.settings import settings
 from pipeline.gmd.pipeline import process_gmd
 from pipeline.macro.pipeline import process_macro
+from pipeline.silver_paths import resolve_silver_inputs
 from pipeline.wdi.pipeline import process_wdi
 from utils.io_paths import build_silver_output_uris
 from utils.logger import get_logger
 
 log = get_logger("pipeline.job")
 
-_RAW_DIR = "/opt/dataset"
-
-_WDI_INPUT = f"{_RAW_DIR}/WDICSV.csv"
-_GMD_INPUT = f"{_RAW_DIR}/GMD.csv"
-_MACRO_INPUT = f"{_RAW_DIR}/Macro.csv"
-
 
 def _loaded_at_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _add_metadata(df: DataFrame, loaded_at: str) -> DataFrame:
+def add_metadata(df: DataFrame, *, run_id: str, run_date: str, loaded_at: str) -> DataFrame:
     return (
         df
-        .withColumn("run_id", F.lit(settings.run_id))
-        .withColumn("run_date", F.lit(settings.run_date).cast("date"))
+        .withColumn("run_id", F.lit(run_id))
+        .withColumn("run_date", F.lit(run_date).cast("date"))
         .withColumn("loaded_at", F.lit(loaded_at).cast("timestamp"))
     )
 
 
-def _save(df: DataFrame, path: str, output_format: str) -> None:
+def save_output(df: DataFrame, path: str, output_format: str) -> None:
     if output_format == "csv":
         df.coalesce(1).write.mode("overwrite").option("header", True).csv(path)
     elif output_format == "parquet":
@@ -43,10 +38,55 @@ def _save(df: DataFrame, path: str, output_format: str) -> None:
     log.info("JOB | saved | format=%s | path=%s", output_format, path)
 
 
+def build_source_frames(
+    spark: SparkSession,
+    *,
+    wdi_path: str | None,
+    gmd_path: str | None,
+    macro_path: str | None,
+    run_id: str,
+    run_date: str,
+    loaded_at: str | None = None,
+) -> dict[str, DataFrame]:
+    loaded_at_value = loaded_at or _loaded_at_utc()
+    frames: dict[str, DataFrame] = {}
+    if wdi_path:
+        frames["wdi"] = add_metadata(
+            process_wdi(spark, wdi_path),
+            run_id=run_id,
+            run_date=run_date,
+            loaded_at=loaded_at_value,
+        )
+    if macro_path:
+        frames["macro"] = add_metadata(
+            process_macro(spark, macro_path),
+            run_id=run_id,
+            run_date=run_date,
+            loaded_at=loaded_at_value,
+        )
+    if gmd_path:
+        frames["gmd"] = add_metadata(
+            process_gmd(spark, gmd_path),
+            run_id=run_id,
+            run_date=run_date,
+            loaded_at=loaded_at_value,
+        )
+    return frames
+
+
+def union_source_frames(frames: dict[str, DataFrame]) -> DataFrame:
+    ordered = [frames[key] for key in ("wdi", "macro", "gmd") if key in frames]
+    if not ordered:
+        raise ValueError("No source DataFrame available to union.")
+    union_df = ordered[0]
+    for frame in ordered[1:]:
+        union_df = union_df.unionByName(frame)
+    return union_df.orderBy("country", "year")
+
+
 def run(spark: SparkSession) -> None:
     output_format = settings.output_format
     output_uris = build_silver_output_uris(settings.silver_output_uri)
-    loaded_at = _loaded_at_utc()
 
     log.info("JOB | ===== pipeline start =====")
     log.info(
@@ -58,17 +98,23 @@ def run(spark: SparkSession) -> None:
     )
 
     try:
-        wdi = _add_metadata(process_wdi(spark, _WDI_INPUT), loaded_at)
-        macro = _add_metadata(process_macro(spark, _MACRO_INPUT), loaded_at)
-        gmd = _add_metadata(process_gmd(spark, _GMD_INPUT), loaded_at)
+        input_paths = resolve_silver_inputs(registry_path=settings.source_registry_path)
+        frames = build_source_frames(
+            spark,
+            wdi_path=input_paths["wdi"],
+            gmd_path=input_paths["gmd"],
+            macro_path=input_paths["fao_macro"],
+            run_id=settings.run_id,
+            run_date=settings.run_date,
+        )
 
-        _save(wdi, output_uris["wdi"], output_format)
-        _save(macro, output_uris["macro"], output_format)
-        _save(gmd, output_uris["gmd"], output_format)
+        for key in ("wdi", "macro", "gmd"):
+            if key in frames:
+                save_output(frames[key], output_uris[key], output_format)
 
         log.info("JOB | building union")
-        union = wdi.unionByName(macro).unionByName(gmd).orderBy("country", "year")
-        _save(union, output_uris["union"], output_format)
+        union = union_source_frames(frames)
+        save_output(union, output_uris["union"], output_format)
 
         log.info("JOB | ===== pipeline done =====")
 
