@@ -18,12 +18,16 @@ function getRows(response?: AiChatResponse) {
   return [];
 }
 
-function formatCell(value: unknown) {
+function formatCell(column: string, value: unknown) {
   if (value == null) {
     return '-';
   }
 
   if (typeof value === 'number') {
+    const normalizedColumn = column.toLowerCase();
+    if (normalizedColumn === 'year' || normalizedColumn.endsWith('_year')) {
+      return String(value);
+    }
     return Number.isFinite(value) ? value.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '-';
   }
 
@@ -67,10 +71,10 @@ export default function ChatDataTable({ response }: { response?: AiChatResponse 
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {visibleRows.map((row, index) => (
-              <tr key={`${index}-${columns.map((column) => formatCell(row[column])).join('|')}`}>
+              <tr key={`${index}-${columns.map((column) => formatCell(column, row[column])).join('|')}`}>
                 {columns.map((column) => (
                   <td key={column} className="whitespace-nowrap px-3 py-2 text-slate-700">
-                    {formatCell(row[column])}
+                    {formatCell(column, row[column])}
                   </td>
                 ))}
               </tr>

@@ -30,3 +30,64 @@ export interface BigQueryAnomalyItem {
   anomaly_score: number | null;
   country_name: string;
 }
+
+export interface BigQueryCountryAnalyticsRow {
+  country_code: string;
+  year: number;
+  actual_growth?: number | null;
+  trend_growth?: number | null;
+  anomaly_growth?: number | null;
+  actual_debt?: number | null;
+  anomaly_debt?: number | null;
+  actual_inflation?: number | null;
+  actual_poverty?: number | null;
+  actual_unemployment?: number | null;
+  actual_manuf_share?: number | null;
+  actual_agri_share?: number | null;
+  actual_reer_deviation?: number | null;
+  anomaly_reer_deviation?: number | null;
+  cluster_id?: number | null;
+  completeness_score?: number | null;
+  flag_score?: number | null;
+}
+
+export interface BigQueryCountryAnalyticsResponse {
+  meta: {
+    country_code: string;
+    data_completeness: number;
+    flag_score: number;
+    latest_year: number | null;
+  };
+  data: Array<{
+    country_code: string;
+    year: number;
+    actual_growth?: number | null;
+    trend_growth?: number | null;
+    anomaly_growth?: number | null;
+    actual_debt?: number | null;
+    anomaly_debt?: number | null;
+    actual_inflation?: number | null;
+    actual_poverty?: number | null;
+    actual_unemployment?: number | null;
+    actual_manuf_share?: number | null;
+    actual_agri_share?: number | null;
+    actual_reer_deviation?: number | null;
+    anomaly_reer_deviation?: number | null;
+    cluster_id?: number | null;
+  }>;
+}
+
+export interface BigQueryClusterBenchmarkMember {
+  country_code: string;
+  country_name: string;
+  year: number;
+  value: number | null;
+}
+
+export interface BigQueryClusterBenchmarkResponse {
+  cluster_id: number;
+  indicator: string;
+  year: number;
+  average: number;
+  members: BigQueryClusterBenchmarkMember[];
+}

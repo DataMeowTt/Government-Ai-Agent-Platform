@@ -89,6 +89,10 @@ export class CountriesService {
   }
 
   async getFullCountryAnalytics(countryCode: string) {
+    if (this.isBigQueryMode()) {
+      return this.bigQueryService.getFullCountryAnalytics(countryCode);
+    }
+
     const growthRepo = this.getGrowthRepo();
     const qb = growthRepo.createQueryBuilder('g');
     const rows = await qb
@@ -130,6 +134,10 @@ export class CountriesService {
     };
   }
   async getClusterBenchmark(countryCode: string, indicator: string, year?: number | null) {
+    if (this.isBigQueryMode()) {
+      return this.bigQueryService.getClusterBenchmark(countryCode, indicator, year);
+    }
+
     const clustersRepo = this.getClustersRepo();
     const growthRepo = this.getGrowthRepo();
 
@@ -145,7 +153,7 @@ export class CountriesService {
     const qb = growthRepo.createQueryBuilder('g')
       .select(['g.country_code as country_code', 'g.country as country_name', 'g.year as year'])
       .where('g.country_code IN (:...codes)', { codes: memberCodes })
-      .where('g.year = :year', { year: currentCluster.year });
+      .andWhere('g.year = :year', { year: currentCluster.year });
 
     if (indicator === 'rGDP_growth_YoY' || indicator === 'actual_growth') {
       qb.addSelect('g.rGDP_growth_YoY as value');

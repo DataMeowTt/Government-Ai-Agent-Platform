@@ -24,8 +24,9 @@ export interface AnomalyItem {
 export interface ClusterItem {
   year: number;
   country_code: string;
+  country?: string;
   cluster_id: number;
-  method: string;
+  latest_valid_year?: number;
 }
 
 export interface CountryAnalyticsRow {

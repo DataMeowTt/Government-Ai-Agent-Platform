@@ -1,7 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { countriesApi } from '@/lib/api/endpoints';
 import { useIndicators } from './useIndicators';
-import { parseArray, countryAnalyticsRowSchema } from '@/lib/schemas';
+import { analyticsResponseSchema } from './useCountries';
 import { CountryAnalyticsRow, CompareGroupedData } from '@/lib/types';
 
 const INDICATOR_KEY_MAP: Record<string, keyof CountryAnalyticsRow> = {
@@ -24,8 +24,8 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
       queryKey: ['compare', code, indicator],
       queryFn: async () => {
         const { data } = await countriesApi.getFullAnalytics(code);
-        const parsed = parseArray(countryAnalyticsRowSchema, data);
-        return parsed.map(item => ({
+        const parsed = analyticsResponseSchema.parse(data);
+        return parsed.data.map(item => ({
           year: item.year,
           value: (item[actualKey] as number | null | undefined) ?? null,
           country_code: code,

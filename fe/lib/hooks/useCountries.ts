@@ -4,7 +4,7 @@ import { parseArray, countrySchema, countryAnalyticsRowSchema } from '@/lib/sche
 import { Country } from '@/lib/types';
 import { z } from 'zod';
 
-const analyticsResponseSchema = z.object({
+export const analyticsResponseSchema = z.object({
   meta: z.object({ country_code: z.string(), data_completeness: z.number(), flag_score: z.number(), latest_year: z.number().nullable() }),
   data: z.array(countryAnalyticsRowSchema),
 });

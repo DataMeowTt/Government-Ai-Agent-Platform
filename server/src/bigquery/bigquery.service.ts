@@ -6,7 +6,10 @@ import {
   BigQueryAnomaliesParams,
   BigQueryAnomalyItem,
   BigQueryClusterItem,
+  BigQueryClusterBenchmarkResponse,
   BigQueryCountryItem,
+  BigQueryCountryAnalyticsResponse,
+  BigQueryCountryAnalyticsRow,
 } from './bigquery.types';
 
 const DEFAULT_PROJECT_ID = 'western-pivot-452008-a6';
@@ -19,9 +22,12 @@ const MAX_LIMIT = 100;
 
 type BigQueryTables = {
   goldGrowthDynamics: string;
+  goldStructuralComposition: string;
   analyticsClusters: string;
   analyticsGoldGrowthDynamics: string;
   analyticsGoldFiscalMonetary: string;
+  analyticsGoldSocialWelfare: string;
+  analyticsGoldStructuralComposition: string;
   analyticsGoldCrisisRisk: string;
 };
 
@@ -65,6 +71,10 @@ export class BigQueryService {
         this.goldDataset,
         'gold_growth_dynamics',
       ),
+      goldStructuralComposition: this.buildTableRef(
+        this.goldDataset,
+        'gold_structural_composition',
+      ),
       analyticsClusters: this.buildTableRef(
         this.analyticsDataset,
         'analytics_clusters',
@@ -77,6 +87,14 @@ export class BigQueryService {
         this.analyticsDataset,
         'analytics_gold_fiscal_monetary',
       ),
+      analyticsGoldSocialWelfare: this.buildTableRef(
+        this.analyticsDataset,
+        'analytics_gold_social_welfare',
+      ),
+      analyticsGoldStructuralComposition: this.buildTableRef(
+        this.analyticsDataset,
+        'analytics_gold_structural_composition',
+      ),
       analyticsGoldCrisisRisk: this.buildTableRef(
         this.analyticsDataset,
         'analytics_gold_crisis_risk',
@@ -85,9 +103,12 @@ export class BigQueryService {
 
     this.whitelistedTables = new Set<string>([
       this.tables.goldGrowthDynamics,
+      this.tables.goldStructuralComposition,
       this.tables.analyticsClusters,
       this.tables.analyticsGoldGrowthDynamics,
       this.tables.analyticsGoldFiscalMonetary,
+      this.tables.analyticsGoldSocialWelfare,
+      this.tables.analyticsGoldStructuralComposition,
       this.tables.analyticsGoldCrisisRisk,
     ]);
 
@@ -96,16 +117,193 @@ export class BigQueryService {
 
   async listCountries(): Promise<BigQueryCountryItem[]> {
     const sql = `
+      WITH ranked AS (
+        SELECT
+          g.country_code AS country_code,
+          g.country AS country_name,
+          g.income_group AS region,
+          ROW_NUMBER() OVER (
+            PARTITION BY g.country_code
+            ORDER BY g.country ASC
+          ) AS rn
+        FROM \`${this.tables.goldGrowthDynamics}\` g
+      )
       SELECT
-        g.country_code AS country_code,
-        g.country AS country_name,
-        ANY_VALUE(g.income_group) AS region
-      FROM \`${this.tables.goldGrowthDynamics}\` g
-      GROUP BY g.country_code, g.country
-      ORDER BY g.country ASC
+        country_code,
+        country_name,
+        region
+      FROM ranked
+      WHERE rn = 1
+      ORDER BY country_name ASC
       LIMIT @limit
     `;
     return this.executeQuery<BigQueryCountryItem>(sql, { limit: MAX_LIMIT });
+  }
+
+  async getFullCountryAnalytics(
+    countryCode: string,
+  ): Promise<BigQueryCountryAnalyticsResponse> {
+    const normalizedCountryCode = this.normalizeCountryCode(countryCode) || countryCode;
+    const sql = `
+      SELECT
+        g.country_code AS country_code,
+        g.year AS year,
+        g.rGDP_growth_YoY AS actual_growth,
+        an_growth.rGDP_growth_YoY_trend AS trend_growth,
+        an_growth.rGDP_growth_YoY_anomaly_score AS anomaly_growth,
+        an_fiscal.govdebt_GDP_actual AS actual_debt,
+        an_fiscal.govdebt_GDP_anomaly_score AS anomaly_debt,
+        an_fiscal.inflation_cpi_actual AS actual_inflation,
+        an_social.poverty_headcount_actual AS actual_poverty,
+        an_social.unemployment_total_actual AS actual_unemployment,
+        an_struct.manuf_va_share_actual AS actual_manuf_share,
+        an_struct.agri_va_share_actual AS actual_agri_share,
+        an_risk.REER_deviation_actual AS actual_reer_deviation,
+        an_risk.REER_deviation_anomaly_score AS anomaly_reer_deviation,
+        c.cluster_id AS cluster_id,
+        g.completeness_score AS completeness_score,
+        COALESCE(gold_struct.flag_score, 0) AS flag_score
+      FROM \`${this.tables.goldGrowthDynamics}\` g
+      LEFT JOIN \`${this.tables.analyticsGoldGrowthDynamics}\` an_growth
+        ON g.country_code = an_growth.country_code AND g.year = an_growth.year
+      LEFT JOIN \`${this.tables.analyticsGoldFiscalMonetary}\` an_fiscal
+        ON g.country_code = an_fiscal.country_code AND g.year = an_fiscal.year
+      LEFT JOIN \`${this.tables.analyticsGoldSocialWelfare}\` an_social
+        ON g.country_code = an_social.country_code AND g.year = an_social.year
+      LEFT JOIN \`${this.tables.analyticsGoldStructuralComposition}\` an_struct
+        ON g.country_code = an_struct.country_code AND g.year = an_struct.year
+      LEFT JOIN \`${this.tables.goldStructuralComposition}\` gold_struct
+        ON g.country_code = gold_struct.country_code AND g.year = gold_struct.year
+      LEFT JOIN \`${this.tables.analyticsGoldCrisisRisk}\` an_risk
+        ON g.country_code = an_risk.country_code AND g.year = an_risk.year
+      LEFT JOIN \`${this.tables.analyticsClusters}\` c
+        ON g.country_code = c.country_code AND g.year = c.year
+      WHERE g.country_code = @countryCode
+      ORDER BY g.year ASC
+      LIMIT @limit
+    `;
+
+    const rows = await this.executeQuery<BigQueryCountryAnalyticsRow>(sql, {
+      countryCode: normalizedCountryCode,
+      limit: MAX_LIMIT,
+    });
+
+    const latestRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+    const completeness =
+      rows.length > 0
+        ? rows.reduce((sum, row) => sum + (Number(row.completeness_score) || 0), 0) / rows.length
+        : 0;
+    const responseRows = rows.map(({ completeness_score, flag_score, ...row }) => row);
+
+    return {
+      meta: {
+        country_code: normalizedCountryCode,
+        data_completeness: Math.round(completeness),
+        flag_score: Number(latestRow?.flag_score || 0),
+        latest_year: latestRow ? Number(latestRow.year) : null,
+      },
+      data: responseRows,
+    };
+  }
+
+  async getClusterBenchmark(
+    countryCode: string,
+    indicator: string,
+    year?: number | null,
+  ): Promise<BigQueryClusterBenchmarkResponse | null> {
+    const normalizedCountryCode = this.normalizeCountryCode(countryCode);
+    if (!normalizedCountryCode) {
+      return null;
+    }
+
+    const indicatorSql =
+      indicator === 'rGDP_growth_YoY' || indicator === 'actual_growth'
+        ? 'g.rGDP_growth_YoY'
+        : indicator === 'govdebt_GDP' || indicator === 'actual_debt'
+          ? 'an_fiscal.govdebt_GDP_actual'
+          : indicator === 'REER_deviation' || indicator === 'actual_reer_deviation'
+            ? 'an_risk.REER_deviation_actual'
+            : null;
+
+    if (!indicatorSql) {
+      return null;
+    }
+
+    const sql = `
+      WITH current_cluster AS (
+        SELECT
+          c.cluster_id AS cluster_id,
+          c.year AS year
+        FROM \`${this.tables.analyticsClusters}\` c
+        WHERE c.country_code = @countryCode
+          AND (@year IS NULL OR c.year = @year)
+        ORDER BY c.year DESC
+        LIMIT 1
+      ),
+      members AS (
+        SELECT
+          c.country_code AS country_code,
+          c.country AS country_name,
+          c.year AS year
+        FROM \`${this.tables.analyticsClusters}\` c
+        JOIN current_cluster cc
+          ON c.cluster_id = cc.cluster_id AND c.year = cc.year
+      )
+      SELECT
+        cc.cluster_id AS cluster_id,
+        cc.year AS year,
+        @indicator AS indicator,
+        m.country_code AS country_code,
+        m.country_name AS country_name,
+        ${indicatorSql} AS value
+      FROM members m
+      JOIN current_cluster cc
+        ON m.year = cc.year
+      LEFT JOIN \`${this.tables.goldGrowthDynamics}\` g
+        ON m.country_code = g.country_code AND m.year = g.year
+      LEFT JOIN \`${this.tables.analyticsGoldFiscalMonetary}\` an_fiscal
+        ON m.country_code = an_fiscal.country_code AND m.year = an_fiscal.year
+      LEFT JOIN \`${this.tables.analyticsGoldCrisisRisk}\` an_risk
+        ON m.country_code = an_risk.country_code AND m.year = an_risk.year
+      ORDER BY m.country_code ASC
+      LIMIT @limit
+    `;
+
+    const rows = await this.executeQuery<
+      {
+        cluster_id: number;
+        year: number;
+        indicator: string;
+        country_code: string;
+        country_name: string;
+        value: number | null;
+      }
+    >(sql, {
+      countryCode: normalizedCountryCode,
+      year: year ?? null,
+      indicator,
+      limit: MAX_LIMIT,
+    });
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const average =
+      rows.reduce((sum, row) => sum + (Number(row.value) || 0), 0) / rows.length;
+
+    return {
+      cluster_id: Number(rows[0].cluster_id),
+      indicator,
+      year: Number(rows[0].year),
+      average,
+      members: rows.map(row => ({
+        country_code: row.country_code,
+        country_name: row.country_name || row.country_code,
+        year: Number(row.year),
+        value: row.value ?? null,
+      })),
+    };
   }
 
   async getClusters(year: number): Promise<BigQueryClusterItem[]> {

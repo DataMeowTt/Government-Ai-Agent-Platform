@@ -18,8 +18,9 @@ export const anomalySchema = z.object({
 export const clusterSchema = z.object({
   year: z.number(),
   country_code: z.string(),
+  country: z.string().optional(),
   cluster_id: z.number(),
-  method: z.string(),
+  latest_valid_year: z.number().optional(),
 });
 
 export const indicatorSchema = z.object({

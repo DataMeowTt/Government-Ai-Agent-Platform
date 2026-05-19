@@ -165,9 +165,7 @@ function ComparePageContent() {
           <div className="lg:col-span-4 space-y-3">
             <label className="block text-sm font-medium text-gray-700">Chỉ số & Giai đoạn</label>
             <select value={selectedIndicator} onChange={(e) => setSelectedIndicator(e.target.value)} className="w-full h-10 border border-gray-300 rounded-md text-sm bg-white px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {(indicators as Indicator[] | undefined)?.filter(i =>
-                ['Growth', 'Fiscal', 'Monetary', 'Social', 'Risk', 'Structure', 'Trade', 'Demographics', 'Investment', 'Quality', 'Other'].includes(i.category)
-              ).map(i => (
+              {(indicators as Indicator[] | undefined)?.map(i => (
                 <option key={i.code} value={i.code}>
                   {getIndicatorViName(i.code)} ({i.unit})
                 </option>
