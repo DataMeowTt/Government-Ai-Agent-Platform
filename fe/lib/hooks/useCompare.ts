@@ -20,10 +20,11 @@ const INDICATOR_KEY_MAP: Record<string, keyof CountryAnalyticsRow> = {
 
 export const useCompare = (countryCodes: string[], indicator: string) => {
   const { data: indicators } = useIndicators();
-  const actualKey = INDICATOR_KEY_MAP[indicator] ?? 'actual_growth';
+  const actualKey = INDICATOR_KEY_MAP[indicator];
+  const unsupportedIndicator = !actualKey;
 
   const results = useQueries({
-    queries: countryCodes.map(code => ({
+    queries: countryCodes.map((code) => ({
       queryKey: ['compare', code, indicator],
       queryFn: async () => {
         const { data } = await countriesApi.getFullAnalytics(code);
@@ -32,18 +33,18 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
         const rows = parsed.success ? parsed.data.data : fallback.success ? fallback.data : [];
         return rows.map(item => ({
           year: item.year,
-          value: (item[actualKey] as number | null | undefined) ?? null,
+          value: (item[actualKey as keyof CountryAnalyticsRow] as number | null | undefined) ?? null,
           country_code: code,
         }));
       },
-      enabled: countryCodes.length > 0,
+      enabled: countryCodes.length > 0 && !unsupportedIndicator,
       staleTime: 10 * 60 * 1000,
     })),
   });
 
-  const isLoading = results.some(r => r.isLoading);
-  const error = results.find(r => r.error)?.error;
-  const flatData = results
+  const isLoading = unsupportedIndicator ? false : results.some(r => r.isLoading);
+  const error = unsupportedIndicator ? undefined : results.find(r => r.error)?.error;
+  const flatData = unsupportedIndicator ? [] : results
     .map(r => r.data ?? [])
     .flat() as { year: number; value: number | null; country_code: string }[];
 
@@ -65,5 +66,8 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
     error,
     indicatorName: meta?.name || indicator,
     indicatorUnit: meta?.unit || '',
+    unsupportedIndicator,
+    requestedIndicator: indicator,
+    resolvedColumn: actualKey,
   };
 };

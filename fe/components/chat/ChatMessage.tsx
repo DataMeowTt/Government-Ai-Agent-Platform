@@ -1,8 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import ChatChart from '@/components/chat/ChatChart';
 import ChatDataTable from '@/components/chat/ChatDataTable';
-import ChatDebugPanel from '@/components/chat/ChatDebugPanel';
-import StatusBadge from '@/components/chat/StatusBadge';
 import type { ChatMessage as ChatMessageType } from '@/lib/types/aiChat';
 
 interface ChatMessageProps {
@@ -36,19 +33,37 @@ export default function ChatMessage({ message, onClarificationClick }: ChatMessa
       ? response.clarificationQuestions
       : response?.parsedQuery?.clarification_questions || [];
 
+  const countries = Array.isArray(response?.parsedQuery?.countries) ? response?.parsedQuery?.countries : [];
+  const indicators = Array.isArray(response?.parsedQuery?.indicators) ? response?.parsedQuery?.indicators : [];
+  const startYear = response?.parsedQuery?.start_year;
+  const endYear = response?.parsedQuery?.end_year;
+  const responseDataRows = Array.isArray(response?.data) ? response.data.length : 0;
+  const chartRows = Array.isArray(response?.chart?.data) ? response.chart.data.length : 0;
+  const rowCount = responseDataRows || chartRows || 0;
+  const hasDataSummary = countries.length > 0 || indicators.length > 0 || startYear != null || endYear != null || rowCount > 0;
+
   return (
     <div className="flex justify-start">
-      <div className="w-full max-w-[92%] rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <StatusBadge status={message.status === 'error' ? 'error' : response?.status} />
-          {response?.questionType ? <span className="text-xs text-slate-500">{response.questionType}</span> : null}
-        </div>
-
+      <div className="w-full max-w-[92%] min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="text-sm leading-6 text-slate-800">{renderText(message.content)}</div>
 
         {message.error ? (
           <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {message.error}
+          </div>
+        ) : null}
+
+        {hasDataSummary ? (
+          <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+            <p className="font-semibold text-slate-800">Dữ liệu đã sử dụng</p>
+            {countries.length > 0 ? <p>Quốc gia: {countries.join(', ')}</p> : null}
+            {indicators.length > 0 ? <p>Chỉ số: {indicators.join(', ')}</p> : null}
+            {startYear != null || endYear != null ? (
+              <p>
+                Giai đoạn: {startYear ?? '...'} - {endYear ?? '...'}
+              </p>
+            ) : null}
+            {rowCount > 0 ? <p>Số dòng dữ liệu: {rowCount}</p> : null}
           </div>
         ) : null}
 
@@ -80,10 +95,7 @@ export default function ChatMessage({ message, onClarificationClick }: ChatMessa
             ))}
           </div>
         ) : null}
-
-        <ChatChart chart={response?.chart} />
         <ChatDataTable response={response} />
-        <ChatDebugPanel response={response} />
       </div>
     </div>
   );

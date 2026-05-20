@@ -30,7 +30,7 @@ export default function ChatDebugPanel({ response }: { response?: AiChatResponse
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-600 hover:text-slate-900"
       >
         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        Hiện debug
+        Thông tin kỹ thuật (dev)
       </button>
       {isOpen ? (
         <pre className="max-h-80 overflow-auto border-t border-slate-200 p-3 text-xs text-slate-700">

@@ -17,19 +17,21 @@ export const useAnomalies = ({
       const { data } = await analyticsApi.getAnomalies({ country, indicator, threshold, limit, offset });
       const wrapped = anomalyResponseSchema.safeParse(data);
       if (wrapped.success) {
+        const sortedItems = (wrapped.data.items || []).slice().sort((a, b) => a.year - b.year);
         return {
-          items: wrapped.data.items || [],
+          items: sortedItems,
           meta: wrapped.data.meta || {},
         };
       }
       const direct = z.array(anomalySchema).safeParse(data);
       if (direct.success) {
+        const sortedItems = direct.data.slice().sort((a, b) => a.year - b.year);
         return {
-          items: direct.data,
-          meta: { total_count: direct.data.length, limit, offset },
+          items: sortedItems,
+          meta: { total_count: sortedItems.length, limit, offset },
         };
       }
-      throw new Error('Dữ liệu bất thường không hợp lệ từ API.');
+      throw new Error('Dữ liệu bất thường không hợp lệ.');
     },
     staleTime: 30 * 1000,
   });

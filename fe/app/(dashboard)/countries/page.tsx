@@ -9,12 +9,20 @@ import TableShell from '@/components/ui/TableShell';
 import StateBlock from '@/components/ui/StateBlock';
 import { TableSkeleton } from '@/components/ui/Skeletons';
 import { useCountries } from '@/lib/hooks/useCountries';
+import type { Country } from '@/lib/types';
 
 export default function CountriesPage() {
   const { data, isLoading, isError, error } = useCountries();
   const [search, setSearch] = useState('');
 
-  const countries = data || [];
+  const countries = useMemo(() => {
+    const map = new Map<string, Country>();
+    (data || []).forEach((item) => {
+      if (!map.has(item.country_code)) map.set(item.country_code, item);
+    });
+    return Array.from(map.values());
+  }, [data]);
+
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return countries;
@@ -29,7 +37,7 @@ export default function CountriesPage() {
       <PageHeader
         title="Quốc gia"
         description="Danh sách quốc gia có dữ liệu trong hệ thống."
-        actions={<p className="text-sm text-slate-600">Tổng sau chuẩn hóa: {countries.length}</p>}
+        actions={<p className="text-sm text-slate-600">Tổng số quốc gia: {countries.length}</p>}
       />
 
       <FilterBar>
@@ -50,7 +58,7 @@ export default function CountriesPage() {
         <StateBlock
           mode="error"
           title="Không tải được danh sách quốc gia"
-          description={error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi gọi API quốc gia.'}
+          description={error instanceof Error ? error.message : 'Đã có lỗi khi tải danh sách quốc gia.'}
         />
       ) : null}
 

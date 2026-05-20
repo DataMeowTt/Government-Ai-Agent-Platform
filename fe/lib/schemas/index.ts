@@ -41,7 +41,7 @@ export const indicatorSchema = z.object({
 });
 
 export const parseArray = <T>(schema: z.ZodType<T>, data: unknown): T[] => {
-  if (!Array.isArray(data)) throw new Error('API response is not an array');
+  if (!Array.isArray(data)) throw new Error('Dữ liệu trả về không đúng định dạng danh sách.');
   return data.map((item) => schema.parse(item));
 };
 

@@ -44,7 +44,7 @@ function ClustersPageContent() {
     <div className="space-y-5">
       <PageHeader
         title="Nhóm cấu trúc kinh tế"
-        description="Nhóm cấu trúc giúp so sánh các quốc gia có đặc điểm kinh tế tương đồng trong cùng năm dữ liệu."
+        description="Phân nhóm quốc gia theo mức độ tương đồng về cấu trúc kinh tế trong cùng năm phân tích."
       />
 
       <FilterBar>
@@ -70,7 +70,7 @@ function ClustersPageContent() {
         <StateBlock
           mode="error"
           title="Không tải được dữ liệu nhóm cấu trúc"
-          description={error instanceof Error ? error.message : 'Lỗi không xác định khi gọi API nhóm cấu trúc.'}
+          description={error instanceof Error ? error.message : 'Lỗi không xác định khi tải dữ liệu nhóm cấu trúc.'}
         />
       ) : null}
 
@@ -84,13 +84,27 @@ function ClustersPageContent() {
 
       {!isLoading && !isError && grouped.length > 0 ? (
         <>
+          <SectionCard title="Hiểu về nhóm cấu trúc kinh tế">
+            <div className="space-y-2 text-sm text-slate-700">
+              <p>
+                Nhóm cấu trúc kinh tế giúp nhận diện các quốc gia có đặc điểm kinh tế tương đồng trong cùng một năm phân
+                tích, từ đó hỗ trợ so sánh theo bối cảnh phù hợp hơn.
+              </p>
+              <p>
+                Cụm không phải xếp hạng tốt hoặc xấu; đây là nhóm quốc gia có cấu trúc kinh tế tương đồng trong cùng năm
+                phân tích.
+              </p>
+              <p>Hồ sơ diễn giải chi tiết cụm sẽ được bổ sung khi có dữ liệu mô tả cụm.</p>
+            </div>
+          </SectionCard>
+
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <StatCard label="Năm đang xem" value={String(year)} icon={<Layers className="h-5 w-5" />} />
             <StatCard label="Số cụm" value={String(grouped.length)} />
             <StatCard label="Số quốc gia" value={String(clusters.length)} />
           </section>
 
-          <SectionCard title="Danh sách cụm theo cluster_id">
+          <SectionCard title="Danh sách cụm">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {grouped.map((cluster) => (
                 <article key={cluster.clusterId} className="rounded-md border border-slate-200 bg-slate-50 p-4">

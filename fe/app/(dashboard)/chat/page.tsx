@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
-import { ChevronDown, ChevronRight, MessageSquareText, Plus } from 'lucide-react';
+import { Loader2, MessageSquareText, Plus } from 'lucide-react';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatMessage from '@/components/chat/ChatMessage';
 import { useAiChat } from '@/lib/hooks/useAiChat';
@@ -75,7 +75,6 @@ function ChatPageContent() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
-  const [showTechnical, setShowTechnical] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const chatMutation = useAiChat();
 
@@ -165,7 +164,7 @@ function ChatPageContent() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Trợ lý dữ liệu AI</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Trợ lý phân tích dữ liệu</h1>
           <p className="mt-1 text-sm text-slate-600">
             Đặt câu hỏi bằng ngôn ngữ tự nhiên về quốc gia, chỉ số, so sánh theo năm và diễn giải xu hướng dữ liệu.
           </p>
@@ -176,11 +175,11 @@ function ChatPageContent() {
           className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           <Plus className="h-4 w-4" />
-          New chat / reset context
+          Bắt đầu cuộc phân tích mới
         </button>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-5">
         <section className="flex min-h-[700px] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
           <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
             {messages.length === 0 ? (
@@ -204,68 +203,51 @@ function ChatPageContent() {
             {chatMutation.isPending ? (
               <div className="flex justify-start">
                 <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  Đang xử lý câu hỏi...
+                  <div className="mb-2 flex items-center gap-2 font-medium text-slate-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang xử lý yêu cầu phân tích
+                  </div>
+                  <ul className="space-y-1 text-xs text-slate-600">
+                    <li>Đang phân tích câu hỏi</li>
+                    <li>Đang truy xuất dữ liệu phù hợp</li>
+                    <li>Đang tổng hợp kết quả</li>
+                  </ul>
                 </div>
               </div>
             ) : null}
             <div ref={bottomRef} />
           </div>
 
-          <ChatInput value={input} isLoading={chatMutation.isPending} onChange={setInput} onSubmit={handleSubmit} />
-        </section>
-
-        <aside className="space-y-4">
-          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Gợi ý câu hỏi mở đầu</h2>
-            <div className="mt-3 space-y-2">
+          <div className="border-t border-slate-200 bg-white px-4 py-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               {suggestedPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
                   onClick={() => setInput(prompt)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                 >
                   {prompt}
                 </button>
               ))}
             </div>
-          </div>
-
-          {hasAssistantResponse ? (
-            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Gợi ý hỏi tiếp</h2>
-              <div className="mt-3 space-y-2">
+            {hasAssistantResponse ? (
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 {followupPrompts.map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
                     onClick={() => setInput(prompt)}
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
-            </div>
-          ) : null}
-
-          <div className="rounded-md border border-slate-200 bg-white shadow-sm">
-            <button
-              type="button"
-              onClick={() => setShowTechnical((current) => !current)}
-              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              {showTechnical ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              Chi tiết kỹ thuật
-            </button>
-            {showTechnical ? (
-              <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-600">
-                <p>Conversation ID: {conversationId || 'Đang khởi tạo...'}</p>
-                <p className="mt-1">Số tin nhắn lưu cục bộ: {messages.length}</p>
-              </div>
             ) : null}
           </div>
-        </aside>
+          <ChatInput value={input} isLoading={chatMutation.isPending} onChange={setInput} onSubmit={handleSubmit} />
+        </section>
       </div>
     </div>
   );

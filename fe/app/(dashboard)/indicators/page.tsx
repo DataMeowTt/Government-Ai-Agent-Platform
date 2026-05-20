@@ -37,7 +37,7 @@ export default function IndicatorsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Danh mục chỉ số"
-        description="Danh mục các chỉ số kinh tế đang được hệ thống hỗ trợ."
+        description="Danh mục chỉ số kinh tế kèm đơn vị, nhóm chỉ số và khả năng phân tích."
         actions={<p className="text-sm text-slate-600">Tổng chỉ số: {indicators.length}</p>}
       />
 
@@ -69,7 +69,7 @@ export default function IndicatorsPage() {
         <StateBlock
           mode="error"
           title="Không tải được danh mục chỉ số"
-          description={error instanceof Error ? error.message : 'Lỗi không xác định khi gọi API chỉ số.'}
+          description={error instanceof Error ? error.message : 'Lỗi không xác định khi tải danh mục chỉ số.'}
         />
       ) : null}
 
@@ -94,19 +94,32 @@ export default function IndicatorsPage() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold">Tên chỉ số</th>
-                <th className="px-4 py-3 text-left font-semibold">Mã chỉ số</th>
                 <th className="px-4 py-3 text-left font-semibold">Đơn vị</th>
                 <th className="px-4 py-3 text-left font-semibold">Nhóm</th>
+                <th className="px-4 py-3 text-left font-semibold">Khả năng phân tích</th>
                 <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {filtered.map((item) => (
                 <tr key={item.code} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                  <td className="px-4 py-3 font-mono">{item.code}</td>
-                  <td className="px-4 py-3">{item.unit || 'N/A'}</td>
-                  <td className="px-4 py-3">{item.category || 'N/A'}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-xs text-slate-500">{item.code}</p>
+                    {item.description_vi ? <p className="mt-1 text-xs text-slate-600">{item.description_vi}</p> : null}
+                  </td>
+                  <td className="px-4 py-3">{item.unit || 'Chưa công bố'}</td>
+                  <td className="px-4 py-3">{item.category || 'Khác'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-700">
+                    {[
+                      item.supports_compare ? 'So sánh' : null,
+                      item.supports_trend ? 'Xu hướng' : null,
+                      item.supports_anomaly ? 'Bất thường' : null,
+                      item.supports_ranking ? 'Xếp hạng' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || 'Đang cập nhật'}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <Link
@@ -114,12 +127,6 @@ export default function IndicatorsPage() {
                         className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                       >
                         So sánh
-                      </Link>
-                      <Link
-                        href={`/chat?q=${encodeURIComponent(`Giải thích chỉ số ${item.code}`)}`}
-                        className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        Hỏi AI
                       </Link>
                     </div>
                   </td>

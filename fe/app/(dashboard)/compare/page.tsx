@@ -210,27 +210,12 @@ function ComparePageContent() {
           >
             Áp dụng
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCountries(DEFAULT_COUNTRIES);
-              setSelectedIndicator(DEFAULT_INDICATOR);
-              setYearFrom(DEFAULT_FROM);
-              setYearTo(DEFAULT_TO);
-              setCountriesState(DEFAULT_COUNTRIES);
-              setIndicatorState(DEFAULT_INDICATOR);
-              setFromState(DEFAULT_FROM);
-              setToState(DEFAULT_TO);
-            }}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Dùng preset VNM/THA
-          </button>
-          <p className="text-xs text-slate-500">
-            Preset demo: {DEFAULT_INDICATOR} ({DEFAULT_FROM} - {DEFAULT_TO})
-          </p>
         </div>
       </FilterBar>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        Trang này so sánh một chỉ số duy nhất giữa các quốc gia theo giai đoạn năm đã chọn.
+      </div>
 
       {compareQuery.isLoading || countriesQuery.isLoading || indicatorsQuery.isLoading ? <TableSkeleton rows={6} /> : null}
 
@@ -242,7 +227,15 @@ function ComparePageContent() {
         />
       ) : null}
 
-      {!compareQuery.isLoading && !compareQuery.error && chartRows.length === 0 ? (
+      {!compareQuery.isLoading && !compareQuery.error && compareQuery.unsupportedIndicator ? (
+        <StateBlock
+          mode="empty"
+          title="Chỉ số chưa hỗ trợ cho màn hình so sánh"
+          description={`Chỉ số ${compareQuery.requestedIndicator} hiện chưa có cấu trúc dữ liệu phù hợp để so sánh theo thời gian.`}
+        />
+      ) : null}
+
+      {!compareQuery.isLoading && !compareQuery.error && !compareQuery.unsupportedIndicator && chartRows.length === 0 ? (
         <StateBlock
           mode="empty"
           title="Không có dữ liệu trong phạm vi lọc"
@@ -250,14 +243,14 @@ function ComparePageContent() {
         />
       ) : null}
 
-      {!compareQuery.isLoading && !compareQuery.error && chartRows.length > 0 ? (
+      {!compareQuery.isLoading && !compareQuery.error && !compareQuery.unsupportedIndicator && chartRows.length > 0 ? (
         <>
           <SectionCard
             title={`Biểu đồ so sánh: ${indicatorMeta?.name || indicatorState}`}
             description={`Đơn vị: ${indicatorMeta?.unit || 'N/A'}`}
           >
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[320px] min-w-0 w-full">
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartRows}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="year" />
@@ -314,6 +307,10 @@ function ComparePageContent() {
               </tbody>
             </table>
           </TableShell>
+          <p className="text-xs text-slate-500">
+            Chỉ số đang so sánh: {compareQuery.indicatorName} ({compareQuery.requestedIndicator}) | Đơn vị:{' '}
+            {compareQuery.indicatorUnit || 'Chưa công bố'}
+          </p>
         </>
       ) : null}
     </div>
