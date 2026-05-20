@@ -66,6 +66,44 @@ export const countryAnalyticsRowSchema = z.object({
 export const countryAnalyticsMetaSchema = z.object({
   country_code: z.string(),
   data_completeness: z.number().nullable().optional(),
+  data_completeness_ratio: z.number().nullable().optional(),
+  data_completeness_percent: z.number().nullable().optional(),
   flag_score: z.number().nullable().optional(),
   latest_year: z.number().nullable().optional(),
+});
+
+export const compareRowSchema = z.object({
+  country_code: z.string(),
+  country: z.string(),
+  year: z.number(),
+  indicator: z.string(),
+  indicator_name: z.string(),
+  category: z.string(),
+  unit: z.string(),
+  value: z.number().nullable(),
+});
+
+export const countryIndicatorRowSchema = z.object({
+  country_code: z.string(),
+  country: z.string(),
+  year: z.number(),
+  indicator: z.string(),
+  indicator_name: z.string(),
+  category: z.string(),
+  unit: z.string(),
+  value: z.number().nullable(),
+  source_table: z.string(),
+});
+
+export const countryIndicatorSummarySchema = z.object({
+  indicator: z.string(),
+  latest_non_null_year: z.number().nullable(),
+  latest_non_null_value: z.number().nullable(),
+  coverage_ratio: z.number(),
+});
+
+export const countryIndicatorsResponseSchema = z.object({
+  country_code: z.string(),
+  rows: z.array(countryIndicatorRowSchema),
+  summary: z.array(countryIndicatorSummarySchema).optional(),
 });

@@ -41,6 +41,8 @@ export interface ClusterItem {
 export interface CountryAnalyticsMeta {
   country_code: string;
   data_completeness?: number | null;
+  data_completeness_ratio?: number | null;
+  data_completeness_percent?: number | null;
   flag_score?: number | null;
   latest_year?: number | null;
 }
@@ -90,4 +92,40 @@ export interface CompareDataPoint {
 
 export interface CompareGroupedData {
   [countryCode: string]: CompareDataPoint[];
+}
+
+export interface CompareRow {
+  country_code: string;
+  country: string;
+  year: number;
+  indicator: string;
+  indicator_name: string;
+  category: string;
+  unit: string;
+  value: number | null;
+}
+
+export interface CountryIndicatorRow {
+  country_code: string;
+  country: string;
+  year: number;
+  indicator: string;
+  indicator_name: string;
+  category: string;
+  unit: string;
+  value: number | null;
+  source_table: string;
+}
+
+export interface CountryIndicatorSummary {
+  indicator: string;
+  latest_non_null_year: number | null;
+  latest_non_null_value: number | null;
+  coverage_ratio: number;
+}
+
+export interface CountryIndicatorsResponse {
+  country_code: string;
+  rows: CountryIndicatorRow[];
+  summary: CountryIndicatorSummary[];
 }

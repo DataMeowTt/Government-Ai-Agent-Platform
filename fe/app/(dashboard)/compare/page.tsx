@@ -1,5 +1,6 @@
 'use client';
-import { Suspense, useMemo, useState } from 'react';
+
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CartesianGrid,
@@ -11,13 +12,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { BarChart3, Plus, Search, X } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import FilterBar from '@/components/ui/FilterBar';
 import SectionCard from '@/components/ui/SectionCard';
 import TableShell from '@/components/ui/TableShell';
 import StateBlock from '@/components/ui/StateBlock';
 import { TableSkeleton } from '@/components/ui/Skeletons';
-import SearchInput from '@/components/ui/SearchInput';
 import { useCountries } from '@/lib/hooks/useCountries';
 import { useIndicators } from '@/lib/hooks/useIndicators';
 import { useCompare } from '@/lib/hooks/useCompare';
@@ -28,7 +29,6 @@ const DEFAULT_COUNTRIES = ['VNM', 'THA'];
 const DEFAULT_INDICATOR = 'govdebt_GDP';
 const DEFAULT_FROM = 2010;
 const DEFAULT_TO = 2023;
-
 const CHART_COLORS = ['#1d4ed8', '#b45309', '#0f766e', '#7c3aed', '#be123c'];
 
 export default function ComparePage() {
@@ -40,8 +40,14 @@ export default function ComparePage() {
 }
 
 function ComparePageContent() {
-  const [countriesState, setCountriesState] = useUrlState<string[]>('countries', DEFAULT_COUNTRIES);
-  const [indicatorState, setIndicatorState] = useUrlState<string>('indicator', DEFAULT_INDICATOR);
+  const [countriesState, setCountriesState] = useUrlState<string[]>(
+    'countries',
+    DEFAULT_COUNTRIES,
+  );
+  const [indicatorState, setIndicatorState] = useUrlState<string>(
+    'indicator',
+    DEFAULT_INDICATOR,
+  );
   const [fromState, setFromState] = useUrlState<number>('from', DEFAULT_FROM);
   const [toState, setToState] = useUrlState<number>('to', DEFAULT_TO);
 
@@ -49,22 +55,30 @@ function ComparePageContent() {
   const [selectedIndicator, setSelectedIndicator] = useState(indicatorState);
   const [yearFrom, setYearFrom] = useState(fromState);
   const [yearTo, setYearTo] = useState(toState);
-  const [search, setSearch] = useState('');
+  const [countryKeyword, setCountryKeyword] = useState('');
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const countryPickerRef = useRef<HTMLDivElement>(null);
 
   const countriesQuery = useCountries();
   const indicatorsQuery = useIndicators();
-  const compareQuery = useCompare(countriesState, indicatorState);
+  const compareQuery = useCompare(countriesState, indicatorState, fromState, toState);
 
-  const indicatorMeta = indicatorsQuery.data?.find((item) => item.code === indicatorState);
-  const filteredCountries = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    const list = countriesQuery.data || [];
-    if (!keyword) return list;
-    return list.filter(
-      (item) =>
-        item.country_name.toLowerCase().includes(keyword) || item.country_code.toLowerCase().includes(keyword)
-    );
-  }, [countriesQuery.data, search]);
+  useEffect(() => {
+    const handleOutside = (event: MouseEvent) => {
+      if (!countryPickerRef.current) return;
+      if (!countryPickerRef.current.contains(event.target as Node)) {
+        setCountryPickerOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleOutside);
+    return () => window.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  const selectableIndicators = useMemo(
+    () => (indicatorsQuery.data || []).filter(item => item.supports_compare !== false),
+    [indicatorsQuery.data],
+  );
+  const indicatorMeta = selectableIndicators.find(item => item.code === indicatorState);
 
   const yearOptions = useMemo(() => {
     const years: number[] = [];
@@ -72,25 +86,43 @@ function ComparePageContent() {
     return years;
   }, []);
 
+  const selectedCountryDetails = useMemo(() => {
+    const byCode = new Map((countriesQuery.data || []).map(item => [item.country_code, item]));
+    return selectedCountries.map(code => byCode.get(code) || { country_code: code, country_name: code });
+  }, [countriesQuery.data, selectedCountries]);
+
+  const availableCountries = useMemo(() => {
+    const all = countriesQuery.data || [];
+    const keyword = countryKeyword.trim().toLowerCase();
+    return all
+      .filter(item => !selectedCountries.includes(item.country_code))
+      .filter(item => {
+        if (!keyword) return true;
+        return (
+          item.country_name.toLowerCase().includes(keyword) ||
+          item.country_code.toLowerCase().includes(keyword)
+        );
+      })
+      .slice(0, 50);
+  }, [countriesQuery.data, countryKeyword, selectedCountries]);
+
   const chartRows = useMemo(() => {
     const grouped = compareQuery.data || {};
     const years = new Set<number>();
-    Object.values(grouped).forEach((items) => {
-      items.forEach((item) => {
-        if (item.year >= fromState && item.year <= toState) years.add(item.year);
-      });
+    Object.values(grouped).forEach(items => {
+      items.forEach(item => years.add(item.year));
     });
     return Array.from(years)
       .sort((a, b) => a - b)
-      .map((year) => {
+      .map(year => {
         const row: Record<string, number | null> = { year };
-        countriesState.forEach((countryCode) => {
-          const found = grouped[countryCode]?.find((item) => item.year === year);
+        countriesState.forEach(countryCode => {
+          const found = grouped[countryCode]?.find(item => item.year === year);
           row[countryCode] = found?.value ?? null;
         });
         return row;
       });
-  }, [compareQuery.data, countriesState, fromState, toState]);
+  }, [compareQuery.data, countriesState]);
 
   const applyFilters = () => {
     const validFrom = Math.min(yearFrom, yearTo);
@@ -101,7 +133,11 @@ function ComparePageContent() {
     setToState(validTo);
   };
 
-  const canApply = selectedCountries.length > 0 && !!selectedIndicator;
+  const canApply = selectedCountries.length >= 1 && !!selectedIndicator;
+  const compareErrorMessage =
+    compareQuery.error instanceof Error
+      ? compareQuery.error.message
+      : 'Không thể tải dữ liệu so sánh.';
 
   return (
     <div className="space-y-5">
@@ -111,8 +147,9 @@ function ComparePageContent() {
         actions={
           <Link
             href="/chat?q=So%20s%C3%A1nh%20n%E1%BB%A3%20c%C3%B4ng%20Vi%E1%BB%87t%20Nam%20v%C3%A0%20Th%C3%A1i%20Lan%20t%E1%BB%AB%202010%20%C4%91%E1%BA%BFn%202023"
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
+            <BarChart3 className="h-4 w-4" />
             Hỏi trợ lý AI
           </Link>
         }
@@ -120,13 +157,17 @@ function ComparePageContent() {
 
       <FilterBar>
         <div className="md:col-span-4">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Chỉ số</label>
+          <label htmlFor="compare-indicator" className="mb-1 block text-sm font-medium text-slate-700">
+            Chỉ số
+          </label>
           <select
+            id="compare-indicator"
+            name="indicator"
             value={selectedIndicator}
-            onChange={(event) => setSelectedIndicator(event.target.value)}
+            onChange={event => setSelectedIndicator(event.target.value)}
             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
           >
-            {(indicatorsQuery.data || []).map((indicator) => (
+            {selectableIndicators.map(indicator => (
               <option key={indicator.code} value={indicator.code}>
                 {indicator.name} ({indicator.code})
               </option>
@@ -135,13 +176,17 @@ function ComparePageContent() {
         </div>
 
         <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Từ năm</label>
+          <label htmlFor="compare-from" className="mb-1 block text-sm font-medium text-slate-700">
+            Từ năm
+          </label>
           <select
+            id="compare-from"
+            name="from"
             value={yearFrom}
-            onChange={(event) => setYearFrom(Number(event.target.value))}
+            onChange={event => setYearFrom(Number(event.target.value))}
             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
           >
-            {yearOptions.map((year) => (
+            {yearOptions.map(year => (
               <option key={year} value={year}>
                 {year}
               </option>
@@ -150,13 +195,17 @@ function ComparePageContent() {
         </div>
 
         <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Đến năm</label>
+          <label htmlFor="compare-to" className="mb-1 block text-sm font-medium text-slate-700">
+            Đến năm
+          </label>
           <select
+            id="compare-to"
+            name="to"
             value={yearTo}
-            onChange={(event) => setYearTo(Number(event.target.value))}
+            onChange={event => setYearTo(Number(event.target.value))}
             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
           >
-            {yearOptions.map((year) => (
+            {yearOptions.map(year => (
               <option key={year} value={year}>
                 {year}
               </option>
@@ -164,41 +213,90 @@ function ComparePageContent() {
           </select>
         </div>
 
-        <div className="md:col-span-4">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Quốc gia (tối đa 5)</label>
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Tìm theo tên hoặc mã quốc gia"
-            debounceTime={150}
-          />
-          <div className="mt-2 max-h-36 overflow-y-auto rounded-md border border-slate-300 bg-white p-2">
-            {filteredCountries.map((country) => {
-              const checked = selectedCountries.includes(country.country_code);
-              return (
-                <label
-                  key={country.country_code}
-                  className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-slate-50"
+        <div className="md:col-span-4" ref={countryPickerRef}>
+          <label htmlFor="compare-country-combobox" className="mb-1 block text-sm font-medium text-slate-700">
+            Quốc gia
+          </label>
+          <div className="relative">
+            <div className="flex min-h-10 flex-wrap items-center gap-1 rounded-md border border-slate-300 px-2 py-1">
+              {selectedCountryDetails.map(item => (
+                <span
+                  key={item.country_code}
+                  className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
                 >
-                  <span>
-                    {country.country_name} ({country.country_code})
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      if (checked) {
-                        setSelectedCountries(selectedCountries.filter((item) => item !== country.country_code));
-                        return;
-                      }
-                      if (selectedCountries.length >= 5) return;
-                      setSelectedCountries([...selectedCountries, country.country_code]);
-                    }}
-                  />
-                </label>
-              );
-            })}
+                  {item.country_name} ({item.country_code})
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedCountries(prev =>
+                        prev.filter(code => code !== item.country_code),
+                      )
+                    }
+                    className="rounded p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                    aria-label={`Bỏ ${item.country_code}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="compare-country-combobox"
+                  name="countries_search"
+                  type="text"
+                  role="combobox"
+                  aria-expanded={countryPickerOpen}
+                  aria-controls="compare-country-listbox"
+                  aria-autocomplete="list"
+                  value={countryKeyword}
+                  onFocus={() => setCountryPickerOpen(true)}
+                  onClick={() => setCountryPickerOpen(true)}
+                  onChange={event => {
+                    setCountryKeyword(event.target.value);
+                    setCountryPickerOpen(true);
+                  }}
+                  placeholder="Bấm để xem tất cả hoặc gõ để lọc"
+                  className="h-8 w-full rounded px-8 text-sm outline-none"
+                />
+              </div>
+            </div>
+            {countryPickerOpen ? (
+              <div
+                id="compare-country-listbox"
+                role="listbox"
+                className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-300 bg-white shadow-lg"
+              >
+                {availableCountries.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">Không có quốc gia phù hợp.</p>
+                ) : (
+                  availableCountries.map(country => (
+                    <button
+                      key={country.country_code}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => {
+                        if (selectedCountries.length >= 5) return;
+                        setSelectedCountries(prev => [...prev, country.country_code]);
+                        setCountryKeyword('');
+                        setCountryPickerOpen(true);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    >
+                      <span>
+                        {country.country_name} ({country.country_code})
+                      </span>
+                      <Plus className="h-3.5 w-3.5 text-slate-400" />
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Chọn tối thiểu 1 quốc gia, khuyến nghị 2 quốc gia để so sánh.
+          </p>
         </div>
 
         <div className="md:col-span-12 flex items-center gap-2">
@@ -213,37 +311,31 @@ function ComparePageContent() {
         </div>
       </FilterBar>
 
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        Trang này so sánh một chỉ số duy nhất giữa các quốc gia theo giai đoạn năm đã chọn.
-      </div>
-
-      {compareQuery.isLoading || countriesQuery.isLoading || indicatorsQuery.isLoading ? <TableSkeleton rows={6} /> : null}
+      {compareQuery.isLoading || countriesQuery.isLoading || indicatorsQuery.isLoading ? (
+        <TableSkeleton rows={6} />
+      ) : null}
 
       {compareQuery.error ? (
         <StateBlock
           mode="error"
           title="Không tải được dữ liệu so sánh"
-          description={compareQuery.error instanceof Error ? compareQuery.error.message : 'Lỗi không xác định'}
+          description={
+            compareErrorMessage.includes('chưa hỗ trợ')
+              ? 'Chỉ số này chưa có dữ liệu so sánh phù hợp.'
+              : compareErrorMessage
+          }
         />
       ) : null}
 
-      {!compareQuery.isLoading && !compareQuery.error && compareQuery.unsupportedIndicator ? (
+      {!compareQuery.isLoading && !compareQuery.error && chartRows.length === 0 ? (
         <StateBlock
           mode="empty"
-          title="Chỉ số chưa hỗ trợ cho màn hình so sánh"
-          description={`Chỉ số ${compareQuery.requestedIndicator} hiện chưa có cấu trúc dữ liệu phù hợp để so sánh theo thời gian.`}
+          title="Chưa có dữ liệu phù hợp"
+          description="Hãy điều chỉnh quốc gia, chỉ số hoặc giai đoạn năm."
         />
       ) : null}
 
-      {!compareQuery.isLoading && !compareQuery.error && !compareQuery.unsupportedIndicator && chartRows.length === 0 ? (
-        <StateBlock
-          mode="empty"
-          title="Không có dữ liệu trong phạm vi lọc"
-          description="Hãy thử điều chỉnh quốc gia, chỉ số hoặc giai đoạn năm."
-        />
-      ) : null}
-
-      {!compareQuery.isLoading && !compareQuery.error && !compareQuery.unsupportedIndicator && chartRows.length > 0 ? (
+      {!compareQuery.isLoading && !compareQuery.error && chartRows.length > 0 ? (
         <>
           <SectionCard
             title={`Biểu đồ so sánh: ${indicatorMeta?.name || indicatorState}`}
@@ -256,13 +348,17 @@ function ComparePageContent() {
                   <XAxis dataKey="year" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value) =>
+                    formatter={value =>
                       formatIndicatorValue(
-                        typeof value === 'number' ? value : value == null ? null : Number(value),
-                        indicatorMeta?.unit
+                        typeof value === 'number'
+                          ? value
+                          : value == null
+                            ? null
+                            : Number(value),
+                        indicatorMeta?.unit,
                       )
                     }
-                    labelFormatter={(label) => `Năm ${label}`}
+                    labelFormatter={label => `Năm ${label}`}
                   />
                   <Legend />
                   {countriesState.map((countryCode, index) => (
@@ -286,7 +382,7 @@ function ComparePageContent() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-3 py-2 text-left font-semibold">Năm</th>
-                  {countriesState.map((countryCode) => (
+                  {countriesState.map(countryCode => (
                     <th key={countryCode} className="px-3 py-2 text-right font-semibold">
                       {countryCode}
                     </th>
@@ -294,12 +390,15 @@ function ComparePageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {chartRows.map((row) => (
+                {chartRows.map(row => (
                   <tr key={`year-${row.year}`} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono">{formatYear(row.year as number)}</td>
-                    {countriesState.map((countryCode) => (
+                    {countriesState.map(countryCode => (
                       <td key={`${row.year}-${countryCode}`} className="px-3 py-2 text-right">
-                        {formatIndicatorValue(row[countryCode] as number | null, indicatorMeta?.unit)}
+                        {formatIndicatorValue(
+                          row[countryCode] as number | null,
+                          indicatorMeta?.unit,
+                        )}
                       </td>
                     ))}
                   </tr>

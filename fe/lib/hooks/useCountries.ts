@@ -3,6 +3,7 @@ import { countriesApi } from '@/lib/api/endpoints';
 import {
   countryAnalyticsMetaSchema,
   countryAnalyticsRowSchema,
+  countryIndicatorsResponseSchema,
   countrySchema,
   parseArray,
 } from '@/lib/schemas';
@@ -11,6 +12,7 @@ import {
   Country,
   CountryAnalyticsResponse,
   CountryAnalyticsRow,
+  CountryIndicatorsResponse,
 } from '@/lib/types';
 import { z } from 'zod';
 
@@ -87,6 +89,31 @@ const normalizeAnalyticsPayload = (code: string, raw: unknown): CountryAnalytics
   };
 };
 
+const normalizeCountryIndicatorsPayload = (
+  code: string,
+  raw: unknown,
+): CountryIndicatorsResponse => {
+  const parsed = countryIndicatorsResponseSchema.safeParse(raw);
+  if (parsed.success) {
+    return {
+      country_code: parsed.data.country_code,
+      rows: parsed.data.rows.slice().sort((a, b) => {
+        if (a.indicator !== b.indicator) return a.indicator.localeCompare(b.indicator);
+        return a.year - b.year;
+      }),
+      summary: (parsed.data.summary || []).slice().sort((a, b) =>
+        a.indicator.localeCompare(b.indicator),
+      ),
+    };
+  }
+
+  return {
+    country_code: code,
+    rows: [],
+    summary: [],
+  };
+};
+
 export const useCountries = () => {
   return useQuery<Country[]>({
     queryKey: ['countries'],
@@ -126,6 +153,18 @@ export const useClusterBenchmark = (code: string, indicator: string, year: numbe
       return parsed.data;
     },
     enabled: !!code && !!indicator && !!year,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCountryIndicators = (code: string) => {
+  return useQuery<CountryIndicatorsResponse>({
+    queryKey: ['countryIndicators', code],
+    queryFn: async () => {
+      const { data } = await countriesApi.getIndicators(code);
+      return normalizeCountryIndicatorsPayload(code, data);
+    },
+    enabled: !!code,
     staleTime: 5 * 60 * 1000,
   });
 };

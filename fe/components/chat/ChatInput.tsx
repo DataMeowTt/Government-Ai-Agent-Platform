@@ -12,6 +12,7 @@ interface ChatInputProps {
 
 export default function ChatInput({ value, isLoading, onChange, onSubmit }: ChatInputProps) {
   const canSend = value.trim().length > 0 && !isLoading;
+  const textareaId = 'chat-message-input';
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,7 +33,12 @@ export default function ChatInput({ value, isLoading, onChange, onSubmit }: Chat
   return (
     <form onSubmit={handleSubmit} className="border-t border-slate-200 bg-white p-4">
       <div className="flex gap-3">
+        <label htmlFor={textareaId} className="sr-only">
+          Nhập nội dung chat
+        </label>
         <textarea
+          id={textareaId}
+          name="message"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}

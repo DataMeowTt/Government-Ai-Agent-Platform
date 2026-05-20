@@ -19,8 +19,6 @@ export default function Pagination({
   totalItems,
   itemsPerPage = 8,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
   const safeCurrent = Math.min(Math.max(currentPage, 1), totalPages);
 
   const paginationRange = useMemo(() => {
@@ -53,6 +51,8 @@ export default function Pagination({
     ];
   }, [safeCurrent, totalPages, siblingsCount]);
 
+  if (totalPages <= 1) return null;
+
   const computedTotalItems =
     typeof totalItems === 'number' && totalItems >= 0 ? totalItems : totalPages * itemsPerPage;
   const start = computedTotalItems === 0 ? 0 : (safeCurrent - 1) * itemsPerPage + 1;
@@ -69,6 +69,7 @@ export default function Pagination({
       <span className="text-sm text-slate-600">{`Hiển thị ${start}–${end} / ${computedTotalItems}`}</span>
       <div className="flex items-center gap-2">
         <button
+          type="button"
           disabled={safeCurrent === 1}
           onClick={() => handlePageChange(safeCurrent - 1)}
           className="rounded border border-slate-300 p-2 hover:bg-slate-50 disabled:opacity-50"
@@ -83,6 +84,7 @@ export default function Pagination({
             </span>
           ) : (
             <button
+              type="button"
               key={`page-${page}-${idx}`}
               onClick={() => handlePageChange(page as number)}
               className={`h-8 rounded border px-3 text-sm ${
@@ -97,6 +99,7 @@ export default function Pagination({
         )}
 
         <button
+          type="button"
           disabled={safeCurrent === totalPages}
           onClick={() => handlePageChange(safeCurrent + 1)}
           className="rounded border border-slate-300 p-2 hover:bg-slate-50 disabled:opacity-50"

@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { Loader2, MessageSquareText, Plus } from 'lucide-react';
@@ -20,7 +19,11 @@ const suggestedPrompts = [
   'Nợ công/GDP là gì?',
 ];
 
-const followupPrompts = ['Phân tích nguyên nhân chính của xu hướng này', 'Mở rộng thêm Indonesia', 'Đổi sang giai đoạn 2015 đến 2023'];
+const followupPrompts = [
+  'Phân tích nguyên nhân chính của xu hướng này',
+  'Mở rộng thêm Indonesia',
+  'Đổi sang giai đoạn 2015 đến 2023',
+];
 
 function createId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -84,6 +87,7 @@ function ChatPageContent() {
     localStorage.setItem(conversationStorageKey, nextConversationId);
     setConversationId(nextConversationId);
     setMessages(readStoredMessages());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsHydrated(true);
   }, []);
 
@@ -95,12 +99,13 @@ function ChatPageContent() {
 
   useEffect(() => {
     if (!prefillPrompt) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInput(prefillPrompt);
   }, [prefillPrompt]);
 
   const hasAssistantResponse = useMemo(
-    () => messages.some((item) => item.role === 'assistant' && item.status !== 'error'),
-    [messages]
+    () => messages.some(item => item.role === 'assistant' && item.status !== 'error'),
+    [messages],
   );
 
   async function handleSubmit() {
@@ -121,7 +126,7 @@ function ChatPageContent() {
       createdAt: new Date().toISOString(),
       status: 'success',
     };
-    setMessages((current) => [...current, userMessage].slice(-30));
+    setMessages(current => [...current, userMessage].slice(-30));
 
     try {
       const response = await chatMutation.mutateAsync({
@@ -137,7 +142,7 @@ function ChatPageContent() {
         response,
         status: 'success',
       };
-      setMessages((current) => [...current, assistantMessage].slice(-30));
+      setMessages(current => [...current, assistantMessage].slice(-30));
     } catch (error) {
       const assistantMessage: ChatMessageType = {
         id: createId(),
@@ -147,7 +152,7 @@ function ChatPageContent() {
         status: 'error',
         error: getErrorMessage(error),
       };
-      setMessages((current) => [...current, assistantMessage].slice(-30));
+      setMessages(current => [...current, assistantMessage].slice(-30));
     }
   }
 
@@ -162,65 +167,78 @@ function ChatPageContent() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Trợ lý phân tích dữ liệu</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Đặt câu hỏi bằng ngôn ngữ tự nhiên về quốc gia, chỉ số, so sánh theo năm và diễn giải xu hướng dữ liệu.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleNewChat}
-          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          <Plus className="h-4 w-4" />
-          Bắt đầu cuộc phân tích mới
-        </button>
+      <div className="space-y-1 border-b border-slate-200 pb-4">
+        <h1 className="text-2xl font-semibold text-slate-900">Trợ lý phân tích dữ liệu</h1>
+        <p className="text-sm text-slate-600">
+          Đặt câu hỏi bằng ngôn ngữ tự nhiên về quốc gia, chỉ số, so sánh theo năm và diễn giải xu hướng dữ liệu.
+        </p>
       </div>
 
-      <div className="grid gap-5">
-        <section className="flex min-h-[700px] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
-          <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
-            {messages.length === 0 ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="max-w-md text-center">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-slate-600">
-                    <MessageSquareText className="h-5 w-5" />
-                  </div>
-                  <h2 className="text-base font-semibold text-slate-900">Bắt đầu trao đổi với trợ lý</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Khuyến nghị bắt đầu bằng câu hỏi đầy đủ quốc gia, chỉ số và giai đoạn năm để tăng độ chính xác.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <ChatMessage key={message.id} message={message} onClarificationClick={setInput} />
-              ))
-            )}
+      <section className="flex min-h-[700px] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+        <div className="sticky top-0 z-10 flex justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <Plus className="h-4 w-4" />
+            New chat
+          </button>
+        </div>
 
-            {chatMutation.isPending ? (
-              <div className="flex justify-start">
-                <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  <div className="mb-2 flex items-center gap-2 font-medium text-slate-700">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang xử lý yêu cầu phân tích
-                  </div>
-                  <ul className="space-y-1 text-xs text-slate-600">
-                    <li>Đang phân tích câu hỏi</li>
-                    <li>Đang truy xuất dữ liệu phù hợp</li>
-                    <li>Đang tổng hợp kết quả</li>
-                  </ul>
+        <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md text-center">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-slate-600">
+                  <MessageSquareText className="h-5 w-5" />
                 </div>
+                <h2 className="text-base font-semibold text-slate-900">Bắt đầu trao đổi với trợ lý</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Khuyến nghị bắt đầu bằng câu hỏi đầy đủ quốc gia, chỉ số và giai đoạn năm để tăng độ chính xác.
+                </p>
               </div>
-            ) : null}
-            <div ref={bottomRef} />
+            </div>
+          ) : (
+            messages.map(message => (
+              <ChatMessage key={message.id} message={message} onClarificationClick={setInput} />
+            ))
+          )}
+
+          {chatMutation.isPending ? (
+            <div className="flex justify-start">
+              <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                <div className="mb-2 flex items-center gap-2 font-medium text-slate-700">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang xử lý yêu cầu phân tích
+                </div>
+                <ul className="space-y-1 text-xs text-slate-600">
+                  <li>Đang phân tích câu hỏi</li>
+                  <li>Đang truy xuất dữ liệu phù hợp</li>
+                  <li>Đang tổng hợp kết quả</li>
+                </ul>
+              </div>
+            </div>
+          ) : null}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="border-t border-slate-200 bg-white px-4 py-3">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            {suggestedPrompts.map(prompt => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => setInput(prompt)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
-
-          <div className="border-t border-slate-200 bg-white px-4 py-3">
+          {hasAssistantResponse ? (
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              {suggestedPrompts.map((prompt) => (
+              {followupPrompts.map(prompt => (
                 <button
                   key={prompt}
                   type="button"
@@ -231,24 +249,16 @@ function ChatPageContent() {
                 </button>
               ))}
             </div>
-            {hasAssistantResponse ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                {followupPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setInput(prompt)}
-                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <ChatInput value={input} isLoading={chatMutation.isPending} onChange={setInput} onSubmit={handleSubmit} />
-        </section>
-      </div>
+          ) : null}
+        </div>
+
+        <ChatInput
+          value={input}
+          isLoading={chatMutation.isPending}
+          onChange={setInput}
+          onSubmit={handleSubmit}
+        />
+      </section>
     </div>
   );
 }

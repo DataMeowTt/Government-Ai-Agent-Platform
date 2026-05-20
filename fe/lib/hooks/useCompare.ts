@@ -1,55 +1,34 @@
-import { useQueries } from '@tanstack/react-query';
-import { countriesApi } from '@/lib/api/endpoints';
+import { useQuery } from '@tanstack/react-query';
+import { compareApi } from '@/lib/api/endpoints';
 import { useIndicators } from './useIndicators';
-import { analyticsResponseSchema } from './useCountries';
-import { CountryAnalyticsRow, CompareGroupedData } from '@/lib/types';
-import { countryAnalyticsRowSchema } from '@/lib/schemas';
-import { z } from 'zod';
+import { CompareGroupedData } from '@/lib/types';
+import { compareRowSchema } from '@/lib/schemas';
+import { parseArray } from '@/lib/schemas';
 
-const INDICATOR_KEY_MAP: Record<string, keyof CountryAnalyticsRow> = {
-  rGDP_growth_YoY: 'actual_growth',
-  govdebt_GDP: 'actual_debt',
-  REER_deviation: 'actual_reer_deviation',
-  actual_reer_deviation: 'actual_reer_deviation',
-  inflation_cpi: 'actual_inflation',
-  poverty_headcount: 'actual_poverty',
-  unemployment_total: 'actual_unemployment',
-  manuf_va_share: 'actual_manuf_share',
-  agri_va_share: 'actual_agri_share',
-};
-
-export const useCompare = (countryCodes: string[], indicator: string) => {
+export const useCompare = (
+  countryCodes: string[],
+  indicator: string,
+  from?: number,
+  to?: number,
+) => {
   const { data: indicators } = useIndicators();
-  const actualKey = INDICATOR_KEY_MAP[indicator];
-  const unsupportedIndicator = !actualKey;
-
-  const results = useQueries({
-    queries: countryCodes.map((code) => ({
-      queryKey: ['compare', code, indicator],
-      queryFn: async () => {
-        const { data } = await countriesApi.getFullAnalytics(code);
-        const parsed = analyticsResponseSchema.safeParse(data);
-        const fallback = z.array(countryAnalyticsRowSchema).safeParse(data);
-        const rows = parsed.success ? parsed.data.data : fallback.success ? fallback.data : [];
-        return rows.map(item => ({
-          year: item.year,
-          value: (item[actualKey as keyof CountryAnalyticsRow] as number | null | undefined) ?? null,
-          country_code: code,
-        }));
-      },
-      enabled: countryCodes.length > 0 && !unsupportedIndicator,
-      staleTime: 10 * 60 * 1000,
-    })),
+  const compareQuery = useQuery({
+    queryKey: ['compare', countryCodes.join(','), indicator, from, to],
+    queryFn: async () => {
+      const { data } = await compareApi.getRows({
+        countries: countryCodes,
+        indicator,
+        from,
+        to,
+      });
+      return parseArray(compareRowSchema, data);
+    },
+    enabled: countryCodes.length > 0 && !!indicator,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const isLoading = unsupportedIndicator ? false : results.some(r => r.isLoading);
-  const error = unsupportedIndicator ? undefined : results.find(r => r.error)?.error;
-  const flatData = unsupportedIndicator ? [] : results
-    .map(r => r.data ?? [])
-    .flat() as { year: number; value: number | null; country_code: string }[];
-
   const grouped: CompareGroupedData = {};
-  flatData.forEach(item => {
+  (compareQuery.data || []).forEach(item => {
     if (!grouped[item.country_code]) grouped[item.country_code] = [];
     grouped[item.country_code].push({ year: item.year, value: item.value });
   });
@@ -62,12 +41,11 @@ export const useCompare = (countryCodes: string[], indicator: string) => {
 
   return {
     data: grouped,
-    isLoading,
-    error,
+    isLoading: compareQuery.isLoading,
+    error: compareQuery.error,
     indicatorName: meta?.name || indicator,
     indicatorUnit: meta?.unit || '',
-    unsupportedIndicator,
+    unsupportedIndicator: false,
     requestedIndicator: indicator,
-    resolvedColumn: actualKey,
   };
 };

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { anomalySchema } from '@/lib/schemas';
 import { z } from 'zod';
@@ -34,6 +34,7 @@ export const useAnomalies = ({
       throw new Error('Dữ liệu bất thường không hợp lệ.');
     },
     staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const { data, isLoading, isError, error } = queryResult;

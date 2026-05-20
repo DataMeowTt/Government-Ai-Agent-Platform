@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -12,197 +13,193 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { BarChart3, Database, Info } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionCard from '@/components/ui/SectionCard';
 import StateBlock from '@/components/ui/StateBlock';
 import TableShell from '@/components/ui/TableShell';
+import Pagination from '@/components/ui/Pagination';
+import SearchInput from '@/components/ui/SearchInput';
 import { ChartSkeleton, TableSkeleton } from '@/components/ui/Skeletons';
-import { useCountries, useCountryAnalytics, useClusterBenchmark } from '@/lib/hooks/useCountries';
+import {
+  useCountries,
+  useCountryAnalytics,
+  useCountryIndicators,
+  useClusterBenchmark,
+} from '@/lib/hooks/useCountries';
 import { formatIndicatorValue, formatNullable, formatNumber, formatYear } from '@/lib/utils/format';
 
-type IndicatorDefinition = {
-  id: string;
-  label: string;
-  rowKey:
-    | 'actual_growth'
-    | 'actual_debt'
-    | 'actual_inflation'
-    | 'actual_unemployment'
-    | 'actual_poverty'
-    | 'actual_reer_deviation'
-    | 'actual_manuf_share'
-    | 'actual_agri_share';
-  unit: string;
-  group: 'Tăng trưởng' | 'Tài khóa - tiền tệ' | 'Rủi ro khủng hoảng' | 'Phúc lợi xã hội' | 'Cơ cấu kinh tế';
-  description: string;
-};
-
-const INDICATORS: IndicatorDefinition[] = [
-  {
-    id: 'rGDP_growth_YoY',
-    label: 'Tăng trưởng GDP thực',
-    rowKey: 'actual_growth',
-    unit: '%',
-    group: 'Tăng trưởng',
-    description: 'Mức tăng trưởng sản lượng thực của nền kinh tế theo năm.',
-  },
-  {
-    id: 'govdebt_GDP',
-    label: 'Nợ công/GDP',
-    rowKey: 'actual_debt',
-    unit: '%',
-    group: 'Tài khóa - tiền tệ',
-    description: 'Tỷ lệ nợ công trên GDP, phản ánh sức ép nợ của khu vực công.',
-  },
-  {
-    id: 'inflation_cpi',
-    label: 'Lạm phát CPI',
-    rowKey: 'actual_inflation',
-    unit: '%',
-    group: 'Tài khóa - tiền tệ',
-    description: 'Mức biến động chỉ số giá tiêu dùng theo năm.',
-  },
-  {
-    id: 'unemployment_total',
-    label: 'Thất nghiệp',
-    rowKey: 'actual_unemployment',
-    unit: '%',
-    group: 'Phúc lợi xã hội',
-    description: 'Tỷ lệ lao động thất nghiệp trong lực lượng lao động.',
-  },
-  {
-    id: 'poverty_headcount',
-    label: 'Nghèo đa chiều',
-    rowKey: 'actual_poverty',
-    unit: '%',
-    group: 'Phúc lợi xã hội',
-    description: 'Tỷ lệ dân số thuộc nhóm nghèo theo ngưỡng dữ liệu hiện có.',
-  },
-  {
-    id: 'REER_deviation',
-    label: 'Độ lệch REER',
-    rowKey: 'actual_reer_deviation',
-    unit: '%',
-    group: 'Rủi ro khủng hoảng',
-    description: 'Mức lệch của tỷ giá thực hiệu lực so với nền tảng dài hạn.',
-  },
-  {
-    id: 'manuf_va_share',
-    label: 'Tỷ trọng công nghiệp chế biến',
-    rowKey: 'actual_manuf_share',
-    unit: '%',
-    group: 'Cơ cấu kinh tế',
-    description: 'Tỷ trọng giá trị gia tăng công nghiệp chế biến trong cơ cấu kinh tế.',
-  },
-  {
-    id: 'agri_va_share',
-    label: 'Tỷ trọng nông nghiệp',
-    rowKey: 'actual_agri_share',
-    unit: '%',
-    group: 'Cơ cấu kinh tế',
-    description: 'Tỷ trọng giá trị gia tăng khu vực nông nghiệp trong cơ cấu kinh tế.',
-  },
+const KPI_CODES = [
+  'rGDP_growth_YoY',
+  'govdebt_GDP',
+  'inflation_cpi',
+  'unemployment_total',
+  'poverty_headcount',
 ];
+const TABLE_PAGE_SIZE = 20;
 
-const KPI_INDICATORS = ['rGDP_growth_YoY', 'govdebt_GDP', 'inflation_cpi', 'unemployment_total', 'poverty_headcount'];
-
-type CountryAnomalyRow = {
+type SeriesPoint = {
   year: number;
-  indicatorLabel: string;
-  indicatorCode: string;
   value: number | null;
-  unit: string;
-  score: number | null;
 };
+
+function resolveCompletenessPercent(meta?: {
+  data_completeness?: number | null;
+  data_completeness_ratio?: number | null;
+  data_completeness_percent?: number | null;
+}) {
+  if (!meta) return null;
+  if (meta.data_completeness_percent != null && Number.isFinite(meta.data_completeness_percent)) {
+    return meta.data_completeness_percent;
+  }
+  if (meta.data_completeness != null && Number.isFinite(meta.data_completeness)) {
+    return meta.data_completeness <= 1 ? meta.data_completeness * 100 : meta.data_completeness;
+  }
+  if (meta.data_completeness_ratio != null && Number.isFinite(meta.data_completeness_ratio)) {
+    return meta.data_completeness_ratio * 100;
+  }
+  return null;
+}
 
 export default function CountryDetailPage() {
   const params = useParams();
   const code = String(params.code || '').toUpperCase();
   const countriesQuery = useCountries();
   const analyticsQuery = useCountryAnalytics(code);
-  const rows = analyticsQuery.data?.data || [];
+  const indicatorsQuery = useCountryIndicators(code);
 
-  const country = countriesQuery.data?.find((item) => item.country_code === code);
+  const rows = useMemo(() => indicatorsQuery.data?.rows || [], [indicatorsQuery.data?.rows]);
+  const country = countriesQuery.data?.find(item => item.country_code === code);
   const countryName = country?.country_name || code;
-  const latestYear = analyticsQuery.data?.meta.latest_year ?? (rows.length ? rows[rows.length - 1].year : null);
+  const completenessPercent = resolveCompletenessPercent(analyticsQuery.data?.meta);
+  const latestYear =
+    analyticsQuery.data?.meta.latest_year ??
+    (rows.length ? Math.max(...rows.map(item => item.year)) : null);
 
-  const yearRange = useMemo(() => {
+  const indicatorSeries = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { indicator: string; indicator_name: string; category: string; unit: string; points: SeriesPoint[] }
+    >();
+    rows.forEach(row => {
+      const current = grouped.get(row.indicator) || {
+        indicator: row.indicator,
+        indicator_name: row.indicator_name || row.indicator,
+        category: row.category || 'Khác',
+        unit: row.unit || '',
+        points: [],
+      };
+      current.points.push({ year: row.year, value: row.value });
+      grouped.set(row.indicator, current);
+    });
+    return Array.from(grouped.values())
+      .map(item => ({
+        ...item,
+        points: item.points.slice().sort((a, b) => a.year - b.year),
+      }))
+      .sort((a, b) => a.indicator_name.localeCompare(b.indicator_name));
+  }, [rows]);
+
+  const yearBounds = useMemo(() => {
     if (!rows.length) return { min: 2000, max: 2025 };
     return {
-      min: Math.min(...rows.map((item) => item.year)),
-      max: Math.max(...rows.map((item) => item.year)),
+      min: Math.min(...rows.map(item => item.year)),
+      max: Math.max(...rows.map(item => item.year)),
     };
   }, [rows]);
 
-  const availableIndicators = useMemo(
-    () => INDICATORS.filter((indicator) => rows.some((row) => row[indicator.rowKey] != null)),
-    [rows]
+  const [selectedIndicatorState, setSelectedIndicator] = useState<string>('');
+  const [fromYearState, setFromYear] = useState<number | null>(null);
+  const [toYearState, setToYear] = useState<number | null>(null);
+  const [tableSearch, setTableSearch] = useState('');
+  const [tablePage, setTablePage] = useState(1);
+
+  const selectedIndicator =
+    selectedIndicatorState && indicatorSeries.some(item => item.indicator === selectedIndicatorState)
+      ? selectedIndicatorState
+      : (indicatorSeries[0]?.indicator ?? '');
+  const fromYear = fromYearState ?? yearBounds.min;
+  const toYear = toYearState ?? yearBounds.max;
+  const safeRangeFrom = Math.min(fromYear, toYear);
+  const safeRangeTo = Math.max(fromYear, toYear);
+
+  const selectedSeries =
+    indicatorSeries.find(item => item.indicator === selectedIndicator) || null;
+  const filteredSeriesPoints = (selectedSeries?.points || []).filter(
+    point => point.year >= safeRangeFrom && point.year <= safeRangeTo,
   );
 
-  const [selectedIndicator, setSelectedIndicator] = useState<string>('govdebt_GDP');
-  const [fromYear, setFromYear] = useState<number>(yearRange.min);
-  const [toYear, setToYear] = useState<number>(yearRange.max);
-
-  useEffect(() => {
-    setFromYear(yearRange.min);
-    setToYear(yearRange.max);
-  }, [yearRange.min, yearRange.max]);
-
-  useEffect(() => {
-    if (availableIndicators.length === 0) return;
-    const existing = availableIndicators.find((item) => item.id === selectedIndicator);
-    if (!existing) setSelectedIndicator(availableIndicators[0].id);
-  }, [availableIndicators, selectedIndicator]);
-
-  const selectedIndicatorMeta = availableIndicators.find((item) => item.id === selectedIndicator) || null;
-  const filteredRows = rows.filter((item) => item.year >= Math.min(fromYear, toYear) && item.year <= Math.max(fromYear, toYear));
-
-  const kpiCards = KPI_INDICATORS.map((kpiCode) => {
-    const meta = INDICATORS.find((item) => item.id === kpiCode);
-    if (!meta) return null;
-    const latest = rows
-      .slice()
-      .reverse()
-      .find((item) => item[meta.rowKey] != null);
-    return {
-      ...meta,
-      value: latest ? (latest[meta.rowKey] as number | null) : null,
-      year: latest?.year ?? null,
-    };
-  }).filter(Boolean) as Array<IndicatorDefinition & { value: number | null; year: number | null }>;
-
-  const chartRows = useMemo(() => {
-    if (!selectedIndicatorMeta) return [];
-    return filteredRows
-      .map((item) => ({
-        year: item.year,
-        value: (item[selectedIndicatorMeta.rowKey] as number | null | undefined) ?? null,
-        trend: selectedIndicatorMeta.rowKey === 'actual_growth' ? item.trend_growth ?? null : null,
-      }))
-      .sort((a, b) => a.year - b.year);
-  }, [filteredRows, selectedIndicatorMeta]);
+  const allYears = useMemo(() => {
+    const years: number[] = [];
+    for (let year = yearBounds.min; year <= yearBounds.max; year += 1) years.push(year);
+    return years;
+  }, [yearBounds]);
 
   const groupedIndicators = useMemo(() => {
-    const groups = new Map<string, Array<IndicatorDefinition & { latestValue: number | null; latestYear: number | null }>>();
-    availableIndicators.forEach((indicator) => {
-      const latest = rows
+    const map = new Map<string, typeof indicatorSeries>();
+    indicatorSeries.forEach(series => {
+      const list = map.get(series.category) || [];
+      list.push(series);
+      map.set(series.category, list);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [indicatorSeries]);
+
+  const kpiCards = useMemo(() => {
+    return KPI_CODES.map(codeValue => {
+      const series = indicatorSeries.find(item => item.indicator === codeValue);
+      if (!series) return null;
+      const latest = series.points
         .slice()
         .reverse()
-        .find((item) => item[indicator.rowKey] != null);
-      const row = {
-        ...indicator,
-        latestValue: latest ? (latest[indicator.rowKey] as number | null) : null,
+        .find(point => point.value != null);
+      return {
+        ...series,
         latestYear: latest?.year ?? null,
+        latestValue: latest?.value ?? null,
       };
-      if (!groups.has(indicator.group)) groups.set(indicator.group, []);
-      groups.get(indicator.group)!.push(row);
-    });
-    return Array.from(groups.entries());
-  }, [availableIndicators, rows]);
+    }).filter(Boolean) as Array<{
+      indicator: string;
+      indicator_name: string;
+      unit: string;
+      latestYear: number | null;
+      latestValue: number | null;
+    }>;
+  }, [indicatorSeries]);
 
-  const anomalies = useMemo<CountryAnomalyRow[]>(() => {
-    const result: CountryAnomalyRow[] = [];
-    rows.forEach((item) => {
+  const tableRows = useMemo(() => {
+    const keyword = tableSearch.trim().toLowerCase();
+    const filtered = rows.filter(row => {
+      if (!keyword) return true;
+      return (
+        row.indicator.toLowerCase().includes(keyword) ||
+        row.indicator_name.toLowerCase().includes(keyword) ||
+        row.category.toLowerCase().includes(keyword)
+      );
+    });
+    return filtered.sort((a, b) => {
+      if (a.indicator !== b.indicator) return a.indicator.localeCompare(b.indicator);
+      return b.year - a.year;
+    });
+  }, [rows, tableSearch]);
+  const totalTablePages = Math.max(1, Math.ceil(tableRows.length / TABLE_PAGE_SIZE));
+  const safeTablePage = Math.min(Math.max(tablePage, 1), totalTablePages);
+  const pagedTableRows = tableRows.slice(
+    (safeTablePage - 1) * TABLE_PAGE_SIZE,
+    safeTablePage * TABLE_PAGE_SIZE,
+  );
+
+  const anomalies = useMemo(() => {
+    const analyticsRows = analyticsQuery.data?.data || [];
+    const result: Array<{
+      year: number;
+      indicatorLabel: string;
+      indicatorCode: string;
+      value: number | null;
+      unit: string;
+      score: number | null;
+    }> = [];
+    analyticsRows.forEach(item => {
       if ((item.anomaly_growth ?? 0) >= 0.75) {
         result.push({
           year: item.year,
@@ -235,18 +232,11 @@ export default function CountryDetailPage() {
       }
     });
     return result.sort((a, b) => b.year - a.year).slice(0, 15);
-  }, [rows]);
+  }, [analyticsQuery.data?.data]);
 
-  const benchmarkIndicator = 'govdebt_GDP';
-  const benchmarkQuery = useClusterBenchmark(code, benchmarkIndicator, latestYear ?? undefined);
+  const benchmarkQuery = useClusterBenchmark(code, 'govdebt_GDP', latestYear ?? undefined);
 
-  const years = useMemo(() => {
-    const list: number[] = [];
-    for (let year = yearRange.min; year <= yearRange.max; year += 1) list.push(year);
-    return list;
-  }, [yearRange.max, yearRange.min]);
-
-  if (analyticsQuery.isLoading || countriesQuery.isLoading) {
+  if (analyticsQuery.isLoading || countriesQuery.isLoading || indicatorsQuery.isLoading) {
     return (
       <div className="space-y-4">
         <ChartSkeleton />
@@ -255,12 +245,18 @@ export default function CountryDetailPage() {
     );
   }
 
-  if (analyticsQuery.isError) {
+  if (analyticsQuery.isError || indicatorsQuery.isError) {
     return (
       <StateBlock
         mode="error"
         title="Không tải được hồ sơ quốc gia"
-        description={analyticsQuery.error instanceof Error ? analyticsQuery.error.message : 'Lỗi không xác định'}
+        description={
+          analyticsQuery.error instanceof Error
+            ? analyticsQuery.error.message
+            : indicatorsQuery.error instanceof Error
+              ? indicatorsQuery.error.message
+              : 'Lỗi không xác định'
+        }
       />
     );
   }
@@ -269,8 +265,8 @@ export default function CountryDetailPage() {
     return (
       <StateBlock
         mode="empty"
-        title="Chưa có dữ liệu hồ sơ quốc gia"
-        description="Hiện chưa có chuỗi dữ liệu phù hợp cho quốc gia này."
+        title="Chưa có dữ liệu phù hợp"
+        description="Hiện chưa có chuỗi dữ liệu chỉ số cho quốc gia này."
       />
     );
   }
@@ -279,19 +275,21 @@ export default function CountryDetailPage() {
     <div className="space-y-5">
       <PageHeader
         title={`Hồ sơ kinh tế quốc gia: ${countryName} (${code})`}
-        description={latestYear ? `Dữ liệu cập nhật đến năm ${formatYear(latestYear)}` : 'Thời điểm cập nhật hệ thống: chưa có thông tin công bố'}
+        description={latestYear ? `Dữ liệu cập nhật đến năm ${formatYear(latestYear)}` : 'Chưa có thông tin năm cập nhật'}
         actions={
           <div className="flex items-center gap-2">
             <Link
-              href={`/compare?countries=${code},THA&indicator=govdebt_GDP&from=2010&to=2023`}
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              href={`/compare?countries=${code}&indicator=govdebt_GDP&from=2010&to=2023`}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              So sánh với Thái Lan
+              <BarChart3 className="h-4 w-4" />
+              So sánh
             </Link>
             <Link
-              href={`/chat?q=${encodeURIComponent(`Phân tích hồ sơ kinh tế của ${countryName} (${code}) dựa trên các chỉ số tăng trưởng, tài khóa, rủi ro và phúc lợi xã hội trong giai đoạn gần nhất.`)}`}
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              href={`/chat?q=${encodeURIComponent(`Phân tích hồ sơ kinh tế của ${countryName} (${code}) theo các chỉ số nổi bật.`)}`}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
+              <Database className="h-4 w-4" />
               Phân tích bằng trợ lý dữ liệu
             </Link>
           </div>
@@ -310,70 +308,70 @@ export default function CountryDetailPage() {
           </div>
           <div>
             <p className="text-slate-500">Khu vực</p>
-            <p className="font-medium text-slate-900">{formatNullable(country?.region, 'Chưa có thông tin công bố')}</p>
+            <p className="font-medium text-slate-900">
+              {formatNullable(country?.region, 'Chưa có thông tin công bố')}
+            </p>
           </div>
           <div>
-            <p className="text-slate-500">Mức đầy đủ dữ liệu</p>
+            <p className="inline-flex items-center gap-1 text-slate-500">
+              Mức đầy đủ dữ liệu
+              <span title="Đây là tỷ lệ bao phủ dữ liệu (coverage), không phải điểm đánh giá chất lượng nội dung.">
+                <Info className="h-3.5 w-3.5" />
+              </span>
+            </p>
             <p className="font-medium text-slate-900">
-              {analyticsQuery.data?.meta.data_completeness != null
-                ? `${formatNumber(analyticsQuery.data.meta.data_completeness, 2)}%`
-                : 'Chưa có thông tin công bố'}
+              {completenessPercent == null ? 'Chưa có dữ liệu phù hợp' : `${formatNumber(completenessPercent, 2)}%`}
             </p>
           </div>
         </div>
       </SectionCard>
 
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-6">
-        {kpiCards.map((kpi) => (
-          <article key={kpi.id} className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium text-slate-600">{kpi.label}</p>
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+        {kpiCards.map(item => (
+          <article key={item.indicator} className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs font-medium text-slate-600">{item.indicator_name}</p>
             <p className="mt-2 text-lg font-semibold text-slate-900">
-              {kpi.value == null ? 'Chưa có dữ liệu phù hợp' : formatIndicatorValue(kpi.value, kpi.unit)}
+              {item.latestValue == null ? 'Chưa có dữ liệu phù hợp' : formatIndicatorValue(item.latestValue, item.unit)}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              {kpi.description} | Đơn vị: {kpi.unit || 'Chưa công bố'} | Năm: {kpi.year ? formatYear(kpi.year) : 'Chưa có'}
+              Năm: {item.latestYear ? formatYear(item.latestYear) : 'Chưa có'} | {item.indicator}
             </p>
           </article>
         ))}
-        <article className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-xs font-medium text-slate-600">Cụm cấu trúc</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">
-            {rows[rows.length - 1]?.cluster_id != null ? `Cụm ${rows[rows.length - 1].cluster_id}` : 'Chưa có dữ liệu phù hợp'}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">Năm: {formatYear(rows[rows.length - 1]?.year)}</p>
-        </article>
       </section>
-
-      <SectionCard title="Giải thích cụm cấu trúc">
-        <p className="text-sm leading-6 text-slate-700">
-          Cụm không phải xếp hạng tốt/xấu; đây là nhóm quốc gia có cấu trúc kinh tế tương đồng trong cùng năm phân tích.
-        </p>
-      </SectionCard>
 
       <SectionCard title="Bộ lọc phân tích">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Chỉ số</label>
+            <label htmlFor="country-indicator" className="mb-1 block text-sm font-medium text-slate-700">
+              Chỉ số
+            </label>
             <select
+              id="country-indicator"
+              name="indicator"
               value={selectedIndicator}
-              onChange={(event) => setSelectedIndicator(event.target.value)}
+              onChange={event => setSelectedIndicator(event.target.value)}
               className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
             >
-              {availableIndicators.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
+              {indicatorSeries.map(item => (
+                <option key={item.indicator} value={item.indicator}>
+                  {item.indicator_name} ({item.indicator})
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Từ năm</label>
+            <label htmlFor="country-from-year" className="mb-1 block text-sm font-medium text-slate-700">
+              Từ năm
+            </label>
             <select
+              id="country-from-year"
+              name="from_year"
               value={fromYear}
-              onChange={(event) => setFromYear(Number(event.target.value))}
+              onChange={event => setFromYear(Number(event.target.value))}
               className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
             >
-              {years.map((year) => (
+              {allYears.map(year => (
                 <option key={year} value={year}>
                   {formatYear(year)}
                 </option>
@@ -381,13 +379,17 @@ export default function CountryDetailPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Đến năm</label>
+            <label htmlFor="country-to-year" className="mb-1 block text-sm font-medium text-slate-700">
+              Đến năm
+            </label>
             <select
+              id="country-to-year"
+              name="to_year"
               value={toYear}
-              onChange={(event) => setToYear(Number(event.target.value))}
+              onChange={event => setToYear(Number(event.target.value))}
               className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
             >
-              {years.map((year) => (
+              {allYears.map(year => (
                 <option key={year} value={year}>
                   {formatYear(year)}
                 </option>
@@ -395,109 +397,126 @@ export default function CountryDetailPage() {
             </select>
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            {selectedIndicatorMeta ? (
+            {selectedSeries ? (
               <>
-                <p className="font-medium text-slate-800">{selectedIndicatorMeta.label}</p>
-                <p>{selectedIndicatorMeta.description}</p>
-                <p>Đơn vị: {selectedIndicatorMeta.unit || 'Chưa công bố'}</p>
+                <p className="font-medium text-slate-800">{selectedSeries.indicator_name}</p>
+                <p>Category: {selectedSeries.category}</p>
+                <p>Unit: {selectedSeries.unit || 'N/A'}</p>
+                <p>Code: {selectedSeries.indicator}</p>
               </>
             ) : (
-              <p>Chưa có chỉ số phù hợp để hiển thị.</p>
+              <p>Chưa có dữ liệu phù hợp.</p>
             )}
           </div>
         </div>
       </SectionCard>
 
       <SectionCard
-        title={selectedIndicatorMeta ? `Xu hướng: ${selectedIndicatorMeta.label}` : 'Xu hướng chỉ số'}
-        description={selectedIndicatorMeta ? `Đơn vị: ${selectedIndicatorMeta.unit || 'Chưa công bố'}` : undefined}
+        title={selectedSeries ? `Xu hướng: ${selectedSeries.indicator_name}` : 'Xu hướng chỉ số'}
+        description={selectedSeries ? `Đơn vị: ${selectedSeries.unit || 'N/A'}` : undefined}
       >
-        {chartRows.length === 0 ? (
-          <StateBlock
-            mode="empty"
-            title="Không có dữ liệu trong phạm vi lọc"
-            description="Hãy mở rộng khoảng năm hoặc chọn chỉ số khác."
-          />
+        {filteredSeriesPoints.length === 0 ? (
+          <StateBlock mode="empty" title="Chưa có dữ liệu phù hợp" description="Hãy điều chỉnh chỉ số hoặc khoảng năm." />
         ) : (
           <div className="h-[320px] min-w-0 w-full">
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chartRows}>
+              <LineChart data={filteredSeriesPoints}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="year" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value, name) => {
-                    if (name === 'trend') return [formatIndicatorValue(value as number | null, selectedIndicatorMeta?.unit), 'Xu hướng'];
-                    return [formatIndicatorValue(value as number | null, selectedIndicatorMeta?.unit), selectedIndicatorMeta?.label || 'Giá trị'];
-                  }}
-                  labelFormatter={(label) => `Năm ${formatYear(label as number)}`}
+                  formatter={value =>
+                    formatIndicatorValue(
+                      typeof value === 'number'
+                        ? value
+                        : value == null
+                          ? null
+                          : Number(value),
+                      selectedSeries?.unit,
+                    )
+                  }
+                  labelFormatter={label => `Năm ${formatYear(label as number)}`}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="value" name={selectedIndicatorMeta?.label || 'Giá trị'} stroke="#1d4ed8" strokeWidth={2} dot={false} connectNulls />
-                {selectedIndicatorMeta?.rowKey === 'actual_growth' ? (
-                  <Line type="monotone" dataKey="trend" name="Xu hướng" stroke="#0f766e" strokeWidth={2} dot={false} connectNulls />
-                ) : null}
+                <Line type="monotone" dataKey="value" name={selectedSeries?.indicator_name || 'Giá trị'} stroke="#1d4ed8" strokeWidth={2} dot={false} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
       </SectionCard>
 
-      <SectionCard title="Bảng dữ liệu theo bộ lọc">
-        {selectedIndicatorMeta ? (
-          <TableShell>
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">Năm</th>
-                  <th className="px-3 py-2 text-left font-semibold">Chỉ số</th>
-                  <th className="px-3 py-2 text-right font-semibold">Giá trị</th>
-                  <th className="px-3 py-2 text-left font-semibold">Đơn vị</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredRows.map((item) => (
-                  <tr key={`${item.country_code}-${item.year}`} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-mono">{formatYear(item.year)}</td>
-                    <td className="px-3 py-2">{selectedIndicatorMeta.label}</td>
-                    <td className="px-3 py-2 text-right">
-                      {item[selectedIndicatorMeta.rowKey] == null
-                        ? 'Chưa có dữ liệu phù hợp'
-                        : formatIndicatorValue(item[selectedIndicatorMeta.rowKey] as number, selectedIndicatorMeta.unit)}
-                    </td>
-                    <td className="px-3 py-2">{selectedIndicatorMeta.unit || 'Chưa công bố'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableShell>
-        ) : (
-          <StateBlock
-            mode="empty"
-            title="Không có chỉ số khả dụng"
-            description="Hiện chưa có chỉ số phù hợp cho quốc gia này."
+      <SectionCard title="Bảng dữ liệu đầy đủ">
+        <div className="mb-3">
+          <SearchInput
+            id="country-indicator-search"
+            name="indicator_search"
+            label="Tìm chỉ số"
+            value={tableSearch}
+            onChange={value => {
+              setTableSearch(value);
+              setTablePage(1);
+            }}
+            placeholder="Lọc theo tên chỉ số, mã hoặc nhóm"
           />
-        )}
+        </div>
+        <TableShell>
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold">Năm</th>
+                <th className="px-3 py-2 text-left font-semibold">Chỉ số</th>
+                <th className="px-3 py-2 text-left font-semibold">Nhóm</th>
+                <th className="px-3 py-2 text-right font-semibold">Giá trị</th>
+                <th className="px-3 py-2 text-left font-semibold">Đơn vị</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {pagedTableRows.map(item => (
+                <tr key={`${item.indicator}-${item.year}`} className="hover:bg-slate-50">
+                  <td className="px-3 py-2 font-mono">{formatYear(item.year)}</td>
+                  <td className="px-3 py-2">
+                    {item.indicator_name}
+                    <p className="text-xs text-slate-500">{item.indicator}</p>
+                  </td>
+                  <td className="px-3 py-2">{item.category}</td>
+                  <td className="px-3 py-2 text-right">
+                    {item.value == null ? 'Chưa có dữ liệu phù hợp' : formatIndicatorValue(item.value, item.unit)}
+                  </td>
+                  <td className="px-3 py-2">{item.unit || 'N/A'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableShell>
+        <Pagination
+          currentPage={safeTablePage}
+          totalPages={totalTablePages}
+          onPageChange={setTablePage}
+          totalItems={tableRows.length}
+          itemsPerPage={TABLE_PAGE_SIZE}
+        />
       </SectionCard>
 
-      <SectionCard title="Các chỉ số theo nhóm">
+      <SectionCard title="Chỉ số theo nhóm">
         <div className="space-y-4">
-          {groupedIndicators.map(([group, items]) => (
-            <article key={group} className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <h3 className="text-sm font-semibold text-slate-900">{group}</h3>
+          {groupedIndicators.map(([category, items]) => (
+            <article key={category} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <h3 className="text-sm font-semibold text-slate-900">{category}</h3>
               <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
-                {items.map((item) => (
-                  <div key={item.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-sm font-medium text-slate-900">{item.label}</p>
-                    <p className="text-xs text-slate-500">{item.id}</p>
-                    <p className="mt-1 text-sm text-slate-700">
-                      {item.latestValue == null
-                        ? 'Chưa có dữ liệu phù hợp'
-                        : `${formatIndicatorValue(item.latestValue, item.unit)} (năm ${item.latestYear ? formatYear(item.latestYear) : 'chưa có'})`}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-600">{item.description}</p>
-                  </div>
-                ))}
+                {items.map(item => {
+                  const latest = item.points.slice().reverse().find(point => point.value != null);
+                  return (
+                    <div key={item.indicator} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-sm font-medium text-slate-900">{item.indicator_name}</p>
+                      <p className="text-xs text-slate-500">{item.indicator}</p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {latest && latest.value != null
+                          ? `${formatIndicatorValue(latest.value, item.unit)} (năm ${formatYear(latest.year)})`
+                          : 'Chưa có dữ liệu phù hợp'}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </article>
           ))}
@@ -525,7 +544,7 @@ export default function CountryDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {benchmarkQuery.data.members.slice(0, 12).map((member) => (
+                  {benchmarkQuery.data.members.slice(0, 12).map(member => (
                     <tr key={`${member.country_code}-${member.year}`}>
                       <td className="px-3 py-2">{member.country_name || member.country_code}</td>
                       <td className="px-3 py-2 font-mono">{member.country_code}</td>
@@ -551,34 +570,20 @@ export default function CountryDetailPage() {
                   <th className="px-3 py-2 text-left font-semibold">Chỉ số</th>
                   <th className="px-3 py-2 text-right font-semibold">Giá trị</th>
                   <th className="px-3 py-2 text-right font-semibold">Điểm bất thường thống kê</th>
-                  <th className="px-3 py-2 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {anomalies.map((item) => {
-                  const prompt = encodeURIComponent(
-                    `Phân tích bất thường của ${item.indicatorLabel} tại ${countryName} (${code}) năm ${formatYear(item.year)}. Giá trị: ${formatIndicatorValue(item.value, item.unit)}. Đơn vị: ${item.unit || 'chưa công bố'}. Điểm bất thường thống kê: ${formatNumber(item.score, 3)}. Hãy diễn giải ý nghĩa kinh tế và các khả năng cần kiểm tra thêm.`
-                  );
-                  return (
-                    <tr key={`${item.indicatorCode}-${item.year}-${item.score ?? 0}`} className="hover:bg-slate-50">
-                      <td className="px-3 py-2 font-mono">{formatYear(item.year)}</td>
-                      <td className="px-3 py-2">
-                        {item.indicatorLabel}
-                        <p className="text-xs text-slate-500">{item.indicatorCode}</p>
-                      </td>
-                      <td className="px-3 py-2 text-right">{formatIndicatorValue(item.value, item.unit)}</td>
-                      <td className="px-3 py-2 text-right">{formatNumber(item.score, 3)}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Link
-                          href={`/chat?q=${prompt}`}
-                          className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                        >
-                          Phân tích
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {anomalies.map(item => (
+                  <tr key={`${item.indicatorCode}-${item.year}-${item.score ?? 0}`} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 font-mono">{formatYear(item.year)}</td>
+                    <td className="px-3 py-2">
+                      {item.indicatorLabel}
+                      <p className="text-xs text-slate-500">{item.indicatorCode}</p>
+                    </td>
+                    <td className="px-3 py-2 text-right">{formatIndicatorValue(item.value, item.unit)}</td>
+                    <td className="px-3 py-2 text-right">{formatNumber(item.score, 3)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </TableShell>
