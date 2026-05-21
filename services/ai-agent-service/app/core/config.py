@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     gemini_router_retries: int = 1
     gemini_router_retry_backoff_ms: int = 700
     gemini_composer_enabled: bool = True
+    ai_knowledge_model: str | None = None
+    ai_composer_model: str | None = None
+    ai_fallback_model: str | None = None
     conversation_context_max_turns: int = 10
     conversation_context_max_rows: int = 20
 

@@ -66,6 +66,13 @@ Conversation context:
 - Không giả định có raw rows, SQL, query plan, parsedQuery, validatedQuery, chart.data, parserDebug, routerDebug hoặc metadata kỹ thuật.
 - Không invent dữ liệu từ conversation_context.
 
+Routing priority additions:
+- If the latest message explicitly provides standalone facts such as country + indicator + year + value or anomaly score, do not use conversation history or old context.
+- If the latest message is context-dependent with markers like "này", "đó", "kết quả trên", "xu hướng này", "phân tích kỹ hơn", "giải thích thêm", classify it as FOLLOW_UP_ANALYSIS when recent_user_questions make that safe.
+- If the previous request was a one-year ranking and the latest message says "xu hướng này", do not call the ranking a trend; analyze the ranking or ask for clarification.
+- Pure standalone definition/source/concept questions remain GENERAL_EXPLANATION.
+- If context is insufficient for a safe follow-up rewrite, return NEED_CLARIFICATION.
+
 Quy tắc route:
 - DATA_QUERY: user hỏi số liệu, so sánh, ranking, trend, anomaly, coverage. Output rewritten_query standalone. answer=null, needs_parser=true, needs_db=true.
 - Follow-up sửa câu trước như thêm quốc gia, đổi năm, đổi top N: vẫn route DATA_QUERY và rewritten_query phải là câu standalone đã merge an toàn từ latest message và recent_user_questions.

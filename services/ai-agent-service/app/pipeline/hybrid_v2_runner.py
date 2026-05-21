@@ -1,4 +1,5 @@
 import logging
+import re
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
@@ -8,7 +9,9 @@ from app.composer.chart_composer import (
     build_ranking_bar_chart_data,
     build_series_line_chart_data,
 )
+from app.composer.analysis_composer import build_series_summary, compose_followup_deep_analysis, compose_provided_facts_analysis
 from app.composer.deterministic_guard import append_result_warnings
+from app.composer.knowledge_composer import compose_knowledge_answer
 from app.composer.display_formatter import (
     format_value,
     get_country_label,
@@ -39,6 +42,7 @@ from app.conversation.context_store import (
 )
 from app.core.config import settings
 from app.executor.tool_executor import execute_query_plan
+from app.knowledge.knowledge_retriever import is_knowledge_question, retrieve_knowledge
 from app.catalog.canonical_indicator_catalog import normalize_catalog_text, resolve_indicator_alias
 from app.catalog.country_group_catalog import resolve_country_groups
 from app.parser.indicator_guard import validate_indicator_codes
@@ -78,8 +82,72 @@ def run_hybrid_v2_pipeline(
             "blocked_indicators": [],
         }
 
+        provided_facts = _extract_provided_analysis_facts(message)
+        if provided_facts:
+            return _provided_facts_response(
+                payload=payload,
+                message=message,
+                rule_draft=rule_draft,
+                facts=provided_facts,
+                router_debug=_router_debug(
+                    "GENERAL_EXPLANATION",
+                    rule_draft,
+                    front_draft,
+                    front_router_decision,
+                    executed_front_router,
+                    parser_model_debug,
+                ),
+            )
+
+        if _looks_context_dependent_analysis(message):
+            if _has_previous_data_context(router_context):
+                return _followup_analysis_response(
+                    payload,
+                    message,
+                    previous_context,
+                    router_context,
+                    rule_draft,
+                    _router_debug(
+                        "FOLLOW_UP_ANALYSIS",
+                        rule_draft,
+                        front_draft,
+                        front_router_decision,
+                        executed_front_router,
+                        parser_model_debug,
+                    ),
+                )
+            return _clarification_response(
+                payload,
+                message,
+                ["Bạn muốn phân tích tiếp kết quả dữ liệu nào? Hãy nêu rõ chỉ số, quốc gia và giai đoạn."],
+                rule_draft,
+                router_debug=_router_debug(
+                    "NEED_CLARIFICATION",
+                    rule_draft,
+                    front_draft,
+                    front_router_decision,
+                    executed_front_router,
+                    parser_model_debug,
+                ),
+            )
+
+        if is_knowledge_question(message, rule_draft):
+            return _knowledge_response(
+                payload=payload,
+                message=message,
+                rule_draft=rule_draft,
+                router_debug=_router_debug(
+                    "GENERAL_EXPLANATION",
+                    rule_draft,
+                    front_draft,
+                    front_router_decision,
+                    executed_front_router,
+                    parser_model_debug,
+                ),
+            )
+
         if rule_draft.route == "GENERAL_EXPLANATION" and not rule_draft.needs_front_llm:
-            return _direct_explanation_response(
+            return _knowledge_response(
                 payload=payload,
                 message=message,
                 rule_draft=rule_draft,
@@ -101,7 +169,7 @@ def run_hybrid_v2_pipeline(
             front_draft = build_front_router_draft_from_existing_router(router_result, rule_draft)
 
         if front_draft.route == "GENERAL_EXPLANATION":
-            return _direct_explanation_response(
+            return _knowledge_response(
                 payload=payload,
                 message=message,
                 rule_draft=rule_draft,
@@ -113,7 +181,6 @@ def run_hybrid_v2_pipeline(
                     executed_front_router,
                     parser_model_debug,
                 ),
-                answer_override=front_draft.answer,
             )
 
         if front_draft.route == "FOLLOW_UP_ANALYSIS":
@@ -245,7 +312,7 @@ def run_hybrid_v2_pipeline(
             return None
 
         if validation.validated_query.get("intent") in {"DIRECT_ANSWER", "GENERAL_EXPLANATION"}:
-            return _direct_explanation_response(
+            return _knowledge_response(
                 payload=payload,
                 message=message,
                 rule_draft=rule_draft,
@@ -257,7 +324,6 @@ def run_hybrid_v2_pipeline(
                     executed_front_router,
                     parser_model_debug,
                 ),
-                answer_override=front_draft.answer,
             )
 
         if validation.validated_query.get("intent") == "OFF_TOPIC":
@@ -331,7 +397,45 @@ def _followup_analysis_response(
     router_debug: dict[str, Any] | None = None,
 ) -> AiChatResponse:
     summary = router_context.get("last_data_summary") or {}
-    answer = _compose_followup_analysis_from_context(router_context, message)
+    rows = router_context.get("last_rows") or summary.get("top_rows") or []
+    indicator_code = summary.get("indicator")
+    indicator_label = get_indicator_label(indicator_code) if indicator_code else ""
+    knowledge_query = " ".join(part for part in (message, str(indicator_code or ""), indicator_label) if part)
+    snippets = retrieve_knowledge(knowledge_query, limit=6)
+    answer, composer_source = compose_followup_deep_analysis(
+        message=message,
+        context_summary=_followup_context_summary(router_context),
+        rows=rows,
+        question_type=router_context.get("last_question_type"),
+        snippets=snippets,
+    )
+    knowledge_ids = [snippet.id for snippet in snippets]
+    knowledge_types = sorted({snippet.type for snippet in snippets})
+    debug = router_debug or {
+        "route": "FOLLOW_UP_ANALYSIS",
+        "pipeline": "hybrid_v2",
+        "ruleFirst": asdict(rule_draft),
+        "executed_front_router": False,
+        "executed_model_parser": False,
+        "executed_parser_agent": False,
+        "executed_db": False,
+        "needs_parser": False,
+        "needs_db": False,
+    }
+    debug = {
+        **debug,
+        "route": "FOLLOW_UP_ANALYSIS",
+        "executed_model_parser": False,
+        "executed_parser_agent": False,
+        "executed_db": False,
+        "needs_parser": False,
+        "needs_db": False,
+        "knowledge": {
+            "matched_ids": knowledge_ids,
+            "matched_types": knowledge_types,
+            "composer": composer_source,
+        },
+    }
 
     response = AiChatResponse(
         answer=sanitize_user_facing_text(answer),
@@ -342,29 +446,19 @@ def _followup_analysis_response(
                 "message": message,
                 "route": "FOLLOW_UP_ANALYSIS",
                 "previousDataSummary": summary,
+                "knowledgeIds": knowledge_ids,
             }
         ],
         chart=AiAgentChartConfig(type="none"),
         warnings=[],
         metadata=_metadata(
-            "template",
-            ["rule_first_router", "conversation_context"],
+            composer_source,
+            ["rule_first_router", "conversation_context", "knowledge_corpus", "followup_deep_analysis"],
             rule_draft=rule_draft,
         ),
         parsedQuery=previous_context.get("last_parsed_query") or None,
         parserDebug=None,
-        routerDebug=router_debug
-        or {
-            "route": "FOLLOW_UP_ANALYSIS",
-            "pipeline": "hybrid_v2",
-            "ruleFirst": asdict(rule_draft),
-            "executed_front_router": False,
-            "executed_model_parser": False,
-            "executed_parser_agent": False,
-            "executed_db": False,
-            "needs_parser": False,
-            "needs_db": False,
-        },
+        routerDebug=debug,
     )
 
     update_conversation_context(
@@ -383,6 +477,33 @@ def _followup_analysis_response(
     )
 
     return response
+
+
+def _followup_context_summary(router_context: dict[str, Any]) -> dict[str, Any]:
+    summary = dict(router_context.get("last_data_summary") or {})
+    indicator_code = summary.get("indicator")
+    summary.update(
+        {
+            "indicator_label": get_indicator_label(indicator_code) if indicator_code else "",
+            "unit": get_indicator_unit(indicator_code),
+            "last_question_type": router_context.get("last_question_type"),
+            "last_user_message": router_context.get("last_user_message"),
+            "last_answer": _truncate_context_text(router_context.get("last_answer"), 2400),
+            "last_data_query": router_context.get("last_data_query") or {},
+            "last_result_summary": router_context.get("last_result_summary") or {},
+            "last_result_validation": router_context.get("last_result_validation") or {},
+            "recent_turns": router_context.get("recent_turns") or [],
+        }
+    )
+    return summary
+
+
+def _truncate_context_text(value: Any, max_chars: int) -> str:
+    text = str(value or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars].rstrip()}..."
+
 
 def _compose_followup_analysis_from_context(router_context: dict[str, Any], message: str = "") -> str:
     summary = router_context.get("last_data_summary") or {}
@@ -427,6 +548,26 @@ def _compose_followup_analysis_from_context(router_context: dict[str, Any], mess
         )
     )
     qualitative_text = _qualitative_followup_text(indicator_code, message)
+    multi_country_reason = _multi_country_followup_reason_text(
+        rows=rows,
+        question_type=question_type,
+        indicator_label=indicator_label,
+        unit=unit,
+        period=period,
+        qualitative_text=qualitative_text,
+        asks_reason=asks_reason,
+    )
+    if multi_country_reason:
+        return multi_country_reason
+    single_country_detail = _single_country_followup_text(
+        rows=rows,
+        indicator_label=indicator_label,
+        unit=unit,
+        period=period,
+        qualitative_text=qualitative_text,
+    )
+    if single_country_detail:
+        return single_country_detail
 
     if not rows:
         detail = f" với {row_count} dòng dữ liệu" if row_count else ""
@@ -495,6 +636,106 @@ def _compose_followup_analysis_from_context(router_context: dict[str, Any], mess
         f"Dựa trên kết quả đã hiển thị cho {indicator_label}{period}, có thể rút ra nhận xét định tính. "
         f"{qualitative_text} "
         "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+    )
+
+
+def _single_country_followup_text(
+    *,
+    rows: list[dict],
+    indicator_label: str,
+    unit: str,
+    period: str,
+    qualitative_text: str,
+) -> str | None:
+    grouped = _context_rows_by_country(rows)
+    if len(grouped) != 1:
+        return None
+
+    country_code, country_rows = next(iter(grouped.items()))
+    numeric_rows = [row for row in country_rows if safe_number(_context_row_value(row)) is not None]
+    if len(numeric_rows) < 2:
+        return None
+    numeric_rows.sort(key=lambda row: int(row.get("year") or 0))
+    first = numeric_rows[0]
+    last = numeric_rows[-1]
+    country = get_country_label(last, country_code=country_code)
+    direction = get_direction_text(_context_row_value(first), _context_row_value(last))
+    volatility = _context_volatility_text(numeric_rows, unit)
+    volatility_sentence = f" {volatility}" if volatility else ""
+    return sanitize_user_facing_text(
+        f"Kết quả trước cho thấy {indicator_label} của {country}{period} "
+        f"đi từ {format_value(_context_row_value(first), unit)} năm {first.get('year')} "
+        f"đến {format_value(_context_row_value(last), unit)} năm {last.get('year')}, xu hướng theo điểm đầu/cuối là {direction}."
+        f"{volatility_sentence} "
+        f"{qualitative_text} "
+        "Đây là phân tích định tính, không phải bằng chứng nhân quả trực tiếp."
+    )
+
+
+def _context_volatility_text(rows: list[dict], unit: str) -> str | None:
+    if len(rows) < 3:
+        return None
+    highest = max(rows, key=lambda row: safe_number(_context_row_value(row)) or 0)
+    lowest = min(rows, key=lambda row: safe_number(_context_row_value(row)) or 0)
+    first_value = safe_number(_context_row_value(rows[0]))
+    last_value = safe_number(_context_row_value(rows[-1]))
+    high_value = safe_number(_context_row_value(highest))
+    low_value = safe_number(_context_row_value(lowest))
+    if None in (first_value, last_value, high_value, low_value):
+        return None
+    endpoint_delta = abs(last_value - first_value)
+    value_range = abs(high_value - low_value)
+    baseline = max(abs(first_value), abs(last_value), 1.0)
+    if value_range <= max(endpoint_delta * 3, baseline * 0.05):
+        return None
+    return (
+        f"Dù đầu kỳ và cuối kỳ gần nhau, chuỗi có biến động đáng kể với đỉnh "
+        f"{format_value(high_value, unit)} năm {highest.get('year')} và đáy {format_value(low_value, unit)} năm {lowest.get('year')}."
+    )
+
+
+def _multi_country_followup_reason_text(
+    *,
+    rows: list[dict],
+    question_type: str | None,
+    indicator_label: str,
+    unit: str,
+    period: str,
+    qualitative_text: str,
+    asks_reason: bool,
+) -> str | None:
+    if not asks_reason or question_type == "VALID_RANKING_QUERY":
+        return None
+
+    grouped = _context_rows_by_country(rows)
+    if len(grouped) < 2:
+        return None
+
+    direction_lines: list[str] = []
+    for country_code, country_rows in grouped.items():
+        numeric_rows = [row for row in country_rows if safe_number(_context_row_value(row)) is not None]
+        if len(numeric_rows) < 2:
+            continue
+        numeric_rows.sort(key=lambda row: int(row.get("year") or 0))
+        first = numeric_rows[0]
+        last = numeric_rows[-1]
+        country = get_country_label(last, country_code=country_code)
+        direction = get_direction_text(_context_row_value(first), _context_row_value(last))
+        direction_lines.append(
+            f"{country}: {format_value(_context_row_value(first), unit)} năm {first.get('year')} "
+            f"đến {format_value(_context_row_value(last), unit)} năm {last.get('year')} ({direction})"
+        )
+
+    if not direction_lines:
+        return None
+
+    return sanitize_user_facing_text(
+        f"Dữ liệu trước đó về {indicator_label}{period} cho thấy: "
+        + "; ".join(direction_lines)
+        + ". "
+        + f"{qualitative_text} "
+        + "Các yếu tố trên chỉ là khả năng cần kiểm chứng thêm bằng bối cảnh ngân sách, tăng trưởng, lãi suất, tỷ giá, cú sốc bên ngoài và thay đổi phương pháp dữ liệu. "
+        + "Đây là phân tích mô tả/định tính, không phải bằng chứng nhân quả trực tiếp."
     )
 
 
@@ -640,6 +881,253 @@ def _context_rows_by_country(rows: list[dict]) -> dict[str, list[dict]]:
             continue
         grouped.setdefault(str(code), []).append(row)
     return grouped
+
+
+def _extract_provided_analysis_facts(message: str) -> dict[str, Any] | None:
+    normalized = normalize_catalog_text(message)
+    country_matches = resolve_countries(message)
+    indicator_match = resolve_indicator_alias(message)
+    years = [int(year) for year in re.findall(r"\b((?:19|20)\d{2})\b", normalized)]
+    value = _extract_number_after_markers(
+        message,
+        normalized,
+        ("giá trị", "gia tri", "value", "mức", "muc"),
+    )
+    anomaly_score = _extract_number_after_markers(
+        message,
+        normalized,
+        ("điểm bất thường thống kê", "diem bat thuong thong ke", "điểm bất thường", "diem bat thuong", "anomaly score"),
+    )
+
+    if not (country_matches and indicator_match and years):
+        return None
+    if value is None and anomaly_score is None:
+        return None
+
+    country = country_matches[0].country
+    return {
+        "country_code": country.code,
+        "country_name": country.name,
+        "indicator_code": indicator_match.indicator.code,
+        "indicator_label": get_indicator_label(indicator_match.indicator.code),
+        "year": years[-1],
+        "value": value,
+        "anomaly_score": anomaly_score,
+        "unit": get_indicator_unit(indicator_match.indicator.code),
+    }
+
+
+def _extract_number_after_markers(message: str, normalized: str, markers: tuple[str, ...]) -> float | None:
+    raw = str(message or "")
+    for marker in markers:
+        normalized_marker = normalize_catalog_text(marker)
+        if normalized_marker not in normalized:
+            continue
+        pattern = rf"{re.escape(marker)}\s*(?:là|la|=|:)?\s*([-+]?\d+(?:[,.]\d+)?)"
+        match = re.search(pattern, raw, flags=re.IGNORECASE)
+        if not match:
+            normalized_match = re.search(
+                rf"{re.escape(normalized_marker)}\s*(?:la|=|:)?\s*([-+]?\d+(?:[,.]\d+)?)",
+                normalized,
+                flags=re.IGNORECASE,
+            )
+            if normalized_match:
+                return _parse_localized_number(normalized_match.group(1))
+            continue
+        return _parse_localized_number(match.group(1))
+    return None
+
+
+def _parse_localized_number(value: str) -> float | None:
+    text = str(value or "").strip().replace(" ", "")
+    if "," in text and "." in text:
+        text = text.replace(".", "").replace(",", ".")
+    elif "," in text:
+        text = text.replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _looks_context_dependent_analysis(message: str) -> bool:
+    normalized = normalize_catalog_text(message)
+    if not normalized:
+        return False
+
+    context_patterns = (
+        "phan tich ki hon",
+        "phan tich ky hon",
+        "phan tich sau hon",
+        "phan tich them",
+        "lam ro hon",
+        "lam ro them",
+        "noi ro hon",
+        "mo rong them",
+        "giai thich them",
+        "giai thich sau hon",
+        "nhan xet them",
+        "nguyen nhan chinh cua xu huong nay",
+        "phan tich nguyen nhan",
+        "phan tich nhom nuoc nay",
+        "vi sao no giam",
+        "vi sao no tang",
+        "vi sao lai nhu vay",
+        "vi sao xu huong nay",
+        "dieu nay co y nghia gi",
+        "rui ro la gi",
+        "ket qua nay noi len dieu gi",
+        "nhom nay co diem gi chung",
+        "xu huong nay",
+        "ket qua tren",
+        "ket qua nay",
+        "o tren",
+        "vua roi",
+        "cac nuoc nay",
+        "nhom nay",
+        "du lieu tren",
+        "bieu do nay",
+    )
+    if any(pattern in normalized for pattern in context_patterns):
+        return True
+
+    has_analysis_marker = any(
+        marker in normalized
+        for marker in ("phan tich", "giai thich", "nhan xet", "vi sao", "tai sao", "nguyen nhan", "y nghia")
+    )
+    has_context_word = any(
+        re.search(rf"(^|\s){re.escape(word)}($|\s)", normalized)
+        for word in ("nay", "do", "tren")
+    )
+    return bool(has_analysis_marker and has_context_word)
+
+
+def _has_previous_data_context(router_context: dict[str, Any]) -> bool:
+    summary = router_context.get("last_data_summary") or {}
+    rows = router_context.get("last_rows") or summary.get("top_rows") or []
+    return bool(summary.get("indicator") or summary.get("countries") or rows)
+
+
+def _provided_facts_response(
+    payload: AiChatRequest,
+    message: str,
+    rule_draft: Any,
+    facts: dict[str, Any],
+    router_debug: dict[str, Any] | None = None,
+) -> AiChatResponse:
+    snippets = retrieve_knowledge(message, limit=5)
+    answer, composer_source = compose_provided_facts_analysis(message, facts, snippets)
+    knowledge_ids = [snippet.id for snippet in snippets]
+    debug = dict(router_debug or {"route": "GENERAL_EXPLANATION", "pipeline": "hybrid_v2"})
+    debug.update(
+        {
+            "route": "PROVIDED_FACTS_ANALYSIS",
+            "executed_model_parser": False,
+            "executed_parser_agent": False,
+            "executed_db": False,
+            "needs_parser": False,
+            "needs_db": False,
+            "providedFacts": facts,
+            "knowledge": {
+                "matched_ids": knowledge_ids,
+                "matched_types": sorted({snippet.type for snippet in snippets}),
+                "composer": composer_source,
+            },
+        }
+    )
+    response = AiChatResponse(
+        answer=sanitize_user_facing_text(answer),
+        questionType="VALID_SIMPLE_QUERY",
+        status="success",
+        data=[
+            {
+                "message": message,
+                "route": "PROVIDED_FACTS_ANALYSIS",
+                "providedFacts": facts,
+                "knowledgeIds": knowledge_ids,
+            }
+        ],
+        chart=AiAgentChartConfig(type="none"),
+        warnings=[],
+        metadata=_metadata(composer_source, ["provided_facts_analysis", "knowledge_corpus"], rule_draft=rule_draft),
+        parsedQuery=None,
+        parserDebug=None,
+        routerDebug=debug,
+    )
+    _update_basic(
+        payload.conversationId,
+        message,
+        response.answer,
+        "PROVIDED_FACTS_ANALYSIS",
+        "success",
+        response.questionType,
+    )
+    return response
+
+
+def _knowledge_response(
+    payload: AiChatRequest,
+    message: str,
+    rule_draft: Any,
+    router_debug: dict[str, Any] | None = None,
+) -> AiChatResponse:
+    snippets = retrieve_knowledge(message, limit=5)
+    answer, composer_source = compose_knowledge_answer(message, snippets)
+    knowledge_ids = [snippet.id for snippet in snippets]
+    knowledge_types = sorted({snippet.type for snippet in snippets})
+    debug = dict(router_debug or {"route": "GENERAL_EXPLANATION", "pipeline": "hybrid_v2"})
+    debug.update(
+        {
+            "route": "GENERAL_EXPLANATION",
+            "executed_model_parser": False,
+            "executed_parser_agent": False,
+            "executed_db": False,
+            "needs_parser": False,
+            "needs_db": False,
+            "knowledge": {
+                "matched_ids": knowledge_ids,
+                "matched_types": knowledge_types,
+                "composer": composer_source,
+            },
+        }
+    )
+
+    response = AiChatResponse(
+        answer=sanitize_user_facing_text(answer),
+        questionType="VALID_SIMPLE_QUERY",
+        status="success",
+        data=[
+            {
+                "message": message,
+                "route": "GENERAL_EXPLANATION",
+                "knowledgeIds": knowledge_ids,
+                "knowledgeTypes": knowledge_types,
+            }
+        ],
+        chart=AiAgentChartConfig(type="none"),
+        warnings=[],
+        metadata=_metadata(composer_source, ["knowledge_corpus"], rule_draft=rule_draft),
+        parsedQuery=None,
+        parserDebug=None,
+        routerDebug=debug,
+    )
+    _update_basic(
+        payload.conversationId,
+        message,
+        response.answer,
+        "GENERAL_EXPLANATION",
+        "success",
+        response.questionType,
+        extra_patch={
+            "last_general_explanation": {
+                "topic": message,
+                "summary": response.answer,
+                "knowledge_ids": knowledge_ids,
+            },
+        },
+    )
+    return response
+
 
 def _direct_explanation_response(
     payload: AiChatRequest,
@@ -1698,12 +2186,15 @@ def _update_query_success(
                 "indicator": validated_query.get("indicator"),
                 "countries": validated_query.get("countries") or [],
                 "years": [year for year in (validated_query.get("effective_start_year"), validated_query.get("effective_end_year")) if year],
+                "year": plan.arguments.get("year") if hasattr(plan, "arguments") else None,
+                "question_type": response.questionType,
                 "start_year": validated_query.get("effective_start_year"),
                 "end_year": validated_query.get("effective_end_year"),
                 "limit": validated_query.get("limit"),
                 "order": validated_query.get("ranking_order"),
                 "row_count": row_summary["row_count"],
                 "top_rows": row_summary["top_rows"],
+                "series_summary": build_series_summary(rows),
             },
             "append_recent_turns": [
                 make_user_turn(message),
