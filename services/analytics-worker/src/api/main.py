@@ -14,8 +14,8 @@ class TaskResponse(BaseModel):
 
 def run_all_analytics_with_callback(task_id: str):
     try:
-        run_all_analytics()
-        tasks[task_id] = "done"
+        result = run_all_analytics()
+        tasks[task_id] = f"done: {result}"
     except Exception as e:
         logger.error(f"Task {task_id} failed: {e}")
         tasks[task_id] = f"failed: {str(e)}"

@@ -148,3 +148,28 @@ def build_router_context(context: dict[str, Any]) -> dict[str, Any]:
         "last_chart": chart_metadata,
         "last_rows": deepcopy(last_rows[:max_rows]),
     }
+
+
+def build_front_llm_context(context: dict[str, Any], max_user_questions: int = 7) -> dict[str, Any]:
+    """Compact, user-facing context for the front LLM router only."""
+    recent_turns = context.get("recent_turns") or []
+    limit = max(1, min(int(max_user_questions or 7), 7))
+    questions: list[str] = []
+
+    for turn in recent_turns:
+        if not isinstance(turn, dict) or turn.get("role") != "user":
+            continue
+        content = _truncate_text(turn.get("content"), 240)
+        if content:
+            questions.append(content)
+
+    return {
+        "recent_user_questions": questions[-limit:],
+    }
+
+
+def _truncate_text(value: Any, max_chars: int) -> str:
+    text = str(value or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars].rstrip()}..."

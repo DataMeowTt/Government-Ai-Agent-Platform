@@ -1,98 +1,120 @@
 'use client';
-import { useCountries } from '@/lib/hooks/useCountries';
-import { useDataState } from '@/lib/hooks/useDataState';
-import { TableSkeleton } from '@/components/ui/Skeletons';
-import { Search, Globe2, Filter } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Country } from '@/lib/types';
+import { Plus } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import FilterBar from '@/components/ui/FilterBar';
+import SearchInput from '@/components/ui/SearchInput';
+import TableShell from '@/components/ui/TableShell';
+import StateBlock from '@/components/ui/StateBlock';
+import { TableSkeleton } from '@/components/ui/Skeletons';
+import { useCountries } from '@/lib/hooks/useCountries';
+import type { Country } from '@/lib/types';
+import { buildCompareCountries } from '@/lib/utils/compare';
 
 export default function CountriesPage() {
-  const { data: countries, isLoading, isEmpty, isError, error } = useDataState(useCountries());
+  const { data, isLoading, isError, error } = useCountries();
   const [search, setSearch] = useState('');
 
-  const filteredCountries = useMemo(() => {
-    const countryList = (countries as Country[]) || [];
-    const q = search.toLowerCase();
-    return countryList.filter((c) =>
-      c.country_name.toLowerCase().includes(q) || c.country_code.toLowerCase().includes(q)
+  const countries = useMemo(() => {
+    const map = new Map<string, Country>();
+    (data || []).forEach((item) => {
+      if (!map.has(item.country_code)) map.set(item.country_code, item);
+    });
+    return Array.from(map.values());
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return countries;
+    return countries.filter(
+      (item) =>
+        item.country_name.toLowerCase().includes(keyword) || item.country_code.toLowerCase().includes(keyword)
     );
   }, [countries, search]);
 
-  if (isError) return <div className="p-4 bg-red-50 text-red-700 rounded border border-red-200">Lỗi: {error?.message}</div>;
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Danh sách Quốc gia</h1>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span className="font-medium text-gray-900">{filteredCountries.length}</span> quốc gia
-        </div>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Quốc gia"
+        description="Danh sách quốc gia có dữ liệu trong hệ thống."
+        actions={<p className="text-sm text-slate-600">Tổng số quốc gia: {countries.length}</p>}
+      />
 
-      {/* Control Bar */}
-      <div className="bg-white p-4 rounded-md border border-gray-200 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm theo tên hoặc mã..."
+      <FilterBar>
+        <div className="md:col-span-6">
+          <label className="mb-1 block text-sm font-medium text-slate-700">Tìm kiếm quốc gia</label>
+          <SearchInput
+            placeholder="Nhập tên quốc gia hoặc mã quốc gia"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 h-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={setSearch}
+            debounceTime={200}
           />
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Filter className="w-4 h-4" />
-          <span>Sắp xếp: Mặc định</span>
-        </div>
-      </div>
+      </FilterBar>
 
-      {/* Table */}
-      <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-        {isLoading ? (
-          <TableSkeleton rows={8} />
-        ) : isEmpty ? (
-          <div className="p-12 flex flex-col items-center text-center">
-            <Globe2 className="w-10 h-10 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không có dữ liệu</h3>
-            <p className="text-sm text-gray-500">API chưa trả về danh sách quốc gia nào.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quốc gia</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nhóm thu nhập</th>
-                  <th className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCountries.length > 0 ? filteredCountries.map((country) => (
-                  <tr key={country.country_code} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">{country.country_code}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{country.country_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{country.region || 'Chưa phân loại'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Link href={`/countries/${country.country_code}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                        Xem chi tiết
+      {isLoading ? <TableSkeleton rows={8} /> : null}
+
+      {isError ? (
+        <StateBlock
+          mode="error"
+          title="Không tải được danh sách quốc gia"
+          description={error instanceof Error ? error.message : 'Đã có lỗi khi tải danh sách quốc gia.'}
+        />
+      ) : null}
+
+      {!isLoading && !isError && filtered.length === 0 ? (
+        <StateBlock
+          mode="empty"
+          title="Không có quốc gia phù hợp"
+          description="Không tìm thấy quốc gia theo từ khóa hiện tại."
+          action={{
+            label: 'Xóa bộ lọc',
+            onClick: () => setSearch(''),
+          }}
+        />
+      ) : null}
+
+      {!isLoading && !isError && filtered.length > 0 ? (
+        <TableShell>
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold">Mã quốc gia</th>
+                <th className="px-4 py-3 text-left font-semibold">Tên quốc gia</th>
+                <th className="px-4 py-3 text-left font-semibold">Khu vực</th>
+                <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {filtered.map((country) => (
+                <tr key={country.country_code} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono">{country.country_code}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{country.country_name}</td>
+                  <td className="px-4 py-3">{country.region || 'N/A'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/countries/${country.country_code}`}
+                        className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        Xem hồ sơ
                       </Link>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                      Không tìm thấy quốc gia phù hợp với từ khóa "{search}".
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      <Link
+                        href={`/compare?countries=${buildCompareCountries(country.country_code).join(',')}&indicator=govdebt_GDP&from=2010&to=2023`}
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Thêm vào so sánh
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableShell>
+      ) : null}
     </div>
   );
 }

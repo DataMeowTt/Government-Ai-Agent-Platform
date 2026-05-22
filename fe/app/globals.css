@@ -1,10 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
     --radius-sm: 6px;
     --radius-md: 8px;
+    --color-bg: #f8fafc;
+    --color-card: #ffffff;
+    --color-border: #d7dee7;
+    --color-accent: #1e3a5f;
   }
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
@@ -13,5 +18,11 @@
   }
   * {
     @apply border-slate-200;
+  }
+  table th {
+    @apply text-slate-600;
+  }
+  table td {
+    @apply text-slate-700;
   }
 }

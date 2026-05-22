@@ -1,136 +1,136 @@
 'use client';
+import { Suspense, useMemo } from 'react';
+import Link from 'next/link';
+import { Layers } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import FilterBar from '@/components/ui/FilterBar';
+import SectionCard from '@/components/ui/SectionCard';
+import StatCard from '@/components/ui/StatCard';
+import StateBlock from '@/components/ui/StateBlock';
+import { CardSkeleton } from '@/components/ui/Skeletons';
 import { useUrlState } from '@/lib/hooks/useUrlState';
 import { useClusters } from '@/lib/hooks/useClusters';
-import { useDataState } from '@/lib/hooks/useDataState';
-import dynamic from 'next/dynamic';
-import { ChartSkeleton, CardSkeleton } from '@/components/ui/Skeletons';
-import { Suspense, useMemo } from 'react';
-import { Layers, ArrowUpRight, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
 
-const ClusterPieChart = dynamic(() => import('@/components/charts/PieChart'), {
-  ssr: false,
-  loading: () => <ChartSkeleton />
-});
+const YEAR_OPTIONS = [2000, 2010, 2020, 2025];
 
 export default function ClustersPage() {
   return (
-    <Suspense fallback={<CardSkeleton className="h-64" />}>
+    <Suspense fallback={<CardSkeleton className="h-48" />}>
       <ClustersPageContent />
     </Suspense>
   );
 }
 
 function ClustersPageContent() {
-  const [year, setYear] = useUrlState<number>('year', 2022);
-  const { data: clusters, isLoading, isEmpty, isError, error } = useDataState(useClusters(year));
+  const [year, setYear] = useUrlState<number>('year', 2025);
+  const { data, isLoading, isError, error } = useClusters(year);
+  const clusters = data || [];
 
-  const { clusterCounts, grouped } = useMemo(() => {
-    const counts: Record<number, number> = {};
-    const grp: Record<number, string[]> = {};
-    if (!isEmpty && clusters) {
-      clusters.forEach(item => {
-        const id = item.cluster_id;
-        counts[id] = (counts[id] || 0) + 1;
-        if (!grp[id]) grp[id] = [];
-        grp[id].push(item.country_code);
+  const grouped = useMemo(() => {
+    const map = new Map<number, { clusterId: number; countries: { code: string; name: string }[] }>();
+    clusters.forEach((item) => {
+      if (!map.has(item.cluster_id)) {
+        map.set(item.cluster_id, { clusterId: item.cluster_id, countries: [] });
+      }
+      map.get(item.cluster_id)!.countries.push({
+        code: item.country_code,
+        name: item.country || item.country_code,
       });
-    }
-    return { clusterCounts: counts, grouped: grp };
-  }, [clusters, isEmpty]);
-
-  const pieData = Object.entries(clusterCounts).map(([id, count]) => ({
-    cluster_id: parseInt(id),
-    count,
-  }));
-
-  if (isError) return <div className="p-4 bg-red-50 text-red-700 rounded border border-red-200">Lỗi: {error?.message}</div>;
+    });
+    return Array.from(map.values()).sort((a, b) => a.clusterId - b.clusterId);
+  }, [clusters]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 rounded-md text-indigo-600">
-            <Layers className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Phân nhóm Cấu trúc Kinh tế</h1>
-            <p className="text-sm text-gray-500">Phương pháp: K-Means Clustering (5 nhóm đặc trưng)</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-md border border-gray-200 shadow-sm">
-          <span className="text-sm font-medium text-gray-700">Năm dữ liệu:</span>
+    <div className="space-y-5">
+      <PageHeader
+        title="Nhóm cấu trúc kinh tế"
+        description="Phân nhóm quốc gia theo mức độ tương đồng về cấu trúc kinh tế trong cùng năm phân tích."
+      />
+
+      <FilterBar>
+        <div className="md:col-span-3">
+          <label className="mb-1 block text-sm font-medium text-slate-700">Năm dữ liệu</label>
           <select
             value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="text-sm font-semibold text-gray-900 bg-transparent border-none focus:ring-0 cursor-pointer"
+            onChange={(event) => setYear(Number(event.target.value))}
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
           >
-            {[2000, 2010, 2015, 2020, 2022].map(y => (
-              <option key={y} value={y}>{y}</option>
+            {YEAR_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
             ))}
           </select>
         </div>
-      </div>
+      </FilterBar>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart Area (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-md border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Biểu đồ Phân bố</h2>
-            {isLoading && <span className="text-xs text-gray-400 animate-pulse">Đang tải dữ liệu...</span>}
-          </div>
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : isEmpty ? (
-            <div className="h-[300px] flex flex-col items-center justify-center text-gray-500">
-              <AlertCircle className="w-12 h-12 text-gray-300 mb-4" />
-              <p className="text-sm">Chưa có dữ liệu phân nhóm cho năm {year}.</p>
+      {isLoading ? <CardSkeleton className="h-40" /> : null}
+
+      {isError ? (
+        <StateBlock
+          mode="error"
+          title="Không tải được dữ liệu nhóm cấu trúc"
+          description={error instanceof Error ? error.message : 'Lỗi không xác định khi tải dữ liệu nhóm cấu trúc.'}
+        />
+      ) : null}
+
+      {!isLoading && !isError && grouped.length === 0 ? (
+        <StateBlock
+          mode="empty"
+          title={`Không có dữ liệu nhóm cấu trúc cho năm ${year}`}
+          description="Hãy thử chọn một năm khác trong danh sách 2000, 2010, 2020, 2025."
+        />
+      ) : null}
+
+      {!isLoading && !isError && grouped.length > 0 ? (
+        <>
+          <SectionCard title="Hiểu về nhóm cấu trúc kinh tế">
+            <div className="space-y-2 text-sm text-slate-700">
+              <p>
+                Nhóm cấu trúc kinh tế giúp nhận diện các quốc gia có đặc điểm kinh tế tương đồng trong cùng một năm phân
+                tích, từ đó hỗ trợ so sánh theo bối cảnh phù hợp hơn.
+              </p>
+              <p>
+                Cụm không phải xếp hạng tốt hoặc xấu; đây là nhóm quốc gia có cấu trúc kinh tế tương đồng trong cùng năm
+                phân tích.
+              </p>
+              <p>Hồ sơ diễn giải chi tiết cụm sẽ được bổ sung khi có dữ liệu mô tả cụm.</p>
             </div>
-          ) : (
-            <ClusterPieChart data={pieData} groupedCountries={grouped} />
-          )}
-        </div>
+          </SectionCard>
 
-        {/* Member List (1 col) */}
-        <div className="lg:col-span-1 bg-white rounded-md border border-gray-200 p-6 flex flex-col h-full">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hồ sơ Cụm & Thành viên</h2>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-            {isLoading ? (
-              <>
-                <CardSkeleton className="h-32" />
-                <CardSkeleton className="h-32" />
-              </>
-            ) : isEmpty ? (
-              <div className="text-center text-sm text-gray-500 py-8">Không có dữ liệu.</div>
-            ) : (
-              Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b)).map(id => (
-                <div key={id} className="p-4 border border-gray-100 rounded-md bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-indigo-700">Cụm {id}</h3>
-                    <span className="text-xs font-medium px-2 py-1 bg-white rounded-full border border-gray-200 text-gray-600">
-                      {grouped[parseInt(id)].length} quốc gia
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <StatCard label="Năm đang xem" value={String(year)} icon={<Layers className="h-5 w-5" />} />
+            <StatCard label="Số cụm" value={String(grouped.length)} />
+            <StatCard label="Số quốc gia" value={String(clusters.length)} />
+          </section>
+
+          <SectionCard title="Danh sách cụm">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {grouped.map((cluster) => (
+                <article key={cluster.clusterId} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Cụm {cluster.clusterId}</h3>
+                    <span className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-600">
+                      {cluster.countries.length} quốc gia
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {grouped[parseInt(id)].map(code => (
+                    {cluster.countries.map((country) => (
                       <Link
-                        key={code}
-                        href={`/countries/${code}`}
-                        className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded text-xs font-medium text-gray-700 hover:text-blue-600 hover:border-blue-300 transition-colors"
-                        title={`Xem chi tiết ${code}`}
+                        key={`${cluster.clusterId}-${country.code}`}
+                        href={`/countries/${country.code}`}
+                        className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
                       >
-                        {code} <ArrowUpRight className="w-3 h-3" />
+                        {country.name} ({country.code})
                       </Link>
                     ))}
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+        </>
+      ) : null}
     </div>
   );
 }

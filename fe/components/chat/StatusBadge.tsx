@@ -11,10 +11,17 @@ const statusStyles: Record<string, string> = {
 export default function StatusBadge({ status }: { status?: AiChatStatus }) {
   const label = status || 'success';
   const className = statusStyles[label] || 'border-slate-200 bg-slate-50 text-slate-700';
+  const textMap: Record<string, string> = {
+    success: 'Thành công',
+    needs_clarification: 'Cần làm rõ',
+    unsupported: 'Không hỗ trợ',
+    off_topic: 'Ngoài phạm vi',
+    error: 'Lỗi',
+  };
 
   return (
     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${className}`}>
-      {label}
+      {textMap[label] || label}
     </span>
   );
 }

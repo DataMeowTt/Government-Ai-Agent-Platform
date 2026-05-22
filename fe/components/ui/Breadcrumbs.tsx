@@ -6,43 +6,42 @@ import { cn } from '@/lib/utils/cn';
 
 const routeMap: Record<string, string> = {
   '/countries': 'Quốc gia',
-  '/anomalies': 'Bất thường',
-  '/clusters': 'Nhóm nước',
   '/compare': 'So sánh',
-  '/chat': 'AI Chat',
+  '/clusters': 'Nhóm cấu trúc',
+  '/anomalies': 'Bất thường',
+  '/indicators': 'Danh mục chỉ số',
+  '/chat': 'Trợ lý dữ liệu AI',
 };
 
 export default function Breadcrumbs({ className }: { className?: string }) {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
 
-  const items = [
-    { label: 'Dashboard', path: '/' },
-    ...segments.map((segment, idx) => {
-      const path = `/${segments.slice(0, idx + 1).join('/')}`;
-      return {
-        label: routeMap[path] || segment.toUpperCase(),
-        path,
-      };
-    }),
-  ];
+  if (segments.length === 0) return null;
 
-  if (items.length <= 1) return null;
+  const items = segments.map((segment, index) => {
+    const path = `/${segments.slice(0, index + 1).join('/')}`;
+    const base = routeMap[path];
+    const label =
+      base ||
+      (segments[index - 1] === 'countries' ? `Hồ sơ ${segment.toUpperCase()}` : segment.toUpperCase());
+    return { label, path };
+  });
 
   return (
-    <nav className={cn('flex items-center gap-2 text-sm', className)} aria-label="Breadcrumb">
-      <Link href="/" className="flex items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors">
-        <Home className="w-4 h-4" />
+    <nav className={cn('flex items-center gap-2 text-sm text-slate-600', className)} aria-label="Breadcrumb">
+      <Link href="/" className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800">
+        <Home className="h-4 w-4" />
       </Link>
-      {items.slice(1).map((item, idx) => {
-        const isLast = idx === items.length - 2;
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
         return (
           <div key={item.path} className="flex items-center gap-2">
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-slate-400" />
             {isLast ? (
-              <span className="font-medium text-gray-900">{item.label}</span>
+              <span className="font-medium text-slate-900">{item.label}</span>
             ) : (
-              <Link href={item.path} className="text-gray-500 hover:text-gray-700 transition-colors">
+              <Link href={item.path} className="hover:text-slate-900">
                 {item.label}
               </Link>
             )}

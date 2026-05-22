@@ -20,6 +20,11 @@ export class CountriesController {
     return this.countriesService.getFullCountryAnalytics(code.toUpperCase());
   }
 
+  @Get(':code/indicators')
+  async getCountryIndicators(@Param('code') code: string) {
+    return this.countriesService.getCountryIndicators(code.toUpperCase());
+  }
+
   @Get(':code/anomalies')
   async getAnomalies(@Param('code') code: string) {
     return this.countriesService.getCountryAnomalies(code.toUpperCase(), 0.75);

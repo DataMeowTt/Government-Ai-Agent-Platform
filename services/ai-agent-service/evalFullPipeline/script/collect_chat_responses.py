@@ -72,7 +72,7 @@ def env_int(name: str, default: int) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect raw chat responses for Phase 9.1.")
+    parser = argparse.ArgumentParser(description="Collect raw chat responses for chat quality baseline.")
     parser.add_argument("--cases", default=str(CASES_PATH))
     parser.add_argument("--target-url", default=os.getenv("EVAL_TARGET_URL", DEFAULT_TARGET_URL))
     parser.add_argument("--direct-agent-url", default=None)

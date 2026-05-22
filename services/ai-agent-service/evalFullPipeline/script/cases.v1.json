@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "description": "Phase 9.1 raw response collection cases for end-user chat quality.",
+  "description": "chat quality baseline raw response collection cases for end-user chat quality.",
   "cases": [
     {"id":"DIRECT_001","category":"DIRECT_ANSWER","description":"Define public debt to GDP","turns":[{"message":"Nợ công/GDP là gì?","expect":{"status":"success","questionType":"VALID_SIMPLE_QUERY","route":["DIRECT_ANSWER","GENERAL_EXPLANATION"],"parserDebug":null}}],"judge_target_turn":"last"},
     {"id":"DIRECT_002","category":"DIRECT_ANSWER","description":"Define CPI inflation","turns":[{"message":"Lạm phát CPI là gì?","expect":{"status":"success","questionType":"VALID_SIMPLE_QUERY","route":["DIRECT_ANSWER","GENERAL_EXPLANATION"],"parserDebug":null}}],"judge_target_turn":"last"},

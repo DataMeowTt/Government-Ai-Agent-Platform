@@ -30,12 +30,16 @@ CONTEXT_REFERENCE_MARKERS = (
     "nay",
     "do",
     "tren",
+    "truoc",
+    "vua roi",
+    "thi sao",
+    "no giam",
+    "no tang",
     "nhom nay",
     "cac nuoc nay",
     "ket qua",
     "bang",
     "bieu do",
-    "xu huong",
 )
 
 MODIFY_MARKERS = (
@@ -158,7 +162,9 @@ def run_rule_first_router(
     user_message: str,
     conversation_context: dict[str, Any] | None = None,
 ) -> RuleRouteDraft:
-    context = conversation_context or {}
+    # Stateless by design: this layer may receive a legacy context argument,
+    # but it must classify/extract only from the latest user message.
+    _ = conversation_context
     normalized = normalize_catalog_text(user_message)
     indicator_match = resolve_indicator_alias(user_message)
     country_groups = [match.group.code for match in resolve_country_groups(user_message)]
@@ -167,8 +173,6 @@ def run_rule_first_router(
     limit = _extract_limit(normalized)
     ranking_order = _extract_order(normalized)
 
-    has_previous_result = _has_previous_result(context)
-    has_previous_query = _has_previous_query(context)
     has_new_data_slots = _has_new_data_slots(
         indicator_match=indicator_match,
         countries=countries,
@@ -180,13 +184,13 @@ def run_rule_first_router(
     has_definition_marker = _has_definition_marker(normalized)
     has_analysis_marker = _has_analysis_marker(normalized)
     has_modify_marker = _has_modify_marker(normalized)
-    has_context_reference_marker = _has_context_reference_marker(normalized)
     has_data_query_marker = _has_data_query_marker(normalized)
     has_coverage_marker = _contains_any(normalized, COVERAGE_MARKERS)
     has_compare_marker = _contains_any(normalized, COMPARE_MARKERS)
     has_ranking_marker = _contains_any(normalized, RANKING_MARKERS)
     has_anomaly_marker = _contains_any(normalized, ANOMALY_MARKERS)
     has_trend_marker = _contains_any(normalized, TREND_MARKERS)
+    has_pronoun_or_context_reference = _has_context_reference_marker(normalized)
 
     if _contains_any(normalized, OFF_TOPIC_MARKERS):
         return RuleRouteDraft(
@@ -219,12 +223,7 @@ def run_rule_first_router(
             reason="Definition query matched without data slots or data-query markers.",
         )
 
-    if (
-        has_previous_result
-        and (has_analysis_marker or has_context_reference_marker)
-        and not has_modify_marker
-        and not has_new_data_slots
-    ):
+    if (has_analysis_marker or has_pronoun_or_context_reference) and not has_new_data_slots:
         return RuleRouteDraft(
             matched=True,
             route="DATA_QUERY",
@@ -232,11 +231,10 @@ def run_rule_first_router(
             needs_front_llm=True,
             needs_parser_agent=False,
             needs_db=False,
-            uses_previous_context=True,
-            reason="possible_follow_up_analysis_needs_front_llm",
+            reason="latest_message_incomplete_or_ambiguous",
         )
 
-    if has_previous_result and (has_analysis_marker or has_context_reference_marker) and has_new_data_slots:
+    if (has_analysis_marker or has_pronoun_or_context_reference) and has_new_data_slots:
         return _safe_low_confidence_draft(
             indicator_match=indicator_match,
             countries=countries,
@@ -245,31 +243,11 @@ def run_rule_first_router(
             limit=limit,
             ranking_order=ranking_order,
             confidence=0.7,
-            uses_previous_context=True,
             intent_hint=_infer_intent_hint(normalized, indicator_match, countries, country_groups),
-            reason="Follow-up analysis signal also contains new data slots; defer to Front LLM / Parser Agent.",
+            reason="Latest message has ambiguous analysis/context-reference signals; defer to Front LLM.",
         )
 
-    delta = _extract_delta(normalized, countries)
-    clear_delta = bool(delta)
-    if has_previous_query and (has_modify_marker or clear_delta):
-        if clear_delta:
-            return RuleRouteDraft(
-                matched=True,
-                route="FOLLOW_UP_MODIFY_QUERY",
-                confidence=0.9,
-                needs_front_llm=False,
-                needs_parser_agent=True,
-                needs_db=True,
-                uses_previous_context=True,
-                draft_countries=countries,
-                draft_start_year=years[0] if years else None,
-                draft_end_year=years[-1] if years else None,
-                draft_limit=limit,
-                draft_ranking_order=ranking_order,
-                delta=delta,
-                reason="Follow-up query modification matched previous query with explicit delta.",
-            )
+    if has_modify_marker and not indicator_match:
         return _safe_low_confidence_draft(
             indicator_match=indicator_match,
             countries=countries,
@@ -278,9 +256,8 @@ def run_rule_first_router(
             limit=limit,
             ranking_order=ranking_order,
             confidence=0.7,
-            uses_previous_context=True,
             intent_hint=_infer_intent_hint(normalized, indicator_match, countries, country_groups),
-            reason="Modify signal matched previous query but delta is ambiguous; defer to Front LLM / Parser Agent.",
+            reason="Latest message contains modify markers but lacks standalone data slots; defer to Front LLM.",
         )
 
     if has_coverage_marker:
@@ -385,7 +362,7 @@ def run_rule_first_router(
             limit=limit,
             ranking_order=ranking_order,
             confidence=0.9 if has_trend_marker else 0.88,
-            needs_front_llm=not has_trend_marker,
+            needs_front_llm=False,
             reason="Time-series data signal matched with indicator and country slots.",
         )
 
@@ -423,25 +400,6 @@ def run_rule_first_router(
         needs_parser_agent=True,
         needs_db=True,
         reason="No reliable deterministic route matched; defer to Front LLM / Parser Agent.",
-    )
-
-
-def _has_previous_result(context: dict[str, Any]) -> bool:
-    return bool(
-        context.get("last_data_query")
-        or context.get("last_rows")
-        or context.get("last_result_summary")
-        or context.get("last_data_summary")
-        or context.get("last_result_validation")
-    )
-
-
-def _has_previous_query(context: dict[str, Any]) -> bool:
-    return bool(
-        context.get("last_data_query")
-        or context.get("last_parsed_query")
-        or context.get("last_validated_query")
-        or context.get("last_query_plan")
     )
 
 
@@ -606,25 +564,3 @@ def _extract_order(normalized_text: str) -> str | None:
     if any(token in normalized_text for token in ("cao nhat", "highest", "lon nhat", "top")):
         return "desc"
     return None
-
-
-def _extract_delta(normalized_text: str, countries: list[str]) -> dict[str, Any]:
-    delta: dict[str, Any] = {}
-    years = _extract_years(normalized_text)
-    if years:
-        delta["year"] = years[-1] if len(years) == 1 else None
-        delta["start_year"] = years[0]
-        delta["end_year"] = years[-1]
-    limit = _extract_limit(normalized_text)
-    if limit is not None:
-        delta["limit"] = limit
-    ranking_order = _extract_order(normalized_text)
-    if ranking_order:
-        delta["ranking_order"] = ranking_order
-    if countries and "them" in normalized_text:
-        delta["add_countries"] = countries
-    elif countries and ("bo" in normalized_text or "xoa" in normalized_text):
-        delta["remove_countries"] = countries
-    elif countries:
-        delta["countries"] = countries
-    return {key: value for key, value in delta.items() if value is not None}

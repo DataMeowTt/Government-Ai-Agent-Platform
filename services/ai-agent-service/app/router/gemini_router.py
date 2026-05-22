@@ -240,7 +240,7 @@ Routes:
 - FOLLOW_UP_ANALYSIS: user hỏi phân tích/nhận xét/giải thích kết quả trước; cần có previous result.
 - FOLLOW_UP_MODIFY_QUERY: user sửa query trước như đổi năm, top N, thêm nước, đổi giai đoạn.
 - NEED_CLARIFICATION: thiếu indicator/country/year quan trọng và chắc chắn cần hỏi lại.
-- UNSUPPORTED: dự báo ML/ARIMA, train model, viết SQL, prediction tương lai, tác vụ ngoài phase hiện tại.
+- UNSUPPORTED: dự báo ML/ARIMA, train model, viết SQL, prediction tương lai, tác vụ ngoài phạm vi hỗ trợ hiện tại.
 - OFF_TOPIC: ngoài phạm vi government/economic/social indicators.
 
 JSON schema:

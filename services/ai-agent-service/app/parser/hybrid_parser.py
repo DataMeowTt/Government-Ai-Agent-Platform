@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.core.config import settings
+from app.parser.indicator_guard import validate_indicator_codes
 from app.parser.model_adapter import (
     create_plan_from_model_parsed,
     model_intent_to_question_type,
@@ -50,8 +51,12 @@ def parse_with_hybrid_parser(
         )
 
     parsed_query = _cleanup_parsed_query(parsed_query, parser_response)
+    indicator_validation = validate_indicator_codes(parsed_query)
     intent = parsed_query.get("intent")
-    parser_debug = _model_parser_debug(parser_response)
+    parser_debug = _model_parser_debug(parser_response, indicator_validation)
+
+    if not indicator_validation["valid"]:
+        return _blocked_indicator_result(parsed_query, parser_debug, indicator_validation)
 
     if intent == "NEED_CLARIFICATION":
         slots = parsed_query_to_slots(parsed_query)
@@ -144,7 +149,12 @@ def _rule_based_result(
         parsed_query=None,
         parser_debug=parser_debug,
     )
-def _model_parser_debug(parser_response: dict[str, Any]) -> dict[str, Any]:
+
+
+def _model_parser_debug(
+    parser_response: dict[str, Any],
+    indicator_validation: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "mode": settings.parser_mode,
         "source": "model_parser",
@@ -155,6 +165,7 @@ def _model_parser_debug(parser_response: dict[str, Any]) -> dict[str, Any]:
         "fallback_reason": parser_response.get("fallback_reason"),
         "latency_ms": parser_response.get("latency_ms"),
         "inference_mode": parser_response.get("inference_mode"),
+        "indicator_guard": indicator_validation,
     }
 
 
@@ -199,11 +210,13 @@ def _can_use_model_parser(
         parser_response.get("deployment_schema_pass")
         or parser_response.get("schema_pass")
     )
+    indicator_validation = validate_indicator_codes(parsed_query)
 
     return (
         parser_response.get("safe_to_execute") is True
         and parser_response.get("catalog_pass") is True
         and schema_pass
+        and indicator_validation["valid"]
         and parsed_query.get("intent") in allowed_intents
     )
 
@@ -212,6 +225,9 @@ def _unsafe_reason(
     parser_response: dict[str, Any],
     parsed_query: dict[str, Any],
 ) -> str:
+    indicator_validation = validate_indicator_codes(parsed_query)
+    if not indicator_validation["valid"]:
+        return "invalid_indicator_in_parser_response"
     if parser_response.get("valid_json") is False:
         return "invalid_json"
     if not (parser_response.get("deployment_schema_pass") or parser_response.get("schema_pass")):
@@ -227,3 +243,42 @@ def _unsafe_reason(
     }:
         return "intent_not_allowed"
     return "cannot_use_model_parser"
+
+
+def _blocked_indicator_result(
+    parsed_query: dict[str, Any],
+    parser_debug: dict[str, Any],
+    indicator_validation: dict[str, Any],
+) -> HybridParseResult:
+    problems: list[str] = []
+    if indicator_validation["forbidden_indicators"]:
+        problems.append(
+            "technical indicators: "
+            + ", ".join(indicator_validation["forbidden_indicators"])
+        )
+    if indicator_validation["unknown_indicators"]:
+        problems.append(
+            "unknown indicators: " + ", ".join(indicator_validation["unknown_indicators"])
+        )
+
+    warning_detail = "; ".join(problems) if problems else "invalid indicators"
+    warning = (
+        "Yêu cầu chưa thể thực thi an toàn vì parser trả chỉ số không hợp lệ "
+        f"({warning_detail}). Vui lòng nêu chỉ số công khai trong catalog."
+    )
+    parser_debug["fallback_reason"] = "invalid_indicator_in_parser_response"
+
+    plan = QueryPlan(
+        question_type="UNSUPPORTED_DATA_QUERY",
+        tool_name="none",
+        arguments={},
+        warnings=[warning],
+    )
+    return HybridParseResult(
+        question_type="UNSUPPORTED_DATA_QUERY",
+        slots=parsed_query_to_slots({"indicators": [], "countries": []}),
+        plan=plan,
+        parsed_query=parsed_query,
+        parser_debug=parser_debug,
+        status="unsupported",
+    )

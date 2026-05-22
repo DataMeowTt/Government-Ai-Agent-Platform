@@ -232,14 +232,14 @@ INTERNAL_TERM_REPLACEMENTS: dict[str, str] = {
     "AI Agent Service": "dịch vụ dữ liệu",
     "AI Agent": "trợ lý",
     "parsedQuery": "diễn giải yêu cầu",
-    "query planner": "bước xử lý",
-    "model parser": "bước xử lý",
+    "query planner": "tiến trình xử lý",
+    "model parser": "tiến trình xử lý",
     "database": "dữ liệu",
     "DB": "dữ liệu",
     "ngrok": "kết nối",
     "Kaggle": "môi trường xử lý",
-    "router": "bước xử lý",
-    "parser": "bước xử lý",
+    "router": "tiến trình xử lý",
+    "parser": "tiến trình xử lý",
     "tool": "công cụ xử lý",
 }
 

@@ -56,6 +56,31 @@ def _best_rows_by_value(rows: list[dict]) -> tuple[dict | None, dict | None]:
     return highest, lowest
 
 
+def _volatility_note(rows: list[dict], unit: str) -> str | None:
+    if len(rows) < 3:
+        return None
+    first = rows[0]
+    last = rows[-1]
+    highest, lowest = _best_rows_by_value(rows)
+    if not highest or not lowest:
+        return None
+    first_value = safe_number(_row_value(first))
+    last_value = safe_number(_row_value(last))
+    high_value = safe_number(_row_value(highest))
+    low_value = safe_number(_row_value(lowest))
+    if None in (first_value, last_value, high_value, low_value):
+        return None
+    endpoint_delta = abs(last_value - first_value)
+    value_range = abs(high_value - low_value)
+    baseline = max(abs(first_value), abs(last_value), 1.0)
+    if value_range <= max(endpoint_delta * 3, baseline * 0.05):
+        return None
+    return (
+        f"Dù đầu kỳ và cuối kỳ gần nhau, chuỗi có biến động đáng kể với đỉnh "
+        f"{format_value(high_value, unit)} năm {highest.get('year')} và đáy {format_value(low_value, unit)} năm {lowest.get('year')}."
+    )
+
+
 def _numeric_rows(items: list[dict]) -> list[dict]:
     return [
         row
@@ -430,13 +455,14 @@ def compose_trend_answer(
     label = get_indicator_label(indicator_code)
     unit = get_indicator_unit(indicator_code)
     period = format_year_range(start_year, end_year)
+    period_label = "toàn bộ giai đoạn có dữ liệu" if start_year is None and end_year is None else f"giai đoạn {period}"
 
     if not rows:
-        return f"Không tìm thấy chuỗi thời gian phù hợp cho {label} trong {period}."
+        return f"Không tìm thấy chuỗi thời gian phù hợp cho {label} trong {period_label}."
 
     grouped = _group_rows_by_country(rows)
     country_text = f" của {grouped[0][0]}" if len(grouped) == 1 else ""
-    lines = [f"Xu hướng {label}{country_text} giai đoạn {period}:"]
+    lines = [f"Xu hướng {label}{country_text} {period_label}:"]
     actual_start_year, actual_end_year = _actual_period_from_rows(rows)
     if actual_start_year is not None and actual_end_year is not None:
         lines.append(f"Dữ liệu thực tế trong kết quả bao phủ {actual_start_year}-{actual_end_year}.")
@@ -460,6 +486,9 @@ def compose_trend_answer(
                 lines.append(f"- Mức cao nhất trong dữ liệu: {format_value(_row_value(highest), unit)} vào năm {highest.get('year')}")
             if lowest:
                 lines.append(f"- Mức thấp nhất trong dữ liệu: {format_value(_row_value(lowest), unit)} vào năm {lowest.get('year')}")
+            note = _volatility_note(numeric_items, unit)
+            if note:
+                lines.append(f"- {note}")
         else:
             lines.append(
                 "- "

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Public_Sans } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/components/providers/QueryProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const publicSans = Public_Sans({ subsets: ["latin", "vietnamese"] });
 
 export const metadata: Metadata = {
-  title: "Gov AI Agent Platform",
-  description: "Economic analytics dashboard",
+  title: "Nền tảng dữ liệu kinh tế chính phủ",
+  description: "Bảng điều hành phân tích kinh tế dựa trên dữ liệu công khai và trợ lý dữ liệu AI",
 };
 
 export default function RootLayout({
@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="vi">
+      <body className={publicSans.className}>
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

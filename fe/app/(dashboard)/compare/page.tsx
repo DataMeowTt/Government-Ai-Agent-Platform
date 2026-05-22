@@ -1,275 +1,466 @@
 'use client';
-import { getIndicatorViName } from '@/lib/utils/indicatorTranslations';
-import { Country, Indicator } from '@/lib/types';
-import { useUrlState } from '@/lib/hooks/useUrlState';
-import { useCompare } from '@/lib/hooks/useCompare';
-import { useIndicators } from '@/lib/hooks/useIndicators';
-import { useCountries } from '@/lib/hooks/useCountries';
-import { ChartSkeleton, TableSkeleton } from '@/components/ui/Skeletons';
-import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
-import { Search, X, Calendar, BarChart3, Table2, AlertCircle, ArrowDownToLine, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-const CHART_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'];
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { BarChart3, Plus, Search, X } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import FilterBar from '@/components/ui/FilterBar';
+import SectionCard from '@/components/ui/SectionCard';
+import TableShell from '@/components/ui/TableShell';
+import StateBlock from '@/components/ui/StateBlock';
+import { TableSkeleton } from '@/components/ui/Skeletons';
+import { useCountries } from '@/lib/hooks/useCountries';
+import { useIndicators } from '@/lib/hooks/useIndicators';
+import { useCompare } from '@/lib/hooks/useCompare';
+import { useUrlState } from '@/lib/hooks/useUrlState';
+import { formatIndicatorValue, formatYear } from '@/lib/utils/format';
+import { DEFAULT_COMPARE_COUNTRIES } from '@/lib/utils/compare';
+
+const DEFAULT_INDICATOR = 'govdebt_GDP';
+const DEFAULT_FROM = 2010;
+const DEFAULT_TO = 2023;
+const CHART_COLORS = ['#1d4ed8', '#b45309', '#0f766e', '#7c3aed', '#be123c'];
+
+const buildLinearTrendByYear = (
+  points: Array<{ year: number; value: number | null; trend_value?: number | null }>,
+): Map<number, number | null> => {
+  const explicitTrend = points.some((point) => point.trend_value != null);
+  if (explicitTrend) {
+    return new Map(points.map((point) => [point.year, point.trend_value ?? null]));
+  }
+
+  const valid = points.filter(
+    (point): point is { year: number; value: number; trend_value?: number | null } =>
+      point.value != null && Number.isFinite(point.value),
+  );
+  if (valid.length < 2) {
+    return new Map(points.map((point) => [point.year, null]));
+  }
+
+  const n = valid.length;
+  const sumX = valid.reduce((acc, point) => acc + point.year, 0);
+  const sumY = valid.reduce((acc, point) => acc + point.value, 0);
+  const sumXY = valid.reduce((acc, point) => acc + point.year * point.value, 0);
+  const sumXX = valid.reduce((acc, point) => acc + point.year * point.year, 0);
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) {
+    return new Map(points.map((point) => [point.year, null]));
+  }
+
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+  return new Map(points.map((point) => [point.year, intercept + slope * point.year]));
+};
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={<TableSkeleton rows={5} />}>
+    <Suspense fallback={<TableSkeleton rows={8} />}>
       <ComparePageContent />
     </Suspense>
   );
 }
 
 function ComparePageContent() {
-  const [rawCountries, setRawCountries] = useUrlState<string[]>('countries', []);
-  const [selectedIndicator, setSelectedIndicator] = useUrlState<string>('indicator', 'rGDP_growth_YoY');
-  const [yearFrom, setYearFrom] = useUrlState<number>('from', 2000);
-  const [yearTo, setYearTo] = useUrlState<number>('to', 2022);
-  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
-  const [isApplying, setIsApplying] = useState(false);
+  const [countriesState, setCountriesState] = useUrlState<string[]>(
+    'countries',
+    [...DEFAULT_COMPARE_COUNTRIES],
+  );
+  const [indicatorState, setIndicatorState] = useUrlState<string>(
+    'indicator',
+    DEFAULT_INDICATOR,
+  );
+  const [fromState, setFromState] = useUrlState<number>('from', DEFAULT_FROM);
+  const [toState, setToState] = useUrlState<number>('to', DEFAULT_TO);
 
-  const [countrySearch, setCountrySearch] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(countriesState);
+  const [selectedIndicator, setSelectedIndicator] = useState(indicatorState);
+  const [yearFrom, setYearFrom] = useState(fromState);
+  const [yearTo, setYearTo] = useState(toState);
+  const [countryKeyword, setCountryKeyword] = useState('');
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const countryPickerRef = useRef<HTMLDivElement>(null);
 
-  const { data: countries, isLoading: loadingCountries } = useCountries();
-  const { data: indicators } = useIndicators();
-  const [displayCountries, setDisplayCountries] = useState(rawCountries);
-  const [displayIndicator, setDisplayIndicator] = useState(selectedIndicator);
-
-  const { data: chartData, isLoading: loadingChart } = useCompare(displayCountries, displayIndicator);
-
-  const applyFilters = () => {
-    setIsApplying(true);
-    setDisplayCountries(rawCountries);
-    setDisplayIndicator(selectedIndicator);
-    setTimeout(() => setIsApplying(false), 500);
-  };
-
-  const toggleCountry = (code: string) => {
-    if (rawCountries.includes(code)) setRawCountries(rawCountries.filter(c => c !== code));
-    else if (rawCountries.length < 5) setRawCountries([...rawCountries, code]);
-    setCountrySearch('');
-    setIsSearchFocused(false);
-  };
+  const countriesQuery = useCountries();
+  const indicatorsQuery = useIndicators();
+  const compareQuery = useCompare(countriesState, indicatorState, fromState, toState);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsSearchFocused(false);
-        setCountrySearch('');
+    const handleOutside = (event: MouseEvent) => {
+      if (!countryPickerRef.current) return;
+      if (!countryPickerRef.current.contains(event.target as Node)) {
+        setCountryPickerOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('mousedown', handleOutside);
+    return () => window.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  const currentIndicatorMeta = indicators?.find(i => i.code === displayIndicator);
-  const indicatorLabel = currentIndicatorMeta
-    ? `${getIndicatorViName(currentIndicatorMeta.code)} (${currentIndicatorMeta.unit})`
-    : displayIndicator;
+  const selectableIndicators = useMemo(
+    () => (indicatorsQuery.data || []).filter(item => item.supports_compare !== false),
+    [indicatorsQuery.data],
+  );
+  const indicatorMeta = selectableIndicators.find(item => item.code === indicatorState);
 
-  const missingDataWarning = displayCountries.some(c => !chartData[c] || chartData[c].length === 0);
+  const yearOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let year = 1980; year <= 2025; year += 1) years.push(year);
+    return years;
+  }, []);
+
+  const selectedCountryDetails = useMemo(() => {
+    const byCode = new Map((countriesQuery.data || []).map(item => [item.country_code, item]));
+    return selectedCountries.map(code => byCode.get(code) || { country_code: code, country_name: code });
+  }, [countriesQuery.data, selectedCountries]);
+
+  const availableCountries = useMemo(() => {
+    const all = countriesQuery.data || [];
+    const keyword = countryKeyword.trim().toLowerCase();
+    return all
+      .filter(item => !selectedCountries.includes(item.country_code))
+      .filter(item => {
+        if (!keyword) return true;
+        return (
+          item.country_name.toLowerCase().includes(keyword) ||
+          item.country_code.toLowerCase().includes(keyword)
+        );
+      })
+      .slice(0, 50);
+  }, [countriesQuery.data, countryKeyword, selectedCountries]);
 
   const chartRows = useMemo(() => {
-    if (!chartData || Object.keys(chartData).length === 0) return [];
-    const years = new Set<number>();
-    Object.values(chartData).forEach(arr =>
-      arr.forEach(p => { if (p.year >= yearFrom && p.year <= yearTo) years.add(p.year); })
-    );
-    return Array.from(years).sort((a, b) => a - b).map(year => {
-      const row: Record<string, number | null> = { year };
-      displayCountries.forEach(code => {
-        row[code] = chartData[code]?.find(p => p.year === year)?.value ?? null;
-      });
-      return row;
+    const grouped = compareQuery.data || {};
+    const trendByCountry = new Map<string, Map<number, number | null>>();
+    Object.entries(grouped).forEach(([countryCode, points]) => {
+      trendByCountry.set(countryCode, buildLinearTrendByYear(points));
     });
-  }, [chartData, displayCountries, yearFrom, yearTo]);
-
-  const tableRows = useMemo(() => {
     const years = new Set<number>();
-    Object.values(chartData || {}).forEach(arr => arr.forEach(p => { if (p.year >= yearFrom && p.year <= yearTo) years.add(p.year); }));
-    return Array.from(years).sort().map(year => {
-      const row: Record<string, number | string> = { year };
-      displayCountries.forEach(code => {
-        const val = chartData[code]?.find(p => p.year === year)?.value;
-        row[code] = val != null ? val : 'N/A';
-      });
-      return row;
+    Object.values(grouped).forEach(items => {
+      items.forEach(item => years.add(item.year));
     });
-  }, [chartData, displayCountries, yearFrom, yearTo]);
+    return Array.from(years)
+      .sort((a, b) => a - b)
+      .map(year => {
+        const row: Record<string, number | null> = { year };
+        countriesState.forEach(countryCode => {
+          const found = grouped[countryCode]?.find(item => item.year === year);
+          row[countryCode] = found?.value ?? null;
+          row[`${countryCode}__trend`] = trendByCountry.get(countryCode)?.get(year) ?? null;
+        });
+        return row;
+      });
+  }, [compareQuery.data, countriesState]);
 
-  const availableCountries = (countries as Country[] | undefined)?.filter((c: Country) =>
-    !rawCountries.includes(c.country_code) &&
-    (c.country_name.toLowerCase().includes(countrySearch.toLowerCase()) || c.country_code.toLowerCase().includes(countrySearch.toLowerCase()))
-  ) || [];
+  const applyFilters = () => {
+    const validFrom = Math.min(yearFrom, yearTo);
+    const validTo = Math.max(yearFrom, yearTo);
+    setCountriesState(selectedCountries);
+    setIndicatorState(selectedIndicator);
+    setFromState(validFrom);
+    setToState(validTo);
+  };
 
-  const yearOptions = Array.from({ length: 2026 - 2000 }, (_, i) => 2000 + i);
-
-  if (loadingCountries) return <TableSkeleton rows={1} />;
+  const canApply = selectedCountries.length >= 1 && !!selectedIndicator;
+  const compareErrorMessage =
+    compareQuery.error instanceof Error
+      ? compareQuery.error.message
+      : 'Không thể tải dữ liệu so sánh.';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 rounded-md text-indigo-600">
-            <BarChart3 className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">So sánh Đa Quốc gia</h1>
+    <div className="space-y-5">
+      <PageHeader
+        title="So sánh quốc gia"
+        description="So sánh chỉ số kinh tế theo quốc gia và giai đoạn năm."
+        actions={
+          <Link
+            href="/chat?q=So%20s%C3%A1nh%20n%E1%BB%A3%20c%C3%B4ng%20Vi%E1%BB%87t%20Nam%20v%C3%A0%20Th%C3%A1i%20Lan%20t%E1%BB%AB%202010%20%C4%91%E1%BA%BFn%202023"
+            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Hỏi trợ lý AI
+          </Link>
+        }
+      />
+
+      <FilterBar>
+        <div className="md:col-span-4">
+          <label htmlFor="compare-indicator" className="mb-1 block text-sm font-medium text-slate-700">
+            Chỉ số
+          </label>
+          <select
+            id="compare-indicator"
+            name="indicator"
+            value={selectedIndicator}
+            onChange={event => setSelectedIndicator(event.target.value)}
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+          >
+            {selectableIndicators.map(indicator => (
+              <option key={indicator.code} value={indicator.code}>
+                {indicator.name} ({indicator.code})
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      <div className="bg-white p-6 rounded-md border border-gray-200 shadow-sm space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Chọn Quốc gia (Tối đa 5)</label>
-            <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border border-gray-200 rounded-md bg-gray-50">
-              {rawCountries.map(code => {
-                const c = (countries as Country[] | undefined)?.find((ct: Country) => ct.country_code === code);
-                return (
-                  <span key={code} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                    {c?.country_name || code} ({code})
-                    <button onClick={() => toggleCountry(code)} className="ml-1 hover:text-blue-900"><X className="w-3 h-3" /></button>
-                  </span>
-                );
-              })}
-              {rawCountries.length === 0 && <span className="text-xs text-gray-400 py-1">Chưa chọn quốc gia nào</span>}
-            </div>
-            <div className="relative" ref={dropdownRef}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm hoặc chọn quốc gia..."
-                value={countrySearch}
-                onChange={(e) => setCountrySearch(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                className="w-full pl-10 pr-4 h-10 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {(isSearchFocused || countrySearch) && availableCountries.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {availableCountries.map(c => (
-                    <button
-                      key={c.country_code}
-                      onMouseDown={(e) => { e.preventDefault(); toggleCountry(c.country_code); }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 border-b border-gray-100 last:border-0"
-                    >
-                      {c.country_name} <span className="text-gray-500 text-xs">({c.country_code})</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="md:col-span-2">
+          <label htmlFor="compare-from" className="mb-1 block text-sm font-medium text-slate-700">
+            Từ năm
+          </label>
+          <select
+            id="compare-from"
+            name="from"
+            value={yearFrom}
+            onChange={event => setYearFrom(Number(event.target.value))}
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+          >
+            {yearOptions.map(year => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          <div className="lg:col-span-4 space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Chỉ số & Giai đoạn</label>
-            <select value={selectedIndicator} onChange={(e) => setSelectedIndicator(e.target.value)} className="w-full h-10 border border-gray-300 rounded-md text-sm bg-white px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {(indicators as Indicator[] | undefined)?.filter(i =>
-                ['Growth', 'Fiscal', 'Monetary', 'Social', 'Risk', 'Structure', 'Trade', 'Demographics', 'Investment', 'Quality', 'Other'].includes(i.category)
-              ).map(i => (
-                <option key={i.code} value={i.code}>
-                  {getIndicatorViName(i.code)} ({i.unit})
-                </option>
+        <div className="md:col-span-2">
+          <label htmlFor="compare-to" className="mb-1 block text-sm font-medium text-slate-700">
+            Đến năm
+          </label>
+          <select
+            id="compare-to"
+            name="to"
+            value={yearTo}
+            onChange={event => setYearTo(Number(event.target.value))}
+            className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+          >
+            {yearOptions.map(year => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="md:col-span-4" ref={countryPickerRef}>
+          <label htmlFor="compare-country-combobox" className="mb-1 block text-sm font-medium text-slate-700">
+            Quốc gia
+          </label>
+          <div className="relative">
+            <div className="flex min-h-10 flex-wrap items-center gap-1 rounded-md border border-slate-300 px-2 py-1">
+              {selectedCountryDetails.map(item => (
+                <span
+                  key={item.country_code}
+                  className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                >
+                  {item.country_name} ({item.country_code})
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedCountries(prev =>
+                        prev.filter(code => code !== item.country_code),
+                      )
+                    }
+                    className="rounded p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                    aria-label={`Bỏ ${item.country_code}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
               ))}
-            </select>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="flex-1">
-                <span className="text-xs text-gray-500 block mb-1">Từ năm</span>
-                <select value={yearFrom} onChange={(e) => setYearFrom(Number(e.target.value))} className="w-full h-9 border border-gray-300 rounded px-2 text-sm bg-white">
-                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-              <Calendar className="w-4 h-4 text-gray-400 mt-4" />
-              <div className="flex-1">
-                <span className="text-xs text-gray-500 block mb-1">Đến năm</span>
-                <select value={yearTo} onChange={(e) => setYearTo(Number(e.target.value))} className="w-full h-9 border border-gray-300 rounded px-2 text-sm bg-white">
-                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="compare-country-combobox"
+                  name="countries_search"
+                  type="text"
+                  role="combobox"
+                  aria-expanded={countryPickerOpen}
+                  aria-controls="compare-country-listbox"
+                  aria-autocomplete="list"
+                  value={countryKeyword}
+                  onFocus={() => setCountryPickerOpen(true)}
+                  onClick={() => setCountryPickerOpen(true)}
+                  onChange={event => {
+                    setCountryKeyword(event.target.value);
+                    setCountryPickerOpen(true);
+                  }}
+                  placeholder="Bấm để xem tất cả hoặc gõ để lọc"
+                  className="h-8 w-full rounded px-8 text-sm outline-none"
+                />
               </div>
             </div>
+            {countryPickerOpen ? (
+              <div
+                id="compare-country-listbox"
+                role="listbox"
+                className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-300 bg-white shadow-lg"
+              >
+                {availableCountries.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">Không có quốc gia phù hợp.</p>
+                ) : (
+                  availableCountries.map(country => (
+                    <button
+                      key={country.country_code}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => {
+                        if (selectedCountries.length >= 5) return;
+                        setSelectedCountries(prev => [...prev, country.country_code]);
+                        setCountryKeyword('');
+                        setCountryPickerOpen(true);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    >
+                      <span>
+                        {country.country_name} ({country.country_code})
+                      </span>
+                      <Plus className="h-3.5 w-3.5 text-slate-400" />
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
-
-          <div className="lg:col-span-3 flex flex-col justify-end gap-3">
-            <button onClick={applyFilters} disabled={rawCountries.length === 0 || isApplying} className="w-full h-10 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              <Plus className="w-4 h-4" /> Áp dụng so sánh
-            </button>
-            <button onClick={() => setViewMode(viewMode === 'chart' ? 'table' : 'chart')} className="w-full h-10 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-              {viewMode === 'chart' ? <Table2 className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
-              {viewMode === 'chart' ? 'Dạng bảng' : 'Dạng biểu đồ'}
-            </button>
-          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Chọn tối thiểu 1 quốc gia, khuyến nghị 2 quốc gia để so sánh.
+          </p>
         </div>
 
-        {missingDataWarning && (
-          <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 text-sm">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>Một hoặc nhiều quốc gia thiếu dữ liệu trong khoảng năm đã chọn. Biểu đồ sẽ hiện gián đoạn.</span>
-          </div>
-        )}
+        <div className="md:col-span-12 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={applyFilters}
+            disabled={!canApply}
+            className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            Áp dụng
+          </button>
+        </div>
+      </FilterBar>
 
-        {loadingChart ? (
-          viewMode === 'chart' ? <ChartSkeleton /> : <TableSkeleton rows={5} />
-        ) : (
-          <>
-            {viewMode === 'chart' ? (
-              displayCountries.length > 0 ? (
-                <div className="bg-white rounded-md border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">{indicatorLabel}</h3>
-                    <button className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"><ArrowDownToLine className="w-3 h-3" /> Xuất PNG</button>
-                  </div>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <LineChart data={chartRows}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="year" stroke="#6b7280" fontSize={12} />
-                      <YAxis stroke="#6b7280" fontSize={12} />
-                      <Tooltip />
-                      <Legend />
-                      {displayCountries.map((code, idx) => (
+      {compareQuery.isLoading || countriesQuery.isLoading || indicatorsQuery.isLoading ? (
+        <TableSkeleton rows={6} />
+      ) : null}
+
+      {compareQuery.error ? (
+        <StateBlock
+          mode="error"
+          title="Không tải được dữ liệu so sánh"
+          description={
+            compareErrorMessage.includes('chưa hỗ trợ')
+              ? 'Chỉ số này chưa có dữ liệu so sánh phù hợp.'
+              : compareErrorMessage
+          }
+        />
+      ) : null}
+
+      {!compareQuery.isLoading && !compareQuery.error && chartRows.length === 0 ? (
+        <StateBlock
+          mode="empty"
+          title="Chưa có dữ liệu phù hợp"
+          description="Hãy điều chỉnh quốc gia, chỉ số hoặc giai đoạn năm."
+        />
+      ) : null}
+
+      {!compareQuery.isLoading && !compareQuery.error && chartRows.length > 0 ? (
+        <>
+          <SectionCard
+            title={`Biểu đồ so sánh: ${indicatorMeta?.name || indicatorState}`}
+            description={`Đơn vị: ${indicatorMeta?.unit || 'N/A'}`}
+          >
+            <div className="h-[320px] min-w-0 w-full">
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartRows}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip
+                    formatter={value =>
+                      formatIndicatorValue(
+                        typeof value === 'number'
+                          ? value
+                          : value == null
+                            ? null
+                            : Number(value),
+                        indicatorMeta?.unit,
+                      )
+                    }
+                    labelFormatter={label => `Năm ${label}`}
+                  />
+                  <Legend />
+                  {countriesState.map((countryCode, index) => (
+                    <Fragment key={`${countryCode}-series`}>
+                      <Line
+                        type="monotone"
+                        dataKey={countryCode}
+                        stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls
+                      />
+                      {chartRows.some(row => row[`${countryCode}__trend`] != null) ? (
                         <Line
-                          key={`${code}-line-${displayIndicator}`}
                           type="monotone"
-                          dataKey={code}
-                          name={code}
-                          stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                          dataKey={`${countryCode}__trend`}
+                          name={`${countryCode} (xu hướng)`}
+                          stroke={CHART_COLORS[index % CHART_COLORS.length]}
                           strokeWidth={2}
-                          dot={{ r: 3 }}
-                          activeDot={{ r: 5 }}
-                          connectNulls={false}
+                          strokeDasharray="6 4"
+                          dot={false}
+                          connectNulls
                         />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center bg-gray-50 rounded border border-dashed border-gray-300 text-gray-500">Chọn quốc gia và nhấn Áp dụng để bắt đầu.</div>
-              )
-            ) : (
-              <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Năm</th>
-                      {displayCountries.map(c => <th key={c} className="px-4 py-3 text-left font-semibold text-gray-600">{c}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {tableRows.map(row => (
-                      <tr key={row.year} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 font-mono text-gray-700">{row.year}</td>
-                        {displayCountries.map(c => (
-                          <td key={c} className={cn('px-4 py-2 font-medium', typeof row[c] === 'number' ? 'text-gray-900' : 'text-gray-400')}>{typeof row[c] === 'number' ? (row[c] as number).toFixed(2) : 'N/A'}</td>
-                        ))}
-                      </tr>
+                      ) : null}
+                    </Fragment>
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </SectionCard>
+
+          <TableShell>
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">Năm</th>
+                  {countriesState.map(countryCode => (
+                    <th key={countryCode} className="px-3 py-2 text-right font-semibold">
+                      {countryCode}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {chartRows.map(row => (
+                  <tr key={`year-${row.year}`} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 font-mono">{formatYear(row.year as number)}</td>
+                    {countriesState.map(countryCode => (
+                      <td key={`${row.year}-${countryCode}`} className="px-3 py-2 text-right">
+                        {formatIndicatorValue(
+                          row[countryCode] as number | null,
+                          indicatorMeta?.unit,
+                        )}
+                      </td>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableShell>
+          <p className="text-xs text-slate-500">
+            Chỉ số đang so sánh: {compareQuery.indicatorName} ({compareQuery.requestedIndicator}) | Đơn vị:{' '}
+            {compareQuery.indicatorUnit || 'Chưa công bố'}
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     internal_api_key: str = "dev-internal-key"
 
     database_url: str | None = None
+    ai_agent_data_source: str = "postgres"
+    bigquery_project_id: str = "western-pivot-452008-a6"
+    bigquery_location: str = "asia-southeast1"
+    bigquery_gold_dataset: str = "gov_ai_gold"
+    bigquery_analytics_dataset: str = "gov_ai_analytics"
+    bigquery_max_bytes_billed: int = 100000000
+    bigquery_cache_ttl_seconds: int = 60
 
     pipeline_mode: str = "hybrid_v2"
     enable_hybrid_v2_fallback: bool = False
@@ -36,6 +43,9 @@ class Settings(BaseSettings):
     gemini_router_retries: int = 1
     gemini_router_retry_backoff_ms: int = 700
     gemini_composer_enabled: bool = True
+    ai_knowledge_model: str | None = None
+    ai_composer_model: str | None = None
+    ai_fallback_model: str | None = None
     conversation_context_max_turns: int = 10
     conversation_context_max_rows: int = 20
 

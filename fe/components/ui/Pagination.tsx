@@ -7,6 +7,8 @@ interface PaginationProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   siblingsCount?: number;
+  totalItems?: number;
+  itemsPerPage?: number;
 }
 
 export default function Pagination({
@@ -14,9 +16,9 @@ export default function Pagination({
   totalPages,
   onPageChange,
   siblingsCount = 1,
+  totalItems,
+  itemsPerPage = 8,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
   const safeCurrent = Math.min(Math.max(currentPage, 1), totalPages);
 
   const paginationRange = useMemo(() => {
@@ -27,7 +29,6 @@ export default function Pagination({
 
     const leftSibling = Math.max(safeCurrent - siblingsCount, 1);
     const rightSibling = Math.min(safeCurrent + siblingsCount, totalPages);
-
     const showLeftDots = leftSibling > 2;
     const showRightDots = rightSibling < totalPages - 2;
 
@@ -50,40 +51,46 @@ export default function Pagination({
     ];
   }, [safeCurrent, totalPages, siblingsCount]);
 
+  if (totalPages <= 1) return null;
+
+  const computedTotalItems =
+    typeof totalItems === 'number' && totalItems >= 0 ? totalItems : totalPages * itemsPerPage;
+  const start = computedTotalItems === 0 ? 0 : (safeCurrent - 1) * itemsPerPage + 1;
+  const end = Math.min(safeCurrent * itemsPerPage, computedTotalItems);
+
   const handlePageChange = (page: number | string) => {
-    if (typeof page === 'number') {
-      const newPage = Math.min(Math.max(page, 1), totalPages);
-      onPageChange(newPage);
-    }
+    if (typeof page !== 'number') return;
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    onPageChange(nextPage);
   };
 
-  const itemsPerPage = 8;
-
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-md mt-6">
-      <span className="text-sm text-gray-500">
-        {`Hiển thị ${Math.min((safeCurrent - 1) * itemsPerPage + 1, totalPages * itemsPerPage)}–${Math.min(safeCurrent * itemsPerPage, totalPages * itemsPerPage)} / ${totalPages * itemsPerPage}`}
-      </span>
+    <div className="mt-4 flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3">
+      <span className="text-sm text-slate-600">{`Hiển thị ${start}–${end} / ${computedTotalItems}`}</span>
       <div className="flex items-center gap-2">
         <button
+          type="button"
           disabled={safeCurrent === 1}
           onClick={() => handlePageChange(safeCurrent - 1)}
-          className="p-2 border rounded-md hover:bg-gray-50 disabled:opacity-50"
+          className="rounded border border-slate-300 p-2 hover:bg-slate-50 disabled:opacity-50"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
 
         {paginationRange.map((page, idx) =>
           page === '...' ? (
-            <span key={`dot-${idx}`} className="px-2 text-gray-500">...</span>
+            <span key={`dot-${idx}`} className="px-2 text-slate-500">
+              ...
+            </span>
           ) : (
             <button
+              type="button"
               key={`page-${page}-${idx}`}
               onClick={() => handlePageChange(page as number)}
-              className={`px-3 h-8 text-sm rounded-md border ${
+              className={`h-8 rounded border px-3 text-sm ${
                 page === safeCurrent
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'hover:bg-gray-50'
+                  ? 'border-slate-800 bg-slate-800 text-white'
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-50'
               }`}
             >
               {page}
@@ -92,11 +99,12 @@ export default function Pagination({
         )}
 
         <button
+          type="button"
           disabled={safeCurrent === totalPages}
           onClick={() => handlePageChange(safeCurrent + 1)}
-          className="p-2 border rounded-md hover:bg-gray-50 disabled:opacity-50"
+          className="rounded border border-slate-300 p-2 hover:bg-slate-50 disabled:opacity-50"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>

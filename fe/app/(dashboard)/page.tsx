@@ -1,124 +1,185 @@
 'use client';
-import { useCountries } from '@/lib/hooks/useCountries';
-import { useClusters } from '@/lib/hooks/useClusters';
-import { useAnomalies } from '@/lib/hooks/useAnomalies';
-import MetricCard from '@/components/ui/MetricCard';
-import ContextPanel from '@/components/ui/ContextPanel';
-import { Globe2, Layers, AlertTriangle, ShieldCheck, BarChart3, Search } from 'lucide-react';
 import Link from 'next/link';
+import { Bot, Globe2, Layers, ListChecks } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionCard from '@/components/ui/SectionCard';
+import StatCard from '@/components/ui/StatCard';
+import StateBlock from '@/components/ui/StateBlock';
+import { useCountries } from '@/lib/hooks/useCountries';
+import { useIndicators } from '@/lib/hooks/useIndicators';
+import { useClusters } from '@/lib/hooks/useClusters';
+
+function MetricErrorCard({ title, message }: { title: string; message: string }) {
+  return (
+    <div className="rounded-md border border-red-200 bg-red-50 px-4 py-4">
+      <p className="text-sm font-semibold text-red-700">{title}</p>
+      <p className="mt-1 text-xs text-red-600">{message}</p>
+    </div>
+  );
+}
+
+const SOURCES = [
+  {
+    name: 'World Bank WDI',
+    href: 'https://wdi.worldbank.org/',
+    description: 'Bộ dữ liệu phát triển toàn cầu về tăng trưởng, tài khóa, xã hội và các chỉ số kinh tế vĩ mô.',
+  },
+  {
+    name: 'FAOSTAT',
+    href: 'https://www.fao.org/faostat/',
+    description: 'Cơ sở dữ liệu thống kê của FAO về nông nghiệp, lương thực và các chỉ số liên quan.',
+  },
+  {
+    name: 'Global Macro Database',
+    href: 'https://www.globalmacrodata.com/',
+    description: 'Cơ sở dữ liệu kinh tế vĩ mô quốc tế theo quốc gia và theo thời gian.',
+  },
+];
 
 export default function DashboardPage() {
-  const { data: countries, isLoading: l1 } = useCountries();
-  const { data: clusters, isLoading: l2 } = useClusters(2022);
-  const { data: anomalies, isLoading: l3 } = useAnomalies({ limit: 50 });
+  const countriesQuery = useCountries();
+  const indicatorsQuery = useIndicators();
+  const clustersQuery = useClusters(2025);
 
-  const totalCountries = countries?.length || 0;
-  const clusterCount = clusters ? new Set(clusters.map(c => c.cluster_id)).size : 0;
-  const totalAnomalies = anomalies?.length || 0;
+  const clusterCount = clustersQuery.data ? new Set(clustersQuery.data.map((item) => item.cluster_id)).size : 0;
+  const latestClusterYear =
+    clustersQuery.data && clustersQuery.data.length > 0
+      ? Math.max(...clustersQuery.data.map((item) => item.latest_valid_year ?? item.year))
+      : null;
 
-  const contextItems = [
-    { icon: Globe2, label: 'Quốc gia theo dõi', value: l1 ? undefined : `${totalCountries}` },
-    { icon: Layers, label: 'Nhóm cấu trúc (2022)', value: l2 ? undefined : `${clusterCount}` },
-    { icon: AlertTriangle, label: 'Cảnh báo hiện tại', value: l3 ? undefined : `${totalAnomalies}` },
-  ];
+  const updateYearText = latestClusterYear
+    ? `Dữ liệu cập nhật đến năm ${latestClusterYear}`
+    : 'Thời điểm cập nhật hệ thống: chưa có thông tin công bố';
 
   return (
-    <div className="space-y-8">
-      {/* Header Dashboard */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Bảng Điều Khiển Tổng Quan</h1>
-        <div className="flex items-center gap-2 text-xs font-medium text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          Dữ liệu đồng bộ: 2022
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Nền tảng phân tích dữ liệu kinh tế công"
+        description="Cổng thông tin hỗ trợ theo dõi, so sánh và diễn giải các chỉ số kinh tế vĩ mô theo quốc gia."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* 3 Metrics Cards */}
-        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <MetricCard
-            icon={Globe2}
-            title="Tổng Quốc gia"
-            value={l1 ? '...' : totalCountries || '--'}
-            isLoading={l1}
-            action={{ label: 'Xem danh sách', href: '/countries' }}
-          />
-          <MetricCard
-            icon={Layers}
-            title="Nhóm Cấu trúc"
-            value={l2 ? '...' : clusterCount || '--'}
-            isLoading={l2}
-            action={{ label: 'Xem phân bố', href: '/clusters' }}
-          />
-          <MetricCard
-            icon={AlertTriangle}
-            title="Bất thường phát hiện"
-            value={l3 ? '...' : totalAnomalies || '--'}
-            trend={!l3 && totalAnomalies > 0 ? { value: 'Cần chú ý', direction: 'up' } : undefined}
-            isLoading={l3}
-            action={{ label: 'Kiểm tra chi tiết', href: '/anomalies' }}
-          />
-        </div>
+      <SectionCard title="Phạm vi hệ thống">
+        <p className="text-sm leading-6 text-slate-700">
+          Hệ thống tổng hợp dữ liệu kinh tế công khai theo quốc gia, phục vụ theo dõi xu hướng tăng trưởng, tài khóa,
+          tiền tệ, rủi ro và phúc lợi xã hội. Người dùng có thể tra cứu hồ sơ quốc gia, so sánh theo thời gian, nhận diện
+          điểm bất thường thống kê và sử dụng trợ lý dữ liệu để diễn giải kết quả.
+        </p>
+      </SectionCard>
 
-        {/* Context Panel */}
-        <div className="lg:col-span-4">
-          <ContextPanel
-            title="Trạng thái Hệ thống"
-            items={contextItems}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        {countriesQuery.isError ? (
+          <MetricErrorCard title="Tổng số quốc gia" message="Không tải được dữ liệu quốc gia." />
+        ) : (
+          <StatCard
+            label="Tổng số quốc gia"
+            value={countriesQuery.isLoading ? '...' : String(countriesQuery.data?.length ?? 0)}
+            note="Số quốc gia có dữ liệu trong hệ thống"
+            icon={<Globe2 className="h-5 w-5" />}
           />
-        </div>
-      </div>
+        )}
+        {indicatorsQuery.isError ? (
+          <MetricErrorCard title="Tổng số chỉ số" message="Không tải được danh mục chỉ số." />
+        ) : (
+          <StatCard
+            label="Tổng số chỉ số"
+            value={indicatorsQuery.isLoading ? '...' : String(indicatorsQuery.data?.length ?? 0)}
+            note="Danh mục chỉ số đang hỗ trợ"
+            icon={<ListChecks className="h-5 w-5" />}
+          />
+        )}
+        <StatCard
+          label="Năm dữ liệu gần nhất"
+          value={latestClusterYear ? String(latestClusterYear) : 'Chưa rõ'}
+          note={updateYearText}
+          icon={<Layers className="h-5 w-5" />}
+        />
+        {clustersQuery.isError ? (
+          <MetricErrorCard title="Số cụm khả dụng" message="Không tải được danh sách cụm." />
+        ) : (
+          <StatCard
+            label="Số cụm khả dụng"
+            value={clustersQuery.isLoading ? '...' : String(clusterCount)}
+            note={latestClusterYear ? `Năm cụm khả dụng: ${latestClusterYear}` : 'Chưa xác định năm cụm khả dụng'}
+            icon={<Bot className="h-5 w-5" />}
+          />
+        )}
+      </section>
 
-      {/* Task Navigation Zone */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Nhiệm vụ Phân tích</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link href="/anomalies" className="group flex flex-col justify-between p-6 bg-white rounded-md border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-100 transition-colors">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">Giám sát Rủi ro</h3>
-                <p className="text-sm text-gray-500 mt-1">Phát hiện các dấu hiệu bất thường về nợ công, tăng trưởng và tỷ giá.</p>
-              </div>
-            </div>
-            <div className="mt-4 text-sm font-medium text-blue-600 flex items-center gap-1">
-              Truy cập ngay <span className="transition-transform group-hover:translate-x-1">→</span>
-            </div>
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SectionCard title="Nhóm chỉ số chính">
+          <ul className="space-y-2 text-sm text-slate-700">
+            <li>Tăng trưởng và quy mô nền kinh tế(growth_dynamics)</li>
+            <li>Tài khóa và tiền tệ(fiscal_monetary)</li>
+            <li>Rủi ro khủng hoảng và ổn định vĩ mô(crisis_risk)</li>
+            <li>Phúc lợi xã hội và thị trường lao động(social_welfare)</li>
+            <li>Cơ cấu kinh tế và chuyển dịch ngành(structural_composition)</li>
+          </ul>
+        </SectionCard>
+        <SectionCard title="Năng lực phân tích">
+          <ul className="space-y-2 text-sm text-slate-700">
+            <li>Hồ sơ kinh tế quốc gia theo chuỗi thời gian.</li>
+            <li>So sánh một chỉ số giữa nhiều quốc gia theo cùng giai đoạn.</li>
+            <li>Phân nhóm cấu trúc kinh tế để tìm quốc gia tương đồng.</li>
+            <li>Phát hiện bất thường thống kê theo ngưỡng giám sát.</li>
+            <li>Trợ lý dữ liệu AI hỗ trợ diễn giải kết quả phân tích.</li>
+          </ul>
+        </SectionCard>
+      </section>
+
+      <SectionCard title="Nguồn dữ liệu">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {SOURCES.map((source) => (
+            <article key={source.name} className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+              <h3 className="text-sm font-semibold text-slate-900">{source.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{source.description}</p>
+              <a
+                href={source.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex text-sm font-medium text-slate-800 underline underline-offset-4"
+              >
+                Xem nguồn dữ liệu gốc
+              </a>
+            </article>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Mục đích từng trang">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <Link href="/countries" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>Quốc gia:</strong> Tra cứu danh sách và mở hồ sơ kinh tế theo từng quốc gia.
           </Link>
-
-          <Link href="/compare" className="group flex flex-col justify-between p-6 bg-white rounded-md border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-purple-50 rounded-lg text-purple-600 group-hover:bg-purple-100 transition-colors">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">So sánh Đa chiều</h3>
-                <p className="text-sm text-gray-500 mt-1">Đối sánh chỉ số vĩ mô giữa các quốc gia theo thời gian thực.</p>
-              </div>
-            </div>
-            <div className="mt-4 text-sm font-medium text-purple-600 flex items-center gap-1">
-              So sánh ngay <span className="transition-transform group-hover:translate-x-1">→</span>
-            </div>
+          <Link href="/compare" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>So sánh:</strong> So sánh một chỉ số giữa nhiều quốc gia theo thời gian.
           </Link>
-          
-          <Link href="/chat" className="group flex flex-col justify-between p-6 bg-white rounded-md border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-green-50 rounded-lg text-green-600 group-hover:bg-green-100 transition-colors">
-                <Search className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors">Trợ lý AI</h3>
-                <p className="text-sm text-gray-500 mt-1">Hỏi đáp thông minh về dữ liệu kinh tế vĩ mô (Đang phát triển).</p>
-              </div>
-            </div>
-            <div className="mt-4 text-sm font-medium text-green-600 flex items-center gap-1">
-              Khám phá <span className="transition-transform group-hover:translate-x-1">→</span>
-            </div>
+          <Link href="/clusters?year=2025" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>Nhóm cấu trúc:</strong> Xem các quốc gia có cấu trúc kinh tế tương đồng trong cùng năm phân tích.
+          </Link>
+          <Link href="/anomalies" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>Bất thường:</strong> Theo dõi các điểm dữ liệu lệch mạnh so với xu hướng lịch sử.
+          </Link>
+          <Link href="/indicators" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>Chỉ số:</strong> Xem danh mục, đơn vị và khả năng phân tích của từng chỉ số.
+          </Link>
+          <Link href="/chat" className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+            <strong>Trợ lý dữ liệu:</strong> Đặt câu hỏi phân tích và nhận kết quả diễn giải kèm bảng, biểu đồ.
           </Link>
         </div>
-      </div>
+      </SectionCard>
+
+      {!countriesQuery.isLoading &&
+      !indicatorsQuery.isLoading &&
+      !clustersQuery.isLoading &&
+      (countriesQuery.data?.length ?? 0) === 0 &&
+      (indicatorsQuery.data?.length ?? 0) === 0 &&
+      (clustersQuery.data?.length ?? 0) === 0 ? (
+        <StateBlock
+          mode="empty"
+          title="Chưa có dữ liệu tổng quan"
+          description="Hiện chưa tải được dữ liệu cho trang tổng quan. Vui lòng thử lại sau."
+        />
+      ) : null}
     </div>
   );
 }

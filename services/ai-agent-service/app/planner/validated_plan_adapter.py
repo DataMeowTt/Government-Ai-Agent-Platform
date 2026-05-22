@@ -26,7 +26,7 @@ def build_plan_from_validated_query(validated_query: dict[str, Any]) -> QueryPla
         )
 
     if intent == "RANKING":
-        year = end_year or start_year or 2022
+        year = end_year or start_year or 2025
         return QueryPlan(
             question_type="VALID_RANKING_QUERY",
             tool_name="rank_countries",

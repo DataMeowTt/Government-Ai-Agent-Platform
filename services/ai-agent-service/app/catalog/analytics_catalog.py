@@ -22,7 +22,7 @@ CLUSTER_TARGET_YEARS: tuple[int, ...] = (
     2000,
     2010,
     2020,
-    2022,
+    2025,
 )
 
 
