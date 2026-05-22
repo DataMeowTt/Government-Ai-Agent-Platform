@@ -1,0 +1,2326 @@
+{
+  "version": "v1",
+  "template_language_styles": [
+    "vi",
+    "vi_no_diacritics",
+    "en",
+    "mixed_vi_en",
+    "technical_code",
+    "short_chat"
+  ],
+  "placeholder_contract": {
+    "indicator": "One rendered indicator alias from indicator_catalog.",
+    "indicator_2": "Second rendered indicator alias for multi-indicator templates.",
+    "indicator_list": "Rendered comma-separated list of indicator aliases.",
+    "country": "One rendered country alias from country_catalog.",
+    "country_2": "Second rendered country alias.",
+    "country_list": "Rendered comma-separated list of country aliases.",
+    "country_group": "Country group alias such as ASEAN, EU, G7.",
+    "year": "Single year.",
+    "start_year": "Start year.",
+    "end_year": "End year.",
+    "period_1": "Rendered first period.",
+    "period_2": "Rendered second period.",
+    "event": "Rendered event alias such as COVID.",
+    "relative_time": "Rendered relative time phrase.",
+    "top_n": "Integer limit for ranking.",
+    "threshold": "Numeric threshold.",
+    "chart_type": "line/bar/table/scatter.",
+    "output_format": "json/csv/table/short summary.",
+    "context_ref": "Follow-up context phrase.",
+    "condition": "Rendered condition phrase.",
+    "theme": "Indicator theme phrase."
+  },
+  "families": {
+    "value_lookup_single_country_year": {
+      "intent": "VALUE_LOOKUP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết {indicator} của {country} năm {year}."
+        ],
+        "en": [
+          "Show {indicator} for {country} in {year}."
+        ]
+      }
+    },
+    "value_lookup_single_country_multi_indicator_year": {
+      "intent": "VALUE_LOOKUP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết {indicator_list} của {country} năm {year}."
+        ],
+        "en": [
+          "Show {indicator_list} for {country} in {year}."
+        ]
+      }
+    },
+    "value_lookup_multi_country_single_year": {
+      "intent": "VALUE_LOOKUP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết {indicator} của {country_list} năm {year}."
+        ],
+        "en": [
+          "Show {indicator} for {country_list} in {year}."
+        ]
+      }
+    },
+    "value_lookup_crisis_flag_country_year": {
+      "intent": "VALUE_LOOKUP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết {indicator} của {country} năm {year}."
+        ],
+        "en": [
+          "Show {indicator} for {country} in {year}."
+        ]
+      }
+    },
+    "value_lookup_structural_indicator_country_year": {
+      "intent": "VALUE_LOOKUP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết {indicator} của {country} năm {year}."
+        ],
+        "en": [
+          "Show {indicator} for {country} in {year}."
+        ]
+      }
+    },
+    "latest_value_single_country": {
+      "intent": "LATEST_VALUE",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết giá trị mới nhất của {indicator} cho {country}."
+        ],
+        "en": [
+          "Show the latest {indicator} for {country}."
+        ]
+      }
+    },
+    "latest_value_multi_country": {
+      "intent": "LATEST_VALUE",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết giá trị mới nhất của {indicator} cho {country_list}."
+        ],
+        "en": [
+          "Show the latest {indicator} for {country_list}."
+        ]
+      }
+    },
+    "latest_value_multi_indicator_single_country": {
+      "intent": "LATEST_VALUE",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết giá trị mới nhất của {indicator_list} cho {country}."
+        ],
+        "en": [
+          "Show the latest {indicator_list} for {country}."
+        ]
+      }
+    },
+    "latest_value_country_group": {
+      "intent": "LATEST_VALUE",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho biết giá trị mới nhất của {indicator} cho {country_group}."
+        ],
+        "en": [
+          "Show the latest {indicator} for {country_group}."
+        ]
+      }
+    },
+    "time_series_single_country_period": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_SINGLE_COUNTRY_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "time_series_multi_country_period": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country_list} từ {start_year} đến {end_year}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country_list} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country_list} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_MULTI_COUNTRY_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "time_series_single_country_decade": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trong {period_1}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country} trong {period_1}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country} during {period_1}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trong {period_1}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country} during {period_1}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_SINGLE_COUNTRY_DECADE {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "time_series_event_after": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} sau {event}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country} sau {event}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country} after {event}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} sau {event}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country} after {event}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_EVENT_AFTER {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "time_series_event_before": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trước {event}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country} trước {event}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country} before {event}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trước {event}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country} bechoe {event}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_EVENT_BEFORE {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "time_series_recent_years": {
+      "intent": "TIME_SERIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trong {relative_time}.",
+          "hãy cho tôi chuỗi thời gian {indicator} của {country} trong {relative_time}."
+        ],
+        "en": [
+          "Show the time series of {indicator} for {country} in {relative_time}."
+        ],
+        "vi_no_diacritics": [
+          "Cho tôi chuỗi thời gian {indicator} của {country} trong {relative_time}."
+        ],
+        "mixed_vi_en": [
+          "Show the time series of {indicator} cho {country} in {relative_time}."
+        ],
+        "technical_code": [
+          "TIME_SERIES_RECENT_YEARS {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_single_country_period": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze xu hướng {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze xu hướng {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_SINGLE_COUNTRY_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_multi_country_period": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích xu hướng {indicator} của {country_list} từ {start_year} đến {end_year}.",
+          "hãy phân tích xu hướng {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze xu hướng {indicator} for {country_list} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích xu hướng {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze xu hướng {indicator} cho {country_list} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_MULTI_COUNTRY_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_actual_vs_trend": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze xu hướng {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích xu hướng {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze xu hướng {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_ACTUAL_VS_TREND {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_residual_deviation": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích residual {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích residual {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze residual {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích residual {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze residual {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_RESIDUAL_DEVIATION {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_structural_break": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích structural break {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích structural break {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze structural break {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích structural break {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze structural break {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_STRUCTURAL_BREAK {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_rolling_average": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích rolling average {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích rolling average {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze rolling average {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích rolling average {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze rolling average {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_ROLLING_AVERAGE {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_recovery_after_event": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích phục hồi {indicator} của {country} sau {event}.",
+          "hãy phân tích phục hồi {indicator} của {country} sau {event}."
+        ],
+        "en": [
+          "Analyze phục hồi {indicator} for {country} after {event}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích phục hồi {indicator} của {country} sau {event}."
+        ],
+        "mixed_vi_en": [
+          "Analyze phục hồi {indicator} cho {country} after {event}."
+        ],
+        "technical_code": [
+          "TREND_RECOVERY_AFTER_EVENT {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "trend_volatility_period": {
+      "intent": "TREND_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích biến động {indicator} của {country} từ {start_year} đến {end_year}.",
+          "hãy phân tích biến động {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Analyze biến động {indicator} for {country} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "phân tích biến động {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Analyze biến động {indicator} cho {country} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "TREND_VOLATILITY_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_countries_period": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}.",
+          "hãy so sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRIES_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_countries_single_year": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} năm {year}.",
+          "hãy so sánh {indicator} của {country_list} năm {year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} in {year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRIES_SINGLE_YEAR {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_countries_after_event": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} sau {event}.",
+          "hãy so sánh {indicator} của {country_list} sau {event}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} after {event}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} sau {event}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} after {event}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRIES_AFTER_EVENT {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_countries_before_after_event": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} sau {event}.",
+          "hãy so sánh {indicator} của {country_list} sau {event}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} after {event}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} sau {event}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} after {event}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRIES_BEFORE_AFTER_EVENT {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_country_vs_group_average": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_group} từ {start_year} đến {end_year}.",
+          "hãy so sánh {indicator} của {country_group} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_group} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_group} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_group} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRY_VS_GROUP_AVERAGE {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_country_vs_region": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_group} từ {start_year} đến {end_year}.",
+          "hãy so sánh {indicator} của {country_group} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_group} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_group} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_group} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRY_VS_REGION {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_country_vs_peer": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}.",
+          "hãy so sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRY_VS_PEER {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_countries_volatility": {
+      "intent": "COMPARE_COUNTRIES",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}.",
+          "hãy so sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country_list} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "So sánh {indicator} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Compare {indicator} cho {country_list} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "COMPARE_COUNTRIES_VOLATILITY {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "compare_indicators_single_country_period": {
+      "intent": "COMPARE_INDICATORS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator_list} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator_list} for {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "compare_indicators_single_country_year": {
+      "intent": "COMPARE_INDICATORS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator_list} của {country} năm {year}."
+        ],
+        "en": [
+          "Compare {indicator_list} for {country} in {year}."
+        ]
+      }
+    },
+    "compare_policy_mix_fiscal_monetary": {
+      "intent": "COMPARE_INDICATORS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "compare_growth_vs_inflation": {
+      "intent": "COMPARE_INDICATORS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "compare_multi_indicator_multi_country": {
+      "intent": "COMPARE_INDICATORS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator_list} của {country_list} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Compare {indicator_list} for {country_list} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "compare_periods_single_country": {
+      "intent": "COMPARE_PERIODS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} giữa {period_1} và {period_2}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} between {period_1} and {period_2}."
+        ]
+      }
+    },
+    "compare_periods_before_after_event": {
+      "intent": "COMPARE_PERIODS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} giữa {period_1} và {period_2}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} between {period_1} and {period_2}."
+        ]
+      }
+    },
+    "compare_decades": {
+      "intent": "COMPARE_PERIODS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} giữa {period_1} và {period_2}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} between {period_1} and {period_2}."
+        ]
+      }
+    },
+    "compare_recent_vs_historical": {
+      "intent": "COMPARE_PERIODS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của {country} giữa {period_1} và {period_2}."
+        ],
+        "en": [
+          "Compare {indicator} for {country} between {period_1} and {period_2}."
+        ]
+      }
+    },
+    "compare_periods_multi_indicator": {
+      "intent": "COMPARE_PERIODS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "So sánh {indicator_list} của {country} giữa {period_1} và {period_2}."
+        ],
+        "en": [
+          "Compare {indicator_list} for {country} between {period_1} and {period_2}."
+        ]
+      }
+    },
+    "ranking_top_n": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_TOP_N {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_bottom_n": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_BOTTOM_N {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_country_position": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_COUNTRY_POSITION {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_within_group": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_WITHIN_GROUP {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_by_average_period": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "RANKING_BY_AVERAGE_PERIOD {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_by_volatility": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} from {start_year} to {end_year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} từ {start_year} đến {end_year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} from {start_year} to {end_year}."
+        ],
+        "technical_code": [
+          "RANKING_BY_VOLATILITY {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_by_anomaly": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_BY_ANOMALY {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "ranking_multi_indicator_score": {
+      "intent": "RANKING",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo {indicator_list} năm {year}.",
+          "hãy xếp hạng top {top_n} theo {indicator_list} năm {year}."
+        ],
+        "en": [
+          "Rank top {top_n} by {indicator_list} in {year}."
+        ],
+        "vi_no_diacritics": [
+          "xếp hạng top {top_n} theo {indicator_list} năm {year}."
+        ],
+        "mixed_vi_en": [
+          "Rank top {top_n} by {indicator_list} in {year}."
+        ],
+        "technical_code": [
+          "RANKING_MULTI_INDICATOR_SCORE {indicator} {country}"
+        ],
+        "short_chat": [
+          "{indicator} {country}"
+        ]
+      }
+    },
+    "rank_by_absolute_change": {
+      "intent": "RANK_BY_CHANGE",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo thay đổi {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by change in {indicator} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "rank_by_pct_change": {
+      "intent": "RANK_BY_CHANGE",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo thay đổi {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by change in {indicator} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "rank_by_increase": {
+      "intent": "RANK_BY_CHANGE",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo thay đổi {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by change in {indicator} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "rank_by_decrease": {
+      "intent": "RANK_BY_CHANGE",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo thay đổi {indicator} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Rank top {top_n} by change in {indicator} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "rank_by_recovery_after_event": {
+      "intent": "RANK_BY_CHANGE",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "xếp hạng top {top_n} theo thay đổi {indicator} sau {event}."
+        ],
+        "en": [
+          "Rank top {top_n} by change in {indicator} after {event}."
+        ]
+      }
+    },
+    "coverage_indicator_country": {
+      "intent": "COVERAGE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "kiểm tra coverage dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Check data coverage for {indicator} and {country}."
+        ]
+      }
+    },
+    "coverage_indicator_all_countries": {
+      "intent": "COVERAGE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "kiểm tra coverage dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Check data coverage for {indicator} and {country}."
+        ]
+      }
+    },
+    "coverage_country_all_indicators": {
+      "intent": "COVERAGE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "kiểm tra coverage dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Check data coverage for {indicator} and {country}."
+        ]
+      }
+    },
+    "coverage_year_range": {
+      "intent": "COVERAGE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "kiểm tra coverage dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Check data coverage for {indicator} and {country}."
+        ]
+      }
+    },
+    "coverage_analytics_availability": {
+      "intent": "COVERAGE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "kiểm tra coverage dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Check data coverage for {indicator} and {country}."
+        ]
+      }
+    },
+    "missing_data_country_indicator": {
+      "intent": "MISSING_DATA",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm dữ liệu thiếu của {indicator} cho {country}."
+        ],
+        "en": [
+          "Find missing data for {indicator} and {country}."
+        ]
+      }
+    },
+    "missing_data_country_all_indicators": {
+      "intent": "MISSING_DATA",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm dữ liệu thiếu của {indicator} cho {country}."
+        ],
+        "en": [
+          "Find missing data for {indicator} and {country}."
+        ]
+      }
+    },
+    "missing_data_indicator_all_countries": {
+      "intent": "MISSING_DATA",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm dữ liệu thiếu của {indicator} cho {country}."
+        ],
+        "en": [
+          "Find missing data for {indicator} and {country}."
+        ]
+      }
+    },
+    "missing_data_period_gap": {
+      "intent": "MISSING_DATA",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm dữ liệu thiếu của {indicator} cho {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Find missing data for {indicator} and {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "data_quality_country_profile": {
+      "intent": "DATA_QUALITY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "đánh giá chất lượng dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Assess data quality for {indicator} and {country}."
+        ]
+      }
+    },
+    "data_quality_indicator_country": {
+      "intent": "DATA_QUALITY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "đánh giá chất lượng dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Assess data quality for {indicator} and {country}."
+        ]
+      }
+    },
+    "data_quality_flag_score": {
+      "intent": "DATA_QUALITY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "đánh giá chất lượng dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Assess data quality for {indicator} and {country}."
+        ]
+      }
+    },
+    "data_quality_completeness_ranking": {
+      "intent": "DATA_QUALITY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "đánh giá chất lượng dữ liệu {indicator} cho {country}."
+        ],
+        "en": [
+          "Assess data quality for {indicator} and {country}."
+        ]
+      }
+    },
+    "anomaly_country_indicator_period": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "anomaly_global_indicator_year": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country} năm {year}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country} in {year}."
+        ]
+      }
+    },
+    "anomaly_threshold_filter": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country}."
+        ]
+      }
+    },
+    "anomaly_top_n": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country}."
+        ]
+      }
+    },
+    "anomaly_after_event": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country} sau {event}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country} after {event}."
+        ]
+      }
+    },
+    "anomaly_multi_indicator_country": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator_list} cho {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Find anomalies for {indicator_list} and {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "anomaly_cluster_outlier": {
+      "intent": "ANOMALY_DETECTION",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "tìm anomaly của {indicator} cho {country} năm {year}."
+        ],
+        "en": [
+          "Find anomalies for {indicator} and {country} in {year}."
+        ]
+      }
+    },
+    "anomaly_explain_country_year": {
+      "intent": "ANOMALY_EXPLANATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích anomaly của {indicator} cho {country} năm {year}."
+        ],
+        "en": [
+          "Explain the anomaly for {indicator} and {country} in {year}."
+        ]
+      }
+    },
+    "anomaly_explain_top_point": {
+      "intent": "ANOMALY_EXPLANATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích anomaly của {indicator} cho {country}."
+        ],
+        "en": [
+          "Explain the anomaly for {indicator} and {country}."
+        ]
+      }
+    },
+    "anomaly_explain_data_components": {
+      "intent": "ANOMALY_EXPLANATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích anomaly của {indicator} cho {country} năm {year}."
+        ],
+        "en": [
+          "Explain the anomaly for {indicator} and {country} in {year}."
+        ]
+      }
+    },
+    "anomaly_explain_warning_reason": {
+      "intent": "ANOMALY_EXPLANATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích anomaly của {indicator} cho {country}."
+        ],
+        "en": [
+          "Explain the anomaly for {indicator} and {country}."
+        ]
+      }
+    },
+    "risk_alert_fiscal": {
+      "intent": "RISK_ALERT",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tạo cảnh báo rủi ro fiscal cho {country}."
+        ],
+        "en": [
+          "Create risk alerts for {country}."
+        ]
+      }
+    },
+    "risk_alert_monetary": {
+      "intent": "RISK_ALERT",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tạo cảnh báo rủi ro monetary cho {country}."
+        ],
+        "en": [
+          "Create risk alerts for {country}."
+        ]
+      }
+    },
+    "risk_alert_social": {
+      "intent": "RISK_ALERT",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tạo cảnh báo rủi ro social cho {country}."
+        ],
+        "en": [
+          "Create risk alerts for {country}."
+        ]
+      }
+    },
+    "risk_alert_crisis_early_warning": {
+      "intent": "RISK_ALERT",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tạo cảnh báo rủi ro crisis cho {country}."
+        ],
+        "en": [
+          "Create risk alerts for {country}."
+        ]
+      }
+    },
+    "risk_alert_multi_signal_dashboard": {
+      "intent": "RISK_ALERT",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tạo cảnh báo rủi ro multi cho {country}."
+        ],
+        "en": [
+          "Create risk alerts for {country}."
+        ]
+      }
+    },
+    "crisis_binary_country_year": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country} năm {year}."
+        ],
+        "en": [
+          "Analyze crisis status for {country} in {year}."
+        ]
+      }
+    },
+    "crisis_type_country_year": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country} năm {year}."
+        ],
+        "en": [
+          "Analyze crisis status for {country} in {year}."
+        ]
+      }
+    },
+    "crisis_composite_ranking": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country} năm {year}."
+        ],
+        "en": [
+          "Analyze crisis status for {country} in {year}."
+        ]
+      }
+    },
+    "crisis_compare_countries_events": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country_list} quanh {event}."
+        ],
+        "en": [
+          "Analyze crisis status for {country_list} around {event}."
+        ]
+      }
+    },
+    "crisis_indicator_during_event": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country} quanh {event}."
+        ],
+        "en": [
+          "Analyze crisis status for {country} around {event}."
+        ]
+      }
+    },
+    "crisis_early_warning_indicator": {
+      "intent": "CRISIS_ANALYSIS",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "phân tích khủng hoảng của {country}."
+        ],
+        "en": [
+          "Analyze crisis status for {country}."
+        ]
+      }
+    },
+    "cluster_membership_country_year": {
+      "intent": "CLUSTER_MEMBERSHIP",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Cho biết cluster của {country} năm {year}."
+        ],
+        "en": [
+          "Show cluster membership for {country} in {year}."
+        ]
+      }
+    },
+    "cluster_members_same_cluster": {
+      "intent": "CLUSTER_MEMBERSHIP",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Cho biết cluster của {country} năm {year}."
+        ],
+        "en": [
+          "Show cluster membership for {country} in {year}."
+        ]
+      }
+    },
+    "cluster_profile_country_year": {
+      "intent": "CLUSTER_MEMBERSHIP",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Cho biết cluster của {country} năm {year}."
+        ],
+        "en": [
+          "Show cluster membership for {country} in {year}."
+        ]
+      }
+    },
+    "cluster_transition_country_period": {
+      "intent": "CLUSTER_MEMBERSHIP",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Cho biết cluster của {country} từ {start_year} đến {end_year}."
+        ],
+        "en": [
+          "Show cluster membership for {country} from {start_year} to {end_year}."
+        ]
+      }
+    },
+    "cluster_similar_countries": {
+      "intent": "CLUSTER_MEMBERSHIP",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Cho biết cluster của {country} năm {year}."
+        ],
+        "en": [
+          "Show cluster membership for {country} in {year}."
+        ]
+      }
+    },
+    "cluster_benchmark_indicator": {
+      "intent": "CLUSTER_BENCHMARK",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Benchmark {indicator} của {country} vài cluster năm {year}."
+        ],
+        "en": [
+          "Benchmark {indicator} for {country} against its cluster in {year}."
+        ]
+      }
+    },
+    "cluster_benchmark_multi_indicator": {
+      "intent": "CLUSTER_BENCHMARK",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Benchmark {indicator_list} của {country} vài cluster năm {year}."
+        ],
+        "en": [
+          "Benchmark {indicator_list} for {country} against its cluster in {year}."
+        ]
+      }
+    },
+    "cluster_benchmark_country_vs_cluster_average": {
+      "intent": "CLUSTER_BENCHMARK",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Benchmark {indicator} của {country} vài cluster năm {year}."
+        ],
+        "en": [
+          "Benchmark {indicator} for {country} against its cluster in {year}."
+        ]
+      }
+    },
+    "cluster_benchmark_outperformer": {
+      "intent": "CLUSTER_BENCHMARK",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Benchmark {indicator} của {country} vài cluster năm {year}."
+        ],
+        "en": [
+          "Benchmark {indicator} for {country} against its cluster in {year}."
+        ]
+      }
+    },
+    "cluster_benchmark_underperformer": {
+      "intent": "CLUSTER_BENCHMARK",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Benchmark {indicator} của {country} vài cluster năm {year}."
+        ],
+        "en": [
+          "Benchmark {indicator} for {country} against its cluster in {year}."
+        ]
+      }
+    },
+    "country_profile_overview": {
+      "intent": "COUNTRY_PROFILE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt hồ sơ của {country}."
+        ],
+        "en": [
+          "Summarize the profile for {country}."
+        ]
+      }
+    },
+    "country_profile_recent_summary": {
+      "intent": "COUNTRY_PROFILE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt hồ sơ của {country} trong {relative_time}."
+        ],
+        "en": [
+          "Summarize the profile for {country} in {relative_time}."
+        ]
+      }
+    },
+    "country_profile_risk_summary": {
+      "intent": "COUNTRY_PROFILE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt hồ sơ của {country}."
+        ],
+        "en": [
+          "Summarize the profile for {country}."
+        ]
+      }
+    },
+    "country_profile_development_stage": {
+      "intent": "COUNTRY_PROFILE",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt hồ sơ của {country} năm {year}."
+        ],
+        "en": [
+          "Summarize the profile for {country} in {year}."
+        ]
+      }
+    },
+    "theme_summary_fiscal": {
+      "intent": "THEME_SUMMARY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt chủ đề {theme} của {country}."
+        ],
+        "en": [
+          "Summarize the {theme} theme for {country}."
+        ]
+      }
+    },
+    "theme_summary_monetary": {
+      "intent": "THEME_SUMMARY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt chủ đề {theme} của {country}."
+        ],
+        "en": [
+          "Summarize the {theme} theme for {country}."
+        ]
+      }
+    },
+    "theme_summary_growth": {
+      "intent": "THEME_SUMMARY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt chủ đề {theme} của {country}."
+        ],
+        "en": [
+          "Summarize the {theme} theme for {country}."
+        ]
+      }
+    },
+    "theme_summary_social": {
+      "intent": "THEME_SUMMARY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt chủ đề {theme} của {country}."
+        ],
+        "en": [
+          "Summarize the {theme} theme for {country}."
+        ]
+      }
+    },
+    "theme_summary_structural": {
+      "intent": "THEME_SUMMARY",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tóm tắt chủ đề {theme} của {country}."
+        ],
+        "en": [
+          "Summarize the {theme} theme for {country}."
+        ]
+      }
+    },
+    "conditional_filter_threshold": {
+      "intent": "CONDITIONAL_FILTER",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm các nước thỏa mãn {condition}."
+        ],
+        "en": [
+          "Find countries matching {condition}."
+        ]
+      }
+    },
+    "conditional_filter_multi_condition": {
+      "intent": "CONDITIONAL_FILTER",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm các nước thỏa mãn {condition}."
+        ],
+        "en": [
+          "Find countries matching {condition}."
+        ]
+      }
+    },
+    "conditional_filter_tradeoff": {
+      "intent": "CONDITIONAL_FILTER",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm các nước thỏa mãn {condition}."
+        ],
+        "en": [
+          "Find countries matching {condition}."
+        ]
+      }
+    },
+    "conditional_filter_outperformer": {
+      "intent": "CONDITIONAL_FILTER",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm các nước thỏa mãn {condition}."
+        ],
+        "en": [
+          "Find countries matching {condition}."
+        ]
+      }
+    },
+    "conditional_filter_composite_score": {
+      "intent": "CONDITIONAL_FILTER",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "tìm các nước thỏa mãn {condition}."
+        ],
+        "en": [
+          "Find countries matching {condition}."
+        ]
+      }
+    },
+    "indicator_definition_basic": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_definition_unit": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_definition_methodology": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_definition_data_table": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_definition_analytics_availability": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_catalog_by_theme": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "indicator_alias_resolution": {
+      "intent": "INDICATOR_DEFINITION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "giải thích {indicator}."
+        ],
+        "en": [
+          "Explain {indicator}."
+        ]
+      }
+    },
+    "follow_up_pronoun_country": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} Còn {country} thì sao?"
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_change_indicator": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} Thay bằng {indicator}."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_change_period": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} Chỉ xem từ {start_year} đến {end_year} thôi."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_add_country": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} thêm {country} vào so sánh."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_remove_country": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} bỏ {country} khỏi so sánh."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_change_chart": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} đổi sang {chart_type}."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_explain_result": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} giải thích kết quả này."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "follow_up_filter_group": {
+      "intent": "FOLLOW_UP",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "{context_ref} Chỉ xem nhóm {country_group}."
+        ],
+        "en": [
+          "For {context_ref}, update the previous result."
+        ]
+      }
+    },
+    "visualization_line_chart": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "line",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {chart_type}."
+        ],
+        "en": [
+          "Show the result as {chart_type}."
+        ]
+      }
+    },
+    "visualization_bar_chart_ranking": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "bar",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {chart_type}."
+        ],
+        "en": [
+          "Show the result as {chart_type}."
+        ]
+      }
+    },
+    "visualization_table_output": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "table",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {chart_type}."
+        ],
+        "en": [
+          "Show the result as {chart_type}."
+        ]
+      }
+    },
+    "visualization_json_output": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {output_format}."
+        ],
+        "en": [
+          "Show the result as {output_format}."
+        ]
+      }
+    },
+    "visualization_short_summary": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {output_format}."
+        ],
+        "en": [
+          "Show the result as {output_format}."
+        ]
+      }
+    },
+    "visualization_report_paragraph": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {output_format}."
+        ],
+        "en": [
+          "Show the result as {output_format}."
+        ]
+      }
+    },
+    "visualization_export_csv": {
+      "intent": "VISUALIZATION_REQUEST",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Hiển thị kết quả dưới dạng {output_format}."
+        ],
+        "en": [
+          "Show the result as {output_format}."
+        ]
+      }
+    },
+    "missing_indicator": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho tôi số liệu của {country} năm {year}.",
+          "{country} năm {year} như thế nào?"
+        ],
+        "vi_no_diacritics": [
+          "Cho toi so lieu cua {country} nam {year}."
+        ],
+        "en": [
+          "Show data for {country} in {year}."
+        ],
+        "mixed_vi_en": [
+          "Show data cho {country} năm {year}."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION {country} {year} chỉ số nào?"
+        ],
+        "short_chat": [
+          "{country} {year} chỉ số nào?"
+        ]
+      }
+    },
+    "missing_country": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho tôi {indicator} năm {year}.",
+          "{indicator} năm {year} là bao nhiêu?"
+        ],
+        "vi_no_diacritics": [
+          "Cho toi {indicator} nam {year}."
+        ],
+        "en": [
+          "Show {indicator} in {year}."
+        ],
+        "mixed_vi_en": [
+          "Show {indicator} năm {year}, missing country."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION {indicator} {year} nước nào?"
+        ],
+        "short_chat": [
+          "{indicator} {year} nước nào?"
+        ]
+      }
+    },
+    "missing_year_for_ranking": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Xếp hạng top {top_n} nước theo {indicator}.",
+          "Top {top_n} về {indicator} là những nước nào?"
+        ],
+        "vi_no_diacritics": [
+          "Xep hang top {top_n} nuoc theo {indicator}."
+        ],
+        "en": [
+          "Rank the top {top_n} countries by {indicator}."
+        ],
+        "mixed_vi_en": [
+          "Top {top_n} countries by {indicator}, thiếu năm."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION top {top_n} {indicator} năm nào?"
+        ],
+        "short_chat": [
+          "top {top_n} {indicator} năm nào?"
+        ]
+      }
+    },
+    "ambiguous_indicator": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "So sánh chỉ số {theme} của {country} năm {year}.",
+          "Cho tôi chỉ số tăng trưởng của {country} năm {year}."
+        ],
+        "vi_no_diacritics": [
+          "So sanh chi so {theme} cua {country} nam {year}."
+        ],
+        "en": [
+          "Show the {theme} indicator for {country} in {year}."
+        ],
+        "mixed_vi_en": [
+          "Show {theme} indicator của {country} năm {year}."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION {theme} {country} {year} là chỉ số nào?"
+        ],
+        "short_chat": [
+          "{theme} {country} {year} là chỉ số nào?"
+        ]
+      }
+    },
+    "ambiguous_country": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "So sánh {indicator} của Korea năm {year}.",
+          "Cho tôi {indicator} của Nga năm {year}."
+        ],
+        "vi_no_diacritics": [
+          "So sanh {indicator} cua Korea nam {year}."
+        ],
+        "en": [
+          "Show {indicator} for Korea in {year}."
+        ],
+        "mixed_vi_en": [
+          "Show {indicator} for Korea năm {year}."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION {indicator} Korea {year}"
+        ],
+        "short_chat": [
+          "Korea {indicator} {year}"
+        ]
+      }
+    },
+    "ambiguous_time_range": {
+      "intent": "NEED_CLARIFICATION",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho tôi {indicator} của {country} mấy năm qua.",
+          "{indicator} ở {country} gần đây thế nào?"
+        ],
+        "vi_no_diacritics": [
+          "Cho toi {indicator} cua {country} may nam qua."
+        ],
+        "en": [
+          "Show {indicator} for {country} recently."
+        ],
+        "mixed_vi_en": [
+          "Show {indicator} của {country} recently."
+        ],
+        "technical_code": [
+          "NEED_CLARIFICATION {country} {indicator} gần đây"
+        ],
+        "short_chat": [
+          "{country} {indicator} gần đây"
+        ]
+      }
+    },
+    "off_topic_programming": {
+      "intent": "OFF_TOPIC",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Viết giúp tôi một hàm Python sắp xếp danh sách.",
+          "Debug đoạn code JavaScript này giúp tôi."
+        ],
+        "en": [
+          "Write a Python function to sort a list."
+        ]
+      }
+    },
+    "off_topic_personal_advice": {
+      "intent": "OFF_TOPIC",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Tôi nên chọn nghề gì trong năm tới?",
+          "Cho tôi lời khuyên cá nhân về công việc."
+        ],
+        "en": [
+          "Give me personal career advice."
+        ]
+      }
+    },
+    "off_topic_general_knowledge": {
+      "intent": "OFF_TOPIC",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Ai là người phát minh ra bóng đèn?",
+          "Kể lịch sử La Mã cổ đại."
+        ],
+        "en": [
+          "Who invented the light bulb?"
+        ]
+      }
+    },
+    "off_topic_entertainment": {
+      "intent": "OFF_TOPIC",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Gợi ý phim hài để xem tối nay.",
+          "Kể một câu chuyện vui."
+        ],
+        "en": [
+          "Recommend a comedy movie."
+        ]
+      }
+    },
+    "off_topic_unrelated_business": {
+      "intent": "OFF_TOPIC",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Tư vấn chiến lược bán hàng cho quán cà phê.",
+          "Lập kế hoạch marketing cho sản phẩm mới."
+        ],
+        "en": [
+          "Make a marketing plan for a new product."
+        ]
+      }
+    },
+    "unsupported_forecast_advanced": {
+      "intent": "UNSUPPORTED",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Dự báo nâng cao {indicator} của {country} đến {period_1}.",
+          "Hãy dự đoán dài hạn {indicator} cho {country}."
+        ],
+        "en": [
+          "Forecast {indicator} for {country} through {period_1} with an advanced model."
+        ]
+      }
+    },
+    "unsupported_arima_modeling": {
+      "intent": "UNSUPPORTED",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Chạy ARIMA cho {indicator} của {country}.",
+          "Fit mô hình ARIMA để dự báo {indicator}."
+        ],
+        "en": [
+          "Run an ARIMA model for {indicator} in {country}."
+        ]
+      }
+    },
+    "unsupported_causal_claim": {
+      "intent": "UNSUPPORTED",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Chứng minh {indicator} gây ra {indicator_2} ở {country}.",
+          "Kết luận quan hệ nhân quả giữa {indicator} và {indicator_2}."
+        ],
+        "en": [
+          "Prove that {indicator} causes {indicator_2} in {country}."
+        ]
+      }
+    },
+    "unsupported_no_data_year": {
+      "intent": "UNSUPPORTED",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Cho tôi {indicator} của {country} năm {year} dù năm đó chưa có dữ liệu.",
+          "Lấy dữ liệu {indicator} của {country} ở năm ngoài database."
+        ],
+        "en": [
+          "Show {indicator} for {country} in {year}, even if that year has no data."
+        ]
+      }
+    },
+    "unsupported_raw_sql_request": {
+      "intent": "UNSUPPORTED",
+      "default_chart_preference": "none",
+      "templates": {
+        "vi": [
+          "Viết raw SQL để query trực tiếp bảng dữ liệu.",
+          "Cho tôi câu SQL lấy toàn bộ dữ liệu từ database."
+        ],
+        "en": [
+          "Give me raw SQL to query the database directly."
+        ]
+      }
+    }
+  }
+}

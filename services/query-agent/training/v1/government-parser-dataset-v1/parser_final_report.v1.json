@@ -1,0 +1,47 @@
+{
+  "coverage": {
+    "countries": 88,
+    "indicators": 56,
+    "intents": 27,
+    "question_families": 151
+  },
+  "dataset_name": "government_ai_parser_dataset_v1",
+  "format": {
+    "assistant_json_schema": "configs/parsed_query_schema.v1.json",
+    "file_type": "jsonl",
+    "record_format": "ChatML messages with assistant.content as valid JSON string"
+  },
+  "generation_sources": {
+    "deterministic_template": 16757,
+    "hard_cases": 3997,
+    "llm_paraphrase": 7446,
+    "off_topic_unsupported": 1800
+  },
+  "notes": [
+    "Labels are generated before questions to avoid label drift.",
+    "LLM paraphrase samples keep labels from base_plans and do not use model-generated labels.",
+    "Split is performed by plan_group_id to avoid paraphrase leakage."
+  ],
+  "quality": {
+    "chatml_errors": 0,
+    "duplicate_user_messages": 0,
+    "mojibake_findings": 0,
+    "placeholder_findings": 0,
+    "schema_errors": 0,
+    "synthetic_artifact_findings": 0
+  },
+  "source_files": [
+    "parser_deterministic.v1.jsonl",
+    "parser_paraphrase.v1.jsonl",
+    "parser_hard_cases.v1.jsonl",
+    "parser_offtopic_unsupported.v1.jsonl"
+  ],
+  "splits": {
+    "test": 3000,
+    "train": 24000,
+    "validation": 3000
+  },
+  "task": "Natural language question to ParsedQuery JSON semantic parsing.",
+  "total_samples": 30000,
+  "version": "v1"
+}

@@ -1,0 +1,33 @@
+{
+  "version": "v1",
+  "target_generation_bucket": "off_topic_unsupported",
+  "target_samples": 1800,
+  "random_seed": 42,
+  "off_topic_domains": [
+    "programming",
+    "personal_advice",
+    "general_knowledge",
+    "entertainment",
+    "unrelated_business"
+  ],
+  "unsupported_types": [
+    "advanced_forecast",
+    "arima_modeling",
+    "causal_claim",
+    "no_data_year",
+    "raw_sql_request"
+  ],
+  "language_styles": [
+    "vi",
+    "vi_no_diacritics",
+    "en",
+    "mixed_vi_en",
+    "short_chat"
+  ],
+  "validation_policy": {
+    "drop_if_placeholder_remaining": true,
+    "drop_if_mojibake": true,
+    "drop_if_duplicate_global": true,
+    "drop_if_too_long_chars": 500
+  }
+}

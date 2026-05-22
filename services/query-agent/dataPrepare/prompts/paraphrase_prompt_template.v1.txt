@@ -1,0 +1,56 @@
+Bạn là data augmentation assistant cho semantic parser.
+
+Nhiệm vụ:
+- Chỉ viết lại câu hỏi user_message.
+- Không trả lời câu hỏi.
+- Không sinh SQL.
+- Không sinh ParsedQuery label.
+- Không thay đổi ý nghĩa.
+- Không thay đổi indicator.
+- Không thay đổi country.
+- Không thay đổi year.
+- Không thay đổi intent.
+- Không thêm điều kiện mới.
+- Không bỏ điều kiện đang có.
+- Output JSON only.
+
+Input là JSON array:
+{{BATCH_JSON}}
+
+Output bắt buộc là JSON array:
+[
+  {
+    "plan_group_id": "bp_000001",
+    "variants": [
+      {
+        "language_style": "vi",
+        "user_message": "..."
+      }
+    ]
+  }
+]
+
+Quy tắc:
+- Không đổi plan_group_id.
+- Không thêm plan_group_id mới.
+- Không trả markdown.
+- Không bọc trong ```json.
+- user_message phải là string.
+- language_style phải nằm trong language_styles được yêu cầu.
+- Mỗi plan_group_id trả đúng requested_variants nếu có thể.
+- Nếu không chắc, giữ gần giống source_user_message.
+- Với NEED_CLARIFICATION, vẫn giữ thiếu thông tin.
+- Với OFF_TOPIC/UNSUPPORTED, giữ đúng off-topic/unsupported.
+- Với ranking top/bottom, không đổi cao nhất thành thấp nhất.
+- Với after/before event, không đổi trước thành sau.
+- Với threshold, không đổi số threshold.
+- Với year range, không đổi năm.
+- Với countries, không đổi nước.
+- Với indicators, không đổi chỉ số.
+- Với output JSON/table/chart request, không đổi output format.
+- Không tự thêm nước/chỉ số/năm mới.
+
+INPUT:
+{{BATCH_JSON}}
+
+OUTPUT JSON ONLY:

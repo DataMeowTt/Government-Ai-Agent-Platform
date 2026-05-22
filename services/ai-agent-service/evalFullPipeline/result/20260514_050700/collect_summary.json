@@ -1,0 +1,116 @@
+{
+  "run_id": "20260514_050700",
+  "target_url": "http://localhost:3000/api/v1/ai/chat",
+  "created_at": "2026-05-13T22:29:08.503736+00:00",
+  "total_scenarios": 100,
+  "total_turns": 120,
+  "ok_turns": 120,
+  "failed_turns": 0,
+  "skipped_turns": 0,
+  "by_category": {
+    "DIRECT_ANSWER": {
+      "scenarios": 15,
+      "turns": 15,
+      "ok_turns": 15,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 2602.27
+    },
+    "DATA_QUERY_RANKING": {
+      "scenarios": 15,
+      "turns": 15,
+      "ok_turns": 15,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 89.8
+    },
+    "DATA_QUERY_COMPARE": {
+      "scenarios": 15,
+      "turns": 15,
+      "ok_turns": 15,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 79.07
+    },
+    "DATA_QUERY_TREND_TIME_SERIES": {
+      "scenarios": 10,
+      "turns": 10,
+      "ok_turns": 10,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 77.2
+    },
+    "DATA_QUERY_COVERAGE_ANOMALY": {
+      "scenarios": 10,
+      "turns": 10,
+      "ok_turns": 10,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 8618.1
+    },
+    "FOLLOW_UP_ANALYSIS": {
+      "scenarios": 10,
+      "turns": 20,
+      "ok_turns": 20,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 3264.15
+    },
+    "FOLLOW_UP_MODIFY_QUERY": {
+      "scenarios": 10,
+      "turns": 20,
+      "ok_turns": 20,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 77.1
+    },
+    "NEED_CLARIFICATION": {
+      "scenarios": 8,
+      "turns": 8,
+      "ok_turns": 8,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 15400.12
+    },
+    "UNSUPPORTED_OFF_TOPIC": {
+      "scenarios": 7,
+      "turns": 7,
+      "ok_turns": 7,
+      "failed_turns": 0,
+      "skipped_turns": 0,
+      "avg_latency_ms": 35654.86
+    }
+  },
+  "status_counts": {
+    "success": 97,
+    "unsupported": 10,
+    "needs_clarification": 8,
+    "no_data": 1,
+    "off_topic": 4
+  },
+  "question_type_counts": {
+    "VALID_SIMPLE_QUERY": 24,
+    "VALID_RANKING_QUERY": 26,
+    "UNSUPPORTED_DATA_QUERY": 10,
+    "VALID_COMPARE_QUERY": 22,
+    "VALID_TREND_QUERY": 17,
+    "VALID_COVERAGE_QUERY": 5,
+    "VALID_ANOMALY_QUERY": 3,
+    "NEED_CLARIFICATION": 8,
+    "NO_DATA": 1,
+    "OFF_TOPIC": 4
+  },
+  "route_counts": {
+    "GENERAL_EXPLANATION": 17,
+    "DATA_QUERY": 72,
+    "FOLLOW_UP_ANALYSIS": 7,
+    "NEED_CLARIFICATION": 11,
+    "FOLLOW_UP_MODIFY_QUERY": 9,
+    "OFF_TOPIC": 4
+  },
+  "parser_source_counts": {
+    "parser_agent": 86
+  },
+  "avg_latency_ms": 4734.42,
+  "unique_case_ids": 100
+}

@@ -1,0 +1,300 @@
+[
+  {
+    "message": "So sánh nợ công Việt Nam và Thái Lan từ 2010 đến 2023.",
+    "raw_output": "{\"intent\":\"COMPARE_COUNTRIES\",\"question_family\":\"compare_countries_volatility\",\"indicators\":[\"govdebt_GDP\"],\"countries\":[\"VNM\",\"THA\"],\"country_groups\":[],\"start_year\":2010,\"end_year\":2023,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"line\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "COMPARE_COUNTRIES",
+      "question_family": "compare_countries_volatility",
+      "indicators": [
+        "govdebt_GDP"
+      ],
+      "countries": [
+        "VNM",
+        "THA"
+      ],
+      "country_groups": [],
+      "start_year": 2010,
+      "end_year": 2023,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "line",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Top 10 nước có lạm phát CPI cao nhất năm 2020.",
+    "raw_output": "{\"intent\":\"RANKING\",\"question_family\":\"ranking_top_n\",\"indicators\":[\"inflation_cpi\"],\"countries\":[],\"country_groups\":[],\"start_year\":2020,\"end_year\":2020,\"relative_time\":null,\"event_time\":null,\"ranking_order\":\"desc\",\"limit\":10,\"threshold\":null,\"aggregation\":\"latest\",\"chart_preference\":\"bar\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "RANKING",
+      "question_family": "ranking_top_n",
+      "indicators": [
+        "inflation_cpi"
+      ],
+      "countries": [],
+      "country_groups": [],
+      "start_year": 2020,
+      "end_year": 2020,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": "desc",
+      "limit": 10,
+      "threshold": null,
+      "aggregation": "latest",
+      "chart_preference": "bar",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Xu hướng thất nghiệp của Nhật Bản sau COVID.",
+    "raw_output": "{\"intent\":\"TREND_ANALYSIS\",\"question_family\":\"trend_recovery_after_event\",\"indicators\":[\"unemployment_total\"],\"countries\":[\"JPN\"],\"country_groups\":[],\"start_year\":2020,\"end_year\":2023,\"relative_time\":\"after_event\",\"event_time\":\"COVID\",\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"line\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "TREND_ANALYSIS",
+      "question_family": "trend_recovery_after_event",
+      "indicators": [
+        "unemployment_total"
+      ],
+      "countries": [
+        "JPN"
+      ],
+      "country_groups": [],
+      "start_year": 2020,
+      "end_year": 2023,
+      "relative_time": "after_event",
+      "event_time": "COVID",
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "line",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Việt Nam có dữ liệu nợ công từ năm nào đến năm nào?",
+    "raw_output": "{\"intent\":\"COVERAGE\",\"question_family\":\"coverage_indicator_country\",\"indicators\":[\"govdebt_GDP\"],\"countries\":[\"VNM\"],\"country_groups\":[],\"start_year\":null,\"end_year\":null,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":\"count\",\"chart_preference\":\"table\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "COVERAGE",
+      "question_family": "coverage_indicator_country",
+      "indicators": [
+        "govdebt_GDP"
+      ],
+      "countries": [
+        "VNM"
+      ],
+      "country_groups": [],
+      "start_year": null,
+      "end_year": null,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": "count",
+      "chart_preference": "table",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Vẽ line chart cho tăng trưởng GDP thực của Indonesia giai đoạn 2000-2022.",
+    "raw_output": "{\"intent\":\"VISUALIZATION_REQUEST\",\"question_family\":\"visualization_line_chart_period\",\"indicators\":[\"rGDP_growth_YoY\"],\"countries\":[\"IDN\"],\"country_groups\":[],\"start_year\":2000,\"end_year\":2022,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"line\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "VISUALIZATION_REQUEST",
+      "question_family": "visualization_line_chart_period",
+      "indicators": [
+        "rGDP_growth_YoY"
+      ],
+      "countries": [
+        "IDN"
+      ],
+      "country_groups": [],
+      "start_year": 2000,
+      "end_year": 2022,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "line",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": false,
+    "schema_errors": [
+      "invalid_question_family:visualization_line_chart_period"
+    ]
+  },
+  {
+    "message": "Nước nào trong ASEAN có tỷ lệ nghèo giảm mạnh nhất?",
+    "raw_output": "{\"intent\":\"NEED_CLARIFICATION\",\"question_family\":\"ambiguous_time_range\",\"indicators\":[\"poverty_headcount\"],\"countries\":[],\"country_groups\":[],\"start_year\":null,\"end_year\":null,\"relative_time\":\"recent\",\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"none\",\"needs_clarification\":true,\"clarification_questions\":[\"Please clarify the missing or ambiguous slot.\"],\"confidence\":1.0}",
+    "pred": {
+      "intent": "NEED_CLARIFICATION",
+      "question_family": "ambiguous_time_range",
+      "indicators": [
+        "poverty_headcount"
+      ],
+      "countries": [],
+      "country_groups": [],
+      "start_year": null,
+      "end_year": null,
+      "relative_time": "recent",
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "none",
+      "needs_clarification": true,
+      "clarification_questions": [
+        "Please clarify the missing or ambiguous slot."
+      ],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Dự báo nợ công Việt Nam bằng ARIMA.",
+    "raw_output": "{\"intent\":\"UNSUPPORTED\",\"question_family\":\"unsupported_forecast_model\",\"indicators\":[\"govdebt_GDP\"],\"countries\":[\"VNM\"],\"country_groups\":[],\"start_year\":null,\"end_year\":null,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"none\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "UNSUPPORTED",
+      "question_family": "unsupported_forecast_model",
+      "indicators": [
+        "govdebt_GDP"
+      ],
+      "countries": [
+        "VNM"
+      ],
+      "country_groups": [],
+      "start_year": null,
+      "end_year": null,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "none",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": false,
+    "schema_errors": [
+      "invalid_question_family:unsupported_forecast_model"
+    ]
+  },
+  {
+    "message": "Viết SQL lấy bảng gold_fiscal_monetary.",
+    "raw_output": "{\"intent\":\"UNSUPPORTED\",\"question_family\":\"unsupported_raw_sql_request\",\"indicators\":[],\"countries\":[],\"country_groups\":[],\"start_year\":null,\"end_year\":null,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"none\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "UNSUPPORTED",
+      "question_family": "unsupported_raw_sql_request",
+      "indicators": [],
+      "countries": [],
+      "country_groups": [],
+      "start_year": null,
+      "end_year": null,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "none",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "Việt Nam thế nào?",
+    "raw_output": "{\"intent\":\"COUNTRY_PROFILE\",\"question_family\":\"country_profile_risk_summary\",\"indicators\":[],\"countries\":[\"VNM\"],\"country_groups\":[],\"start_year\":null,\"end_year\":null,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"table\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "COUNTRY_PROFILE",
+      "question_family": "country_profile_risk_summary",
+      "indicators": [],
+      "countries": [
+        "VNM"
+      ],
+      "country_groups": [],
+      "start_year": null,
+      "end_year": null,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "table",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  },
+  {
+    "message": "So sánh Việt Nam với Thái Lan.",
+    "raw_output": "{\"intent\":\"COMPARE_COUNTRIES\",\"question_family\":\"compare_countries_single_year\",\"indicators\":[\"GDP_value\"],\"countries\":[\"VNM\",\"THA\"],\"country_groups\":[],\"start_year\":2015,\"end_year\":2015,\"relative_time\":null,\"event_time\":null,\"ranking_order\":null,\"limit\":null,\"threshold\":null,\"aggregation\":null,\"chart_preference\":\"line\",\"needs_clarification\":false,\"clarification_questions\":[],\"confidence\":1.0}",
+    "pred": {
+      "intent": "COMPARE_COUNTRIES",
+      "question_family": "compare_countries_single_year",
+      "indicators": [
+        "GDP_value"
+      ],
+      "countries": [
+        "VNM",
+        "THA"
+      ],
+      "country_groups": [],
+      "start_year": 2015,
+      "end_year": 2015,
+      "relative_time": null,
+      "event_time": null,
+      "ranking_order": null,
+      "limit": null,
+      "threshold": null,
+      "aggregation": null,
+      "chart_preference": "line",
+      "needs_clarification": false,
+      "clarification_questions": [],
+      "confidence": 1.0
+    },
+    "valid_json": true,
+    "schema_pass": true,
+    "schema_errors": []
+  }
+]

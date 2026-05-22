@@ -1,0 +1,65 @@
+{
+  "version": "v1",
+  "random_seed": 42,
+  "target_total_samples": 30000,
+  "target_base_plan_groups": 6000,
+  "target_samples_per_plan": {
+    "min": 3,
+    "max": 7,
+    "default": 5
+  },
+  "year_policy": {
+    "min_year": 1990,
+    "max_year": 2023,
+    "common_single_years": [1997, 2000, 2008, 2010, 2015, 2020, 2021, 2022, 2023],
+    "common_periods": [
+      [2000, 2010],
+      [2010, 2020],
+      [2010, 2023],
+      [2015, 2023],
+      [2020, 2023]
+    ],
+    "unsupported_years": [1900, 1901, 2099]
+  },
+  "event_mapping": {
+    "COVID": {
+      "aliases": ["COVID", "Covid-19", "đại dịch COVID", "dai dich COVID"],
+      "start_year": 2020,
+      "before_period": [2015, 2019],
+      "after_period": [2020, 2023]
+    },
+    "GFC_2008": {
+      "aliases": ["khủng hoảng tài chính 2008", "global financial crisis", "GFC 2008"],
+      "start_year": 2008,
+      "before_period": [2003, 2007],
+      "after_period": [2008, 2012]
+    },
+    "ASIAN_FINANCIAL_CRISIS_1997": {
+      "aliases": ["khủng hoảng tài chính châu Á 1997", "Asian financial crisis 1997"],
+      "start_year": 1997,
+      "before_period": [1993, 1996],
+      "after_period": [1997, 2001]
+    }
+  },
+  "ranking_policy": {
+    "top_n_values": [5, 10, 15],
+    "default_top_n": 10
+  },
+  "threshold_policy": {
+    "anomaly_thresholds": [0.75, 0.8, 0.9],
+    "debt_thresholds": [60, 90, 100],
+    "inflation_thresholds": [5, 10, 20],
+    "unemployment_thresholds": [5, 10, 20]
+  },
+  "family_weight_policy": {
+    "high": 3,
+    "medium": 2,
+    "low": 1
+  },
+  "generation_buckets": {
+    "deterministic_template": 0.55,
+    "llm_paraphrase": 0.30,
+    "hard_cases": 0.10,
+    "off_topic_unsupported": 0.05
+  }
+}

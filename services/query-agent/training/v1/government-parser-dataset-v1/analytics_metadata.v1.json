@@ -1,0 +1,50 @@
+{
+  "version": "v1",
+  "trend_method": {
+    "name": "linear_regression_by_country",
+    "group_by": "country_code",
+    "min_observations": 3,
+    "output_suffixes": ["actual", "trend", "residual", "slope", "intercept", "r2"]
+  },
+  "anomaly_method": {
+    "name": "isolation_forest_on_residuals",
+    "min_observations": 5,
+    "score_range": [0, 1],
+    "default_threshold": 0.75,
+    "output_suffixes": ["anomaly_score"]
+  },
+  "analytics_tables_indicators": {
+    "gold_growth_dynamics": ["rGDP_growth_YoY", "GDP_growth_YoY", "trend_deviation", "GDP_pc_growth_gap", "rolling_mean_5yr"],
+    "gold_fiscal_monetary": ["govdebt_GDP", "fiscal_balance_GDP", "real_interest_rate", "inflation_gap", "inflation_cpi", "tax_revenue_pct_GDP"],
+    "gold_crisis_risk": ["REER_deviation", "spending_efficiency"],
+    "gold_social_welfare": ["poverty_headcount", "poverty_change_5yr", "hcons_growth", "unemployment_total", "youth_unemployment_gap"],
+    "gold_structural_composition": ["GFCF_to_GDP", "GNI_to_GDP", "agri_va_share", "manuf_va_share", "food_bev_share_manuf"]
+  },
+  "analytics_suffixes": [
+    "actual",
+    "trend",
+    "residual",
+    "slope",
+    "intercept",
+    "r2",
+    "anomaly_score"
+  ],
+  "cluster": {
+    "method": "kmeans",
+    "n_clusters": 5,
+    "target_years": [2000, 2010, 2020, 2022],
+    "lookback_years": 3,
+    "forward_fill_limit": 2,
+    "imputer": "KNNImputer(n_neighbors=5)",
+    "scaler": "StandardScaler",
+    "indicators": [
+      "agri_va_share",
+      "manuf_va_share",
+      "GFCF_to_GDP",
+      "GNI_to_GDP",
+      "poverty_headcount",
+      "urban_pop_pct",
+      "unemployment_total"
+    ]
+  }
+}

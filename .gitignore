@@ -1,0 +1,12 @@
+tmp/
+summarize/
+services/data-pipeline/data
+reports/
+memory/
+logs/
+docs/
+job.txt
+infra/gcp/cloud-run/*.env.local
+infra/gcp/cloud-run/secrets.env.local
+*.env.local
+secrets.env.local

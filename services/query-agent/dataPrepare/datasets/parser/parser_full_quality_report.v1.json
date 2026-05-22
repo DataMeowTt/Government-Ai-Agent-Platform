@@ -1,0 +1,153 @@
+{
+  "version": "v1",
+  "total_samples": 30000,
+  "quality_checks": {
+    "jsonl_parse_errors": 0,
+    "chatml_errors": 0,
+    "assistant_json_errors": 0,
+    "schema_errors": 0,
+    "label_consistency_errors": 0,
+    "catalog_errors": 0,
+    "semantic_errors": 0,
+    "duplicate_user_messages": 0,
+    "mojibake_findings": 0,
+    "placeholder_findings": 0,
+    "synthetic_artifact_findings": 0,
+    "too_long_messages": 0
+  },
+  "coverage": {
+    "intents_covered": 27,
+    "question_families_covered": 151,
+    "countries_covered": 88,
+    "indicators_covered": 56,
+    "plan_groups_covered": 6002
+  },
+  "distribution": {
+    "samples_by_generation_source": {
+      "deterministic_template": 16757,
+      "hard_cases": 3997,
+      "llm_paraphrase": 7446,
+      "off_topic_unsupported": 1800
+    },
+    "samples_by_intent": {
+      "ANOMALY_DETECTION": 1300,
+      "ANOMALY_EXPLANATION": 600,
+      "CLUSTER_BENCHMARK": 800,
+      "CLUSTER_MEMBERSHIP": 700,
+      "COMPARE_COUNTRIES": 2500,
+      "COMPARE_INDICATORS": 900,
+      "COMPARE_PERIODS": 1000,
+      "CONDITIONAL_FILTER": 900,
+      "COUNTRY_PROFILE": 800,
+      "COVERAGE": 1000,
+      "CRISIS_ANALYSIS": 900,
+      "DATA_QUALITY": 700,
+      "FOLLOW_UP": 1400,
+      "INDICATOR_DEFINITION": 800,
+      "LATEST_VALUE": 1000,
+      "MISSING_DATA": 900,
+      "NEED_CLARIFICATION": 1600,
+      "OFF_TOPIC": 1000,
+      "RANKING": 2000,
+      "RANK_BY_CHANGE": 1000,
+      "RISK_ALERT": 700,
+      "THEME_SUMMARY": 600,
+      "TIME_SERIES": 2000,
+      "TREND_ANALYSIS": 1800,
+      "UNSUPPORTED": 800,
+      "VALUE_LOOKUP": 1500,
+      "VISUALIZATION_REQUEST": 800
+    },
+    "samples_by_language_style": {
+      "en": 8058,
+      "mixed_vi_en": 3682,
+      "short_chat": 3598,
+      "technical_code": 1045,
+      "vi": 9935,
+      "vi_no_diacritics": 3682
+    },
+    "samples_by_question_family_top_20": [
+      [
+        "time_series_single_country_period",
+        334
+      ],
+      [
+        "time_series_single_country_decade",
+        334
+      ],
+      [
+        "time_series_multi_country_period",
+        333
+      ],
+      [
+        "time_series_event_after",
+        333
+      ],
+      [
+        "time_series_event_before",
+        333
+      ],
+      [
+        "time_series_recent_years",
+        333
+      ],
+      [
+        "compare_country_vs_group_average",
+        313
+      ],
+      [
+        "compare_country_vs_region",
+        313
+      ],
+      [
+        "compare_country_vs_peer",
+        313
+      ],
+      [
+        "compare_countries_volatility",
+        313
+      ],
+      [
+        "compare_countries_period",
+        312
+      ],
+      [
+        "compare_countries_single_year",
+        312
+      ],
+      [
+        "compare_countries_after_event",
+        312
+      ],
+      [
+        "compare_countries_before_after_event",
+        312
+      ],
+      [
+        "value_lookup_single_country_year",
+        300
+      ],
+      [
+        "value_lookup_single_country_multi_indicator_year",
+        300
+      ],
+      [
+        "value_lookup_multi_country_single_year",
+        300
+      ],
+      [
+        "value_lookup_crisis_flag_country_year",
+        300
+      ],
+      [
+        "value_lookup_structural_indicator_country_year",
+        300
+      ],
+      [
+        "missing_indicator",
+        267
+      ]
+    ]
+  },
+  "warnings": []
+}

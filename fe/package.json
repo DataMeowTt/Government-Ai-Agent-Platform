@@ -1,0 +1,40 @@
+{
+  "name": "fe",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.100.5",
+    "@tanstack/react-table": "^8.21.3",
+    "axios": "^1.15.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.4",
+    "@types/node": "^20.19.39",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.5.0",
+    "es-abstract": "^1.23.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "postcss": "^8.5.12",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5"
+  }
+}

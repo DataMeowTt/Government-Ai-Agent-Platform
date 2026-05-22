@@ -1,0 +1,39 @@
+sources:
+  - source_name: wdi
+    source_type: local_path
+    enabled: true
+    description: World Bank WDI bulk CSV extracted locally from a user download.
+    license_note: World Bank WDI bulk CSV, local extracted files from user download. Default open data license is generally CC BY 4.0 unless indicator metadata says otherwise.
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: data/raw/worldBank/
+    indicator_mapping: null
+    output_format: csv
+
+  - source_name: gmd
+    source_type: local_path
+    enabled: true
+    description: Global Macro Database CSV downloaded locally by the user.
+    license_note: Global Macro Database, user-downloaded CSV. Treat as non-commercial/citation-required unless the user provides a different license confirmation.
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: data/raw/gmd/GMD.csv
+    indicator_mapping: null
+    output_format: csv
+
+  - source_name: fao_macro
+    source_type: local_path
+    enabled: true
+    description: FAOSTAT Macro-Statistics Key Indicators local normalized CSV and codebooks.
+    license_note: FAOSTAT/FAO attribution note. Preserve the downloaded normalized CSV and companion codebook files.
+    base_url: null
+    api_url: null
+    csv_url: null
+    gcs_uri: null
+    local_path: data/raw/Macro-Statistics_Key_Indicators_E_All_Data_(Normalized)/
+    indicator_mapping: null
+    output_format: csv

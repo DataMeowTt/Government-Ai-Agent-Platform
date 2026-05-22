@@ -1,0 +1,48 @@
+{
+  "total": 500,
+  "valid_json_rate": 1.0,
+  "schema_pass_rate": 0.998,
+  "exact_full_json_rate": 0.812,
+  "intent_accuracy_on_schema_pass": 0.9498997995991983,
+  "question_family_accuracy_on_schema_pass": 0.8677354709418837,
+  "year_exact_accuracy_on_schema_pass": 0.8897795591182365,
+  "ranking_order_accuracy_on_schema_pass": 1.0,
+  "aggregation_accuracy_on_schema_pass": 1.0,
+  "chart_preference_accuracy_on_schema_pass": 1.0,
+  "needs_clarification_accuracy_on_schema_pass": 0.9899799599198397,
+  "indicator_micro": {
+    "precision": 1.0,
+    "recall": 0.994535519125683,
+    "f1": 0.9972602739726028,
+    "tp": 546,
+    "fp": 0,
+    "fn": 3
+  },
+  "country_micro": {
+    "precision": 0.9670710571923743,
+    "recall": 0.9721254355400697,
+    "f1": 0.9695916594265854,
+    "tp": 558,
+    "fp": 19,
+    "fn": 16
+  },
+  "country_group_micro": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 25,
+    "fp": 0,
+    "fn": 0
+  },
+  "executable_plan_rate": 0.988,
+  "dangerous_wrong_query_rate": 0.176,
+  "dangerous_wrong_query_count": 88,
+  "schema_error_top": {
+    "invalid_intent:DECADE_ANALYSIS": 1,
+    "invalid_question_family:decade_analysis_country_year": 1
+  },
+  "split": "test",
+  "num_samples": 500,
+  "runtime_seconds": 1928.54,
+  "prediction_path": "/kaggle/working/government-parser-finetune/outputs/reports/test_predictions.jsonl"
+}

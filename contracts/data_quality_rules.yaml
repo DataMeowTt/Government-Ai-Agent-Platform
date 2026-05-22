@@ -1,0 +1,274 @@
+version: 1
+project: government_ai_agent_platform
+domain: economic_indicators
+
+defaults:
+  min_year: 1980
+  max_year: 2030
+  allowed_sources:
+    - wdi
+    - gmd
+    - macro
+  country_code_regex: "^[A-Z]{3}$"
+  fail_pipeline_on_error: true
+
+severity_levels:
+  error:
+    description: Must fail the pipeline before publish.
+  warning:
+    description: Should be reported but does not always block publish.
+  info:
+    description: For observability only.
+
+silver_rules:
+  required_columns:
+    severity: error
+    columns:
+      - country_code
+      - country
+      - year
+      - indicator
+      - value
+      - source
+
+  required_cloud_metadata_columns:
+    severity: error
+    columns:
+      - run_id
+      - run_date
+      - loaded_at
+    required_when: cloud_metadata_available
+
+  no_duplicate_country_year_indicator_source:
+    severity: error
+    key:
+      - country_code
+      - year
+      - indicator
+      - source
+
+  country_code_iso3_format:
+    severity: error
+    column: country_code
+    regex: "^[A-Z]{3}$"
+
+  year_range:
+    severity: error
+    column: year
+    min: 1980
+    max: 2030
+
+  source_allowed:
+    severity: error
+    column: source
+    allowed_values:
+      - wdi
+      - gmd
+      - macro
+
+  indicator_must_exist_in_contract:
+    severity: error
+    column: indicator
+    contract: indicator_contract.yaml
+
+  null_value_rate_by_indicator:
+    severity: warning
+    column: value
+    group_by:
+      - indicator
+      - source
+    warning_threshold: 0.70
+    error_threshold: 0.95
+
+gold_rules:
+  required_key_columns:
+    severity: error
+    columns:
+      - country_code
+      - country
+      - year
+
+  required_cloud_metadata_columns:
+    severity: error
+    columns:
+      - run_id
+      - run_date
+      - loaded_at
+    required_when: cloud_metadata_available
+
+  no_duplicate_country_year:
+    severity: error
+    key:
+      - country_code
+      - year
+
+  country_code_iso3_format:
+    severity: error
+    column: country_code
+    regex: "^[A-Z]{3}$"
+
+  year_range:
+    severity: error
+    column: year
+    min: 1980
+    max: 2030
+
+  completeness_score_range:
+    severity: error
+    column: completeness_score
+    min: 0.0
+    max: 1.0
+
+  crisis_binary_flags:
+    severity: error
+    columns:
+      - SovDebtCrisis
+      - CurrencyCrisis
+      - BankingCrisis
+      - crisis_any
+    allowed_values:
+      - 0
+      - 1
+
+  crisis_composite_range:
+    severity: error
+    column: crisis_composite
+    allowed_values:
+      - 0
+      - 1
+      - 2
+      - 3
+
+  no_public_indicator_missing_from_gold:
+    severity: error
+    contract: indicator_contract.yaml
+
+  no_unknown_public_gold_column:
+    severity: error
+    contract: indicator_contract.yaml
+    allow_columns:
+      - country_code
+      - country
+      - year
+      - income_group
+      - development_group
+      - run_id
+      - run_date
+      - loaded_at
+
+  technical_columns_not_public:
+    severity: error
+    technical_columns:
+      - decade
+      - flag_score
+      - completeness_score
+
+  preserve_null_for_no_interpolate_indicators:
+    severity: error
+    indicators:
+      - poverty_headcount
+      - poverty_change_5yr
+      - crisis_any
+      - crisis_composite
+      - SovDebtCrisis
+      - CurrencyCrisis
+      - BankingCrisis
+
+analytics_rules:
+  required_key_columns:
+    severity: error
+    columns:
+      - country_code
+      - country
+      - year
+
+  required_cloud_metadata_columns:
+    severity: error
+    columns:
+      - run_id
+      - run_date
+      - loaded_at
+    required_when: cloud_metadata_available
+
+  no_duplicate_country_year:
+    severity: error
+    key:
+      - country_code
+      - year
+
+  trend_columns_required_for_supported_indicators:
+    severity: error
+    applies_when:
+      indicator_contract_field: supports_trend
+      value: true
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+
+  anomaly_columns_required_for_supported_indicators:
+    severity: error
+    applies_when:
+      indicator_contract_field: supports_anomaly
+      value: true
+    required_suffixes:
+      - _anomaly_score
+
+  cluster_indicators_required:
+    severity: error
+    applies_when:
+      indicator_contract_field: used_for_cluster
+      value: true
+
+  cluster_latest_valid_year_required:
+    severity: error
+    table: analytics_clusters
+    required_columns:
+      - latest_valid_year
+
+bigquery_rules:
+  datasets_must_exist:
+    severity: error
+    datasets:
+      - gov_ai_silver
+      - gov_ai_gold
+      - gov_ai_analytics
+      - gov_ai_ops
+
+  production_tables_must_have_metadata:
+    severity: error
+    columns:
+      - run_id
+      - run_date
+      - loaded_at
+
+  production_publish_requires_staging_validation:
+    severity: error
+    publish_strategy: staging_validate_write_truncate
+
+  staging_table_name_no_dash:
+    severity: error
+    regex: "^[A-Za-z0-9_]+$"
+
+postgres_sync_rules:
+  row_count_match_bigquery:
+    severity: error
+    enabled_when: sync_bigquery_to_postgres_enabled
+
+  synced_tables:
+    severity: error
+    tables:
+      - gold_growth_dynamics
+      - gold_fiscal_monetary
+      - gold_crisis_risk
+      - gold_social_welfare
+      - gold_structural_composition
+      - analytics_gold_growth_dynamics
+      - analytics_gold_fiscal_monetary
+      - analytics_gold_crisis_risk
+      - analytics_gold_social_welfare
+      - analytics_gold_structural_composition
+      - analytics_clusters

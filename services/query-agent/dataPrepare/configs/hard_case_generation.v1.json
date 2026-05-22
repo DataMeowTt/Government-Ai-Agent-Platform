@@ -1,0 +1,38 @@
+{
+  "version": "v1",
+  "target_generation_bucket": "hard_cases",
+  "target_samples": 3997,
+  "random_seed": 42,
+  "hard_case_types": {
+    "missing_diacritics": 0.18,
+    "light_typo": 0.12,
+    "abbreviation": 0.12,
+    "short_chat": 0.12,
+    "mixed_language": 0.1,
+    "punctuation_noise": 0.08,
+    "case_noise": 0.06,
+    "ambiguous_alias": 0.08,
+    "missing_slot_clarification": 0.08,
+    "follow_up_short": 0.06
+  },
+  "noise_policy": {
+    "max_typos_per_message": 2,
+    "preserve_numbers": true,
+    "preserve_iso3_codes": true,
+    "preserve_years": true,
+    "preserve_country_surface_terms": true,
+    "preserve_indicator_surface_terms": true
+  },
+  "validation_policy": {
+    "drop_if_placeholder_remaining": true,
+    "drop_if_mojibake": true,
+    "drop_if_duplicate_global": true,
+    "drop_if_too_long_chars": 500,
+    "drop_if_required_year_missing_for_non_followup": true,
+    "drop_if_required_country_missing_for_non_followup": true
+  },
+  "fallback_policy": {
+    "allow_safe_template_fill": true,
+    "max_fallback_ratio": 0.2
+  }
+}

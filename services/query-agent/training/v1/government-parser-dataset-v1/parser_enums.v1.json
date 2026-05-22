@@ -1,0 +1,8 @@
+{
+  "ranking_order": ["asc", "desc", null],
+  "chart_preference": ["line", "bar", "scatter", "table", "none", null],
+  "aggregation": ["avg", "sum", "min", "max", "change", "pct_change", "latest", "count", null],
+  "relative_time": ["latest", "recent", "last_3_years", "last_5_years", "last_10_years", "after_event", "before_event", null],
+  "event_time": ["COVID", "GFC_2008", "ASIAN_FINANCIAL_CRISIS_1997", null],
+  "country_groups": ["ASEAN", "EU", "G7", "G20", "OECD", "WORLD", "ASIA", "EUROPE", "AFRICA", "LATAM"]
+}

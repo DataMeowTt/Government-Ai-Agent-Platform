@@ -1,0 +1,2071 @@
+{
+  "cases": [
+    {
+      "id": "DIRECT_001",
+      "category": "DIRECT_ANSWER",
+      "description": "Define public debt to GDP",
+      "turns": [
+        {
+          "message": "Nợ công/GDP là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_002",
+      "category": "DIRECT_ANSWER",
+      "description": "Define CPI inflation",
+      "turns": [
+        {
+          "message": "Lạm phát CPI là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_003",
+      "category": "DIRECT_ANSWER",
+      "description": "Define real GDP growth YoY",
+      "turns": [
+        {
+          "message": "Tăng trưởng GDP thực YoY nghĩa là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_004",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain unemployment rate",
+      "turns": [
+        {
+          "message": "Tỷ lệ thất nghiệp phản ánh điều gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_005",
+      "category": "DIRECT_ANSWER",
+      "description": "Define poverty headcount",
+      "turns": [
+        {
+          "message": "Poverty headcount là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_006",
+      "category": "DIRECT_ANSWER",
+      "description": "Define REER deviation",
+      "turns": [
+        {
+          "message": "REER deviation là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_007",
+      "category": "DIRECT_ANSWER",
+      "description": "Define fiscal balance GDP",
+      "turns": [
+        {
+          "message": "Fiscal balance/GDP là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_008",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain tax revenue GDP",
+      "turns": [
+        {
+          "message": "Tax revenue/GDP dùng để đánh giá gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_009",
+      "category": "DIRECT_ANSWER",
+      "description": "Define GFCF to GDP",
+      "turns": [
+        {
+          "message": "GFCF to GDP là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_010",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain data coverage",
+      "turns": [
+        {
+          "message": "Coverage dữ liệu nghĩa là gì trong hệ thống này?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_011",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain current account GDP",
+      "turns": [
+        {
+          "message": "Current account/GDP cho biết điều gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_012",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain real interest rate",
+      "turns": [
+        {
+          "message": "Real interest rate là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_013",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain trade openness",
+      "turns": [
+        {
+          "message": "Trade openness là chỉ số gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_014",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain external debt",
+      "turns": [
+        {
+          "message": "External debt/GNI dùng để hiểu rủi ro gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "DIRECT_015",
+      "category": "DIRECT_ANSWER",
+      "description": "Explain GDP per capita",
+      "turns": [
+        {
+          "message": "GDP per capita khác gì GDP tổng?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": [
+              "DIRECT_ANSWER",
+              "GENERAL_EXPLANATION"
+            ],
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_001",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top inflation CPI 2020",
+      "turns": [
+        {
+          "message": "Top 10 nước có lạm phát CPI cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_002",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top public debt 2021",
+      "turns": [
+        {
+          "message": "Top 5 nước có nợ công/GDP cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_003",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top unemployment 2020",
+      "turns": [
+        {
+          "message": "Top 10 nước có tỷ lệ thất nghiệp cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_004",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Lowest GDP growth 2020",
+      "turns": [
+        {
+          "message": "Top 8 nước có tăng trưởng GDP thực thấp nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_005",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top poverty headcount 2019",
+      "turns": [
+        {
+          "message": "Top 5 nước có poverty headcount cao nhất năm 2019",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_006",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top tax revenue 2022",
+      "turns": [
+        {
+          "message": "Top 10 nước có tax revenue/GDP cao nhất năm 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_007",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Lowest real interest rate 2021",
+      "turns": [
+        {
+          "message": "Top 5 nước có real interest rate thấp nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_008",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top GDP growth 2021",
+      "turns": [
+        {
+          "message": "Top 10 nước có tăng trưởng GDP thực cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_009",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top fiscal balance 2020",
+      "turns": [
+        {
+          "message": "Top 10 nước có fiscal balance/GDP cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_010",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Lowest fiscal balance 2022",
+      "turns": [
+        {
+          "message": "Top 10 nước có fiscal balance/GDP thấp nhất năm 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_011",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top GFCF GDP 2020",
+      "turns": [
+        {
+          "message": "Top 7 nước có GFCF to GDP cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_012",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top trade openness 2021",
+      "turns": [
+        {
+          "message": "Top 10 nước có trade openness cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_013",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top GNI to GDP 2020",
+      "turns": [
+        {
+          "message": "Top 5 nước có GNI to GDP cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_014",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Lowest inflation 2020",
+      "turns": [
+        {
+          "message": "Top 10 nước có lạm phát CPI thấp nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "RANKING_015",
+      "category": "DATA_QUERY_RANKING",
+      "description": "Top GDP per capita 2022",
+      "turns": [
+        {
+          "message": "Top 10 nước có GDP per capita cao nhất năm 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_001",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Vietnam Thailand debt compare",
+      "turns": [
+        {
+          "message": "So sánh nợ công Việt Nam và Thái Lan từ 2010 đến 2023",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_002",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Argentina Brazil inflation compare",
+      "turns": [
+        {
+          "message": "So sánh lạm phát CPI của Argentina và Brazil từ 2015 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_003",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "ASEAN unemployment compare",
+      "turns": [
+        {
+          "message": "So sánh thất nghiệp của Việt Nam, Thái Lan và Indonesia từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_004",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "China India growth compare",
+      "turns": [
+        {
+          "message": "So sánh tăng trưởng GDP thực của China và India từ 2000 đến 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_005",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Malaysia Philippines tax compare",
+      "turns": [
+        {
+          "message": "So sánh tax revenue/GDP của Malaysia và Philippines từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_006",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Vietnam Indonesia CPI compare",
+      "turns": [
+        {
+          "message": "So sánh lạm phát CPI Việt Nam và Indonesia giai đoạn 2010-2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_007",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Thailand Malaysia public debt compare",
+      "turns": [
+        {
+          "message": "So sánh nợ công/GDP của Thailand và Malaysia từ 2005 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_008",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Japan Korea unemployment compare",
+      "turns": [
+        {
+          "message": "So sánh tỷ lệ thất nghiệp của Japan và Korea từ 2000 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_009",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "US Canada fiscal balance compare",
+      "turns": [
+        {
+          "message": "So sánh fiscal balance/GDP của United States và Canada từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_010",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Germany France GFCF compare",
+      "turns": [
+        {
+          "message": "So sánh GFCF to GDP của Germany và France từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_011",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Brazil Mexico GDP per capita compare",
+      "turns": [
+        {
+          "message": "So sánh GDP per capita của Brazil và Mexico từ 2000 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_012",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "India Indonesia poverty compare",
+      "turns": [
+        {
+          "message": "So sánh poverty headcount của India và Indonesia từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_013",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Vietnam Malaysia trade compare",
+      "turns": [
+        {
+          "message": "So sánh trade openness của Việt Nam và Malaysia từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_014",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Argentina Turkey CPI compare",
+      "turns": [
+        {
+          "message": "So sánh CPI inflation của Argentina và Turkey từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COMPARE_015",
+      "category": "DATA_QUERY_COMPARE",
+      "description": "Vietnam Philippines trade openness compare",
+      "turns": [
+        {
+          "message": "So sánh trade openness của Việt Nam và Philippines từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_001",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Vietnam debt trend",
+      "turns": [
+        {
+          "message": "Xu hướng nợ công/GDP của Việt Nam từ 2010 đến 2023",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_002",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Argentina inflation trend",
+      "turns": [
+        {
+          "message": "Diễn biến lạm phát CPI của Argentina từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_003",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Thailand unemployment series",
+      "turns": [
+        {
+          "message": "Cho tôi chuỗi thời gian thất nghiệp của Thailand từ 2005 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_004",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "India GDP growth trend",
+      "turns": [
+        {
+          "message": "Tăng trưởng GDP thực của India giai đoạn 2000-2020 như thế nào?",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_005",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Indonesia poverty trend",
+      "turns": [
+        {
+          "message": "Xu hướng poverty headcount của Indonesia từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_006",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Vietnam CPI trend",
+      "turns": [
+        {
+          "message": "Diễn biến lạm phát CPI của Việt Nam từ 2000 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_007",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Brazil debt trend",
+      "turns": [
+        {
+          "message": "Xu hướng nợ công/GDP của Brazil từ 2005 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_008",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Malaysia tax trend",
+      "turns": [
+        {
+          "message": "Tax revenue/GDP của Malaysia thay đổi ra sao từ 2010 đến 2022?",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_009",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Turkey real interest trend",
+      "turns": [
+        {
+          "message": "Xu hướng real interest rate của Turkey từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "TREND_010",
+      "category": "DATA_QUERY_TREND_TIME_SERIES",
+      "description": "Philippines trade openness trend",
+      "turns": [
+        {
+          "message": "Chuỗi thời gian trade openness của Philippines từ 2000 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": [
+              "VALID_TREND_QUERY",
+              "VALID_COMPARE_QUERY"
+            ],
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_001",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Inflation coverage",
+      "turns": [
+        {
+          "message": "Dữ liệu lạm phát CPI có coverage như thế nào?",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "COVERAGE"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_002",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Vietnam public debt coverage",
+      "turns": [
+        {
+          "message": "Coverage dữ liệu nợ công/GDP của Việt Nam",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "COVERAGE"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_003",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Tax revenue coverage",
+      "turns": [
+        {
+          "message": "Coverage dữ liệu tax revenue/GDP trên các nước",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "COVERAGE"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_004",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Unemployment coverage ASEAN",
+      "turns": [
+        {
+          "message": "Coverage dữ liệu thất nghiệp của các nước ASEAN",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "COVERAGE"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_005",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "GDP growth coverage",
+      "turns": [
+        {
+          "message": "Dữ liệu tăng trưởng GDP thực có coverage tốt không?",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "COVERAGE"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_006",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Vietnam public debt anomalies",
+      "turns": [
+        {
+          "message": "Kiểm tra điểm bất thường của nợ công/GDP Việt Nam từ 2010 đến 2023",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "ANOMALY_DETECTION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_007",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Argentina CPI anomalies",
+      "turns": [
+        {
+          "message": "Những năm bất thường về lạm phát CPI của Argentina",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "ANOMALY_DETECTION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_008",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Vietnam GDP growth anomaly",
+      "turns": [
+        {
+          "message": "Có bất thường nào trong tăng trưởng GDP thực của Việt Nam không?",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "ANOMALY_DETECTION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_009",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Thailand unemployment anomaly",
+      "turns": [
+        {
+          "message": "Kiểm tra bất thường tỷ lệ thất nghiệp của Thailand từ 2010 đến 2022",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "ANOMALY_DETECTION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "COV_ANOM_010",
+      "category": "DATA_QUERY_COVERAGE_ANOMALY",
+      "description": "Brazil fiscal balance anomaly",
+      "turns": [
+        {
+          "message": "Có năm nào bất thường về fiscal balance/GDP của Brazil không?",
+          "expect": {
+            "status": [
+              "success",
+              "unsupported"
+            ],
+            "route": "DATA_QUERY",
+            "intent": "ANOMALY_DETECTION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_001",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Analyze inflation ranking reasons",
+      "turns": [
+        {
+          "message": "Top 10 nước có lạm phát CPI cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Phân tích lý do tại sao được không?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_002",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Comment debt compare trend",
+      "turns": [
+        {
+          "message": "So sánh nợ công Việt Nam và Thái Lan từ 2010 đến 2023",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Nhận xét xu hướng chính giúp tôi",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_003",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Common factors high debt",
+      "turns": [
+        {
+          "message": "Top 5 nước có nợ công/GDP cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Các nước này có điểm chung gì không?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_004",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Explain unemployment trend",
+      "turns": [
+        {
+          "message": "Xu hướng thất nghiệp của Thailand từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        },
+        {
+          "message": "Giải thích kết quả này ngắn gọn",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_005",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Analyze Argentina inflation trend",
+      "turns": [
+        {
+          "message": "Diễn biến lạm phát CPI của Argentina từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        },
+        {
+          "message": "Vì sao xu hướng này có thể xảy ra?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_006",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Comment GDP ranking",
+      "turns": [
+        {
+          "message": "Top 10 nước có tăng trưởng GDP thực cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Nhận xét nhanh về nhóm nước đứng đầu",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_007",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Debt trend qualitative reasons",
+      "turns": [
+        {
+          "message": "Xu hướng nợ công/GDP của Brazil từ 2005 đến 2022",
+          "expect": {
+            "status": "success",
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        },
+        {
+          "message": "Phân tích ngắn lý do tăng giảm",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_008",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Tax compare insight",
+      "turns": [
+        {
+          "message": "So sánh tax revenue/GDP của Malaysia và Philippines từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Có insight chính nào từ biểu đồ này?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_009",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "Poverty trend explanation",
+      "turns": [
+        {
+          "message": "Xu hướng poverty headcount của Indonesia từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        },
+        {
+          "message": "Giải thích kết quả này cho người không chuyên",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_ANALYSIS_010",
+      "category": "FOLLOW_UP_ANALYSIS",
+      "description": "High public debt ranking comment",
+      "turns": [
+        {
+          "message": "Top 5 nước có nợ công/GDP cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Những rủi ro chung của nhóm này là gì?",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_SIMPLE_QUERY",
+            "route": "FOLLOW_UP_ANALYSIS",
+            "parserDebug": null
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_001",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Change ranking year and limit",
+      "turns": [
+        {
+          "message": "Top 10 nước có lạm phát CPI cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Đổi sang năm 2021 và lấy top 5 thôi",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "RANKING",
+            "start_year": 2021,
+            "end_year": 2021,
+            "limit": 5
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_002",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Add Indonesia to compare",
+      "turns": [
+        {
+          "message": "So sánh nợ công Việt Nam và Thái Lan từ 2010 đến 2023",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Thêm Indonesia vào so sánh",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_003",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Unemployment top 3 2022",
+      "turns": [
+        {
+          "message": "Top 10 nước có thất nghiệp cao nhất năm 2020",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Lấy top 3 năm 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "RANKING",
+            "start_year": 2022,
+            "end_year": 2022,
+            "limit": 3
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_004",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Inflation period subset",
+      "turns": [
+        {
+          "message": "Xu hướng lạm phát CPI của Argentina từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "route": "DATA_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ]
+          }
+        },
+        {
+          "message": "Chỉ xem giai đoạn 2015 đến 2020",
+          "expect": {
+            "status": "success",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": [
+              "TIME_SERIES",
+              "TREND_ANALYSIS",
+              "VALUE_LOOKUP"
+            ],
+            "start_year": 2015,
+            "end_year": 2020
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_005",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Debt ranking switch year",
+      "turns": [
+        {
+          "message": "Top 5 nước có nợ công/GDP cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Đổi sang năm 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "RANKING",
+            "start_year": 2022,
+            "end_year": 2022
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_006",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Compare add Philippines",
+      "turns": [
+        {
+          "message": "So sánh lạm phát CPI Việt Nam và Indonesia giai đoạn 2010-2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Thêm Philippines nữa",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_007",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "GDP growth ranking top 5",
+      "turns": [
+        {
+          "message": "Top 10 nước có tăng trưởng GDP thực cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Chỉ lấy top 5 thôi",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "RANKING",
+            "limit": 5
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_008",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Tax compare shorter period",
+      "turns": [
+        {
+          "message": "So sánh tax revenue/GDP của Malaysia và Philippines từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Chỉ xem từ 2015 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "COMPARE_COUNTRIES",
+            "start_year": 2015,
+            "end_year": 2022
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_009",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Trade openness ranking switch lowest",
+      "turns": [
+        {
+          "message": "Top 10 nước có trade openness cao nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "RANKING"
+          }
+        },
+        {
+          "message": "Giờ lấy top 5 thấp nhất năm 2021",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_RANKING_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "RANKING",
+            "limit": 5
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "FOLLOWUP_MODIFY_010",
+      "category": "FOLLOW_UP_MODIFY_QUERY",
+      "description": "Trade openness compare add Thailand",
+      "turns": [
+        {
+          "message": "So sánh trade openness của Việt Nam và Philippines từ 2010 đến 2022",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "DATA_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        },
+        {
+          "message": "Thêm Thailand vào cùng biểu đồ",
+          "expect": {
+            "status": "success",
+            "questionType": "VALID_COMPARE_QUERY",
+            "route": "FOLLOW_UP_MODIFY_QUERY",
+            "intent": "COMPARE_COUNTRIES"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_001",
+      "category": "NEED_CLARIFICATION",
+      "description": "Compare countries missing indicator",
+      "turns": [
+        {
+          "message": "So sánh Việt Nam với Thái Lan",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_002",
+      "category": "NEED_CLARIFICATION",
+      "description": "Vietnam data missing indicator",
+      "turns": [
+        {
+          "message": "Cho tôi dữ liệu của Việt Nam",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_003",
+      "category": "NEED_CLARIFICATION",
+      "description": "Ranking missing indicator",
+      "turns": [
+        {
+          "message": "Top 10 nước cao nhất năm 2020",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_004",
+      "category": "NEED_CLARIFICATION",
+      "description": "Trend missing indicator",
+      "turns": [
+        {
+          "message": "Xu hướng của Argentina từ 2010 đến 2022",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_005",
+      "category": "NEED_CLARIFICATION",
+      "description": "This indicator ambiguous",
+      "turns": [
+        {
+          "message": "So sánh chỉ số này giữa Việt Nam và Indonesia",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_006",
+      "category": "NEED_CLARIFICATION",
+      "description": "Ranking missing metric",
+      "turns": [
+        {
+          "message": "Cho tôi bảng xếp hạng năm 2021",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_007",
+      "category": "NEED_CLARIFICATION",
+      "description": "Compare many countries missing metric",
+      "turns": [
+        {
+          "message": "So sánh Việt Nam, Malaysia và Philippines giai đoạn 2010-2020",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "CLARIFY_008",
+      "category": "NEED_CLARIFICATION",
+      "description": "Trend missing country",
+      "turns": [
+        {
+          "message": "Xu hướng lạm phát CPI từ 2010 đến 2022",
+          "expect": {
+            "status": "needs_clarification",
+            "questionType": "NEED_CLARIFICATION",
+            "route": "NEED_CLARIFICATION"
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_001",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "ARIMA GDP forecast",
+      "turns": [
+        {
+          "message": "Dự báo GDP Việt Nam 2030 bằng mô hình ARIMA",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_002",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "Train inflation model",
+      "turns": [
+        {
+          "message": "Train model dự báo lạm phát cho tôi",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_003",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "Delete table SQL",
+      "turns": [
+        {
+          "message": "Viết SQL trực tiếp để xóa bảng dữ liệu",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_004",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "Weather off topic",
+      "turns": [
+        {
+          "message": "Thời tiết Hà Nội hôm nay thế nào?",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_005",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "World Cup off topic",
+      "turns": [
+        {
+          "message": "Ai vô địch World Cup 2022?",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_006",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "Stock advice off topic",
+      "turns": [
+        {
+          "message": "Tư vấn mua cổ phiếu nào hôm nay?",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    },
+    {
+      "id": "UNSUPPORTED_007",
+      "category": "UNSUPPORTED_OFF_TOPIC",
+      "description": "Future crisis prediction",
+      "turns": [
+        {
+          "message": "Dự đoán khủng hoảng tài chính năm 2030",
+          "expect": {
+            "status": [
+              "unsupported",
+              "off_topic"
+            ],
+            "route": [
+              "UNSUPPORTED",
+              "OFF_TOPIC"
+            ]
+          }
+        }
+      ],
+      "judge_target_turn": "last"
+    }
+  ]
+}

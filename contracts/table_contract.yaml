@@ -1,0 +1,424 @@
+version: 1
+project: government_ai_agent_platform
+domain: economic_indicators
+
+warehouse:
+  primary: bigquery
+  compatibility_layer: postgresql
+  bigquery:
+    location: asia-southeast1
+    datasets:
+      silver: gov_ai_silver
+      gold: gov_ai_gold
+      analytics: gov_ai_analytics
+      ops: gov_ai_ops
+
+common_columns:
+  entity_keys:
+    - country_code
+    - country
+    - year
+  metadata_columns:
+    - run_id
+    - run_date
+    - loaded_at
+
+silver:
+  silver_indicators:
+    dataset: gov_ai_silver
+    table: silver_indicators
+    description: Long-format normalized indicator table built from WDI, GMD, and FAO Macro sources.
+    grain:
+      - country_code
+      - year
+      - indicator
+      - source
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+      - indicator
+      - source
+    columns:
+      country_code:
+        type: STRING
+        nullable: false
+      country:
+        type: STRING
+        nullable: false
+      year:
+        type: INTEGER
+        nullable: false
+      indicator:
+        type: STRING
+        nullable: false
+      value:
+        type: FLOAT
+        nullable: true
+      source:
+        type: STRING
+        nullable: false
+      run_id:
+        type: STRING
+        nullable: false
+      run_date:
+        type: DATE
+        nullable: false
+      loaded_at:
+        type: TIMESTAMP
+        nullable: false
+
+gold:
+  gold_growth_dynamics:
+    dataset: gov_ai_gold
+    source_builder: gold.tables.growth_dynamics
+    description: Growth and real GDP dynamics indicators.
+    grain:
+      - country_code
+      - year
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+    columns:
+      country_code: { type: STRING, nullable: false }
+      country: { type: STRING, nullable: false }
+      year: { type: INTEGER, nullable: false }
+      rGDP_growth_YoY: { type: FLOAT, nullable: true }
+      rolling_mean_5yr: { type: FLOAT, nullable: true }
+      GDP_growth_YoY: { type: FLOAT, nullable: true }
+      GDP_growth_trend_5yr: { type: FLOAT, nullable: true }
+      trend_deviation: { type: FLOAT, nullable: true }
+      GDP_pc_growth_gap: { type: FLOAT, nullable: true }
+      log_rGDP_pc_USD: { type: FLOAT, nullable: true }
+      income_group: { type: STRING, nullable: true }
+      development_group: { type: STRING, nullable: true }
+      completeness_score: { type: FLOAT, nullable: true, technical: true }
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      loaded_at: { type: TIMESTAMP, nullable: false }
+
+  gold_fiscal_monetary:
+    dataset: gov_ai_gold
+    source_builder: gold.tables.fiscal_monetary
+    description: Fiscal, debt, revenue, expenditure, interest rate, and inflation indicators.
+    grain:
+      - country_code
+      - year
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+    columns:
+      country_code: { type: STRING, nullable: false }
+      country: { type: STRING, nullable: false }
+      year: { type: INTEGER, nullable: false }
+      govdebt_GDP: { type: FLOAT, nullable: true }
+      debt_change_YoY: { type: FLOAT, nullable: true }
+      govrev_GDP: { type: FLOAT, nullable: true }
+      govexp_GDP: { type: FLOAT, nullable: true }
+      fiscal_balance_GDP: { type: FLOAT, nullable: true }
+      cumulative_deficit_5yr: { type: FLOAT, nullable: true }
+      ltrate: { type: FLOAT, nullable: true }
+      infl: { type: FLOAT, nullable: true }
+      real_interest_rate: { type: FLOAT, nullable: true }
+      tax_revenue_pct_GDP: { type: FLOAT, nullable: true }
+      inflation_cpi: { type: FLOAT, nullable: true }
+      inflation_deflator: { type: FLOAT, nullable: true }
+      inflation_gap: { type: FLOAT, nullable: true }
+      rolling_3yr_avg_cpi: { type: FLOAT, nullable: true }
+      income_group: { type: STRING, nullable: true }
+      development_group: { type: STRING, nullable: true }
+      completeness_score: { type: FLOAT, nullable: true, technical: true }
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      loaded_at: { type: TIMESTAMP, nullable: false }
+
+  gold_crisis_risk:
+    dataset: gov_ai_gold
+    source_builder: gold.tables.crisis_risk
+    description: Crisis flags and macro-fiscal risk indicators.
+    grain:
+      - country_code
+      - year
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+    columns:
+      country_code: { type: STRING, nullable: false }
+      country: { type: STRING, nullable: false }
+      year: { type: INTEGER, nullable: false }
+      SovDebtCrisis: { type: INTEGER, nullable: true }
+      CurrencyCrisis: { type: INTEGER, nullable: true }
+      BankingCrisis: { type: INTEGER, nullable: true }
+      crisis_composite: { type: INTEGER, nullable: true }
+      crisis_any: { type: INTEGER, nullable: true }
+      REER_deviation: { type: FLOAT, nullable: true }
+      spending_efficiency: { type: FLOAT, nullable: true }
+      govdebt_GDP: { type: FLOAT, nullable: true }
+      fiscal_balance_GDP: { type: FLOAT, nullable: true }
+      rGDP_growth_YoY: { type: FLOAT, nullable: true }
+      income_group: { type: STRING, nullable: true }
+      development_group: { type: STRING, nullable: true }
+      completeness_score: { type: FLOAT, nullable: true, technical: true }
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      loaded_at: { type: TIMESTAMP, nullable: false }
+
+  gold_social_welfare:
+    dataset: gov_ai_gold
+    source_builder: gold.tables.social_welfare
+    description: Labor, poverty, population, household consumption, and trade indicators.
+    grain:
+      - country_code
+      - year
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+    columns:
+      country_code: { type: STRING, nullable: false }
+      country: { type: STRING, nullable: false }
+      year: { type: INTEGER, nullable: false }
+      unemployment_total: { type: FLOAT, nullable: true }
+      unemployment_youth: { type: FLOAT, nullable: true }
+      youth_unemployment_gap: { type: FLOAT, nullable: true }
+      youth_gap_ratio: { type: FLOAT, nullable: true }
+      self_employed_pct: { type: FLOAT, nullable: true }
+      poverty_headcount: { type: FLOAT, nullable: true }
+      poverty_change_5yr: { type: FLOAT, nullable: true }
+      urban_pop_pct: { type: FLOAT, nullable: true }
+      urban_pop_growth: { type: FLOAT, nullable: true }
+      pop_density: { type: FLOAT, nullable: true }
+      log_pop_density: { type: FLOAT, nullable: true }
+      pop_growth: { type: FLOAT, nullable: true }
+      hcons_share: { type: FLOAT, nullable: true }
+      hcons_growth: { type: FLOAT, nullable: true }
+      trade_pct_gdp: { type: FLOAT, nullable: true }
+      income_group: { type: STRING, nullable: true }
+      development_group: { type: STRING, nullable: true }
+      completeness_score: { type: FLOAT, nullable: true, technical: true }
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      loaded_at: { type: TIMESTAMP, nullable: false }
+
+  gold_structural_composition:
+    dataset: gov_ai_gold
+    source_builder: gold.tables.structural_composition
+    description: Structural composition, GDP components, sector value added, and technical source flags.
+    grain:
+      - country_code
+      - year
+    partition:
+      type: integer_range
+      column: year
+      start: 1980
+      end: 2031
+      interval: 1
+    cluster:
+      - country_code
+    columns:
+      country_code: { type: STRING, nullable: false }
+      country: { type: STRING, nullable: false }
+      year: { type: INTEGER, nullable: false }
+      decade: { type: FLOAT, nullable: true, technical: true, dimension: true }
+      GDP_value: { type: FLOAT, nullable: true }
+      GFCF_value: { type: FLOAT, nullable: true }
+      GNI_value: { type: FLOAT, nullable: true }
+      Agri_VA: { type: FLOAT, nullable: true }
+      Manuf_VA: { type: FLOAT, nullable: true }
+      VA_FoodBev: { type: FLOAT, nullable: true }
+      GFCF_to_GDP: { type: FLOAT, nullable: true }
+      GNI_to_GDP: { type: FLOAT, nullable: true }
+      agri_va_share: { type: FLOAT, nullable: true }
+      manuf_va_share: { type: FLOAT, nullable: true }
+      food_bev_share_manuf: { type: FLOAT, nullable: true }
+      GDP_growth_YoY: { type: FLOAT, nullable: true }
+      flag_score: { type: FLOAT, nullable: true, technical: true }
+      income_group: { type: STRING, nullable: true }
+      development_group: { type: STRING, nullable: true }
+      completeness_score: { type: FLOAT, nullable: true, technical: true }
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      loaded_at: { type: TIMESTAMP, nullable: false }
+
+analytics:
+  analytics_gold_growth_dynamics:
+    dataset: gov_ai_analytics
+    base_gold_table: gold_growth_dynamics
+    grain:
+      - country_code
+      - year
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+      - _anomaly_score
+
+  analytics_gold_fiscal_monetary:
+    dataset: gov_ai_analytics
+    base_gold_table: gold_fiscal_monetary
+    grain:
+      - country_code
+      - year
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+      - _anomaly_score
+
+  analytics_gold_crisis_risk:
+    dataset: gov_ai_analytics
+    base_gold_table: gold_crisis_risk
+    grain:
+      - country_code
+      - year
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+      - _anomaly_score
+
+  analytics_gold_social_welfare:
+    dataset: gov_ai_analytics
+    base_gold_table: gold_social_welfare
+    grain:
+      - country_code
+      - year
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+      - _anomaly_score
+
+  analytics_gold_structural_composition:
+    dataset: gov_ai_analytics
+    base_gold_table: gold_structural_composition
+    grain:
+      - country_code
+      - year
+    required_suffixes:
+      - _actual
+      - _trend
+      - _residual
+      - _slope
+      - _intercept
+      - _r2
+      - _anomaly_score
+
+  analytics_clusters:
+    dataset: gov_ai_analytics
+    description: Country clustering output by selected contract indicators and latest valid year.
+    grain:
+      - country_code
+      - year
+    required_columns:
+      - country_code
+      - country
+      - year
+      - cluster_id
+      - latest_valid_year
+      - run_id
+      - run_date
+      - loaded_at
+
+ops:
+  pipeline_runs:
+    dataset: gov_ai_ops
+    grain:
+      - run_id
+    partition:
+      type: date
+      column: run_date
+    cluster:
+      - status
+    columns:
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      status: { type: STRING, nullable: false }
+      source_changed: { type: BOOLEAN, nullable: true }
+      raw_hashes: { type: JSON, nullable: true }
+      silver_rows: { type: INTEGER, nullable: true }
+      gold_rows: { type: JSON, nullable: true }
+      analytics_rows: { type: JSON, nullable: true }
+      started_at: { type: TIMESTAMP, nullable: false }
+      finished_at: { type: TIMESTAMP, nullable: true }
+      error_message: { type: STRING, nullable: true }
+
+  source_snapshots:
+    dataset: gov_ai_ops
+    grain:
+      - run_id
+      - source_name
+    partition:
+      type: date
+      column: run_date
+    cluster:
+      - source_name
+      - status
+
+  job_logs:
+    dataset: gov_ai_ops
+    grain:
+      - run_id
+      - job_name
+      - started_at
+    partition:
+      type: date
+      column: run_date
+    cluster:
+      - job_name
+      - status
+
+  data_quality_results:
+    dataset: gov_ai_ops
+    grain:
+      - run_id
+      - check_name
+    partition:
+      type: date
+      column: run_date
+    cluster:
+      - severity
+      - status
+
+  indicator_contract_versions:
+    dataset: gov_ai_ops
+    grain:
+      - contract_version
+    partition:
+      type: date
+      column: published_date

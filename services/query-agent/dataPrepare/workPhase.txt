@@ -1,0 +1,10 @@
+Phase 1: Chốt data contract
+Phase 2: Chốt intent + question_family coverage
+Phase 3: Chuẩn hóa indicator/country alias catalog
+Phase 4: Thiết kế template sinh câu hỏi
+Phase 5: Sinh base ParsedQuery plans bằng code
+Phase 6: Sinh câu hỏi deterministic từ template
+Phase 7: dùng gemini 3.1 flas lite
+Phase 8: Generate remaining buckets: hard_cases + off_topic_unsupported
+Phase 9: Merge + global validate + deduplicate + quality check
+Phase 10: Split train/validation/test + final dataset report

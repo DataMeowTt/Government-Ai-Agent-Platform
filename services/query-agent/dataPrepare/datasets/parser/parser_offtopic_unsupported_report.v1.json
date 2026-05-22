@@ -1,0 +1,33 @@
+{
+  "version": "v1",
+  "generation_source": "off_topic_unsupported",
+  "target_samples": 1800,
+  "generated_samples": 1800,
+  "missing_samples": 0,
+  "samples_by_intent": {
+    "OFF_TOPIC": 1000,
+    "UNSUPPORTED": 800
+  },
+  "samples_by_family": {
+    "off_topic_entertainment": 200,
+    "off_topic_general_knowledge": 200,
+    "off_topic_personal_advice": 200,
+    "off_topic_programming": 200,
+    "off_topic_unrelated_business": 200,
+    "unsupported_arima_modeling": 160,
+    "unsupported_causal_claim": 160,
+    "unsupported_forecast_advanced": 160,
+    "unsupported_no_data_year": 160,
+    "unsupported_raw_sql_request": 160
+  },
+  "samples_by_language_style": {
+    "en": 360,
+    "mixed_vi_en": 360,
+    "short_chat": 360,
+    "vi": 360,
+    "vi_no_diacritics": 360
+  },
+  "unique_user_messages": 1800,
+  "duplicate_user_messages": 0,
+  "warnings": []
+}

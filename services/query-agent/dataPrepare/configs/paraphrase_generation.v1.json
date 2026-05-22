@@ -1,0 +1,61 @@
+{
+  "version": "v1",
+  "provider": "gemini",
+  "target_generation_bucket": "llm_paraphrase",
+  "target_samples": 7446,
+  "model": {
+    "default": "gemini-3.1-flash-lite-preview",
+    "temperature": 0.65,
+    "top_p": 0.95,
+    "max_output_tokens": 4096
+  },
+  "batching": {
+    "plans_per_request": 10,
+    "variants_per_plan_default": 3,
+    "max_prompt_chars": 16000
+  },
+  "concurrency": {
+    "default_workers": 5,
+    "max_workers": 5,
+    "key_rotation": "round_robin"
+  },
+  "language_mix": {
+    "vi": 0.35,
+    "vi_no_diacritics": 0.15,
+    "en": 0.25,
+    "mixed_vi_en": 0.15,
+    "short_chat": 0.1
+  },
+  "paraphrase_rules": {
+    "preserve_meaning": true,
+    "do_not_change_indicator": true,
+    "do_not_change_country": true,
+    "do_not_change_year": true,
+    "do_not_change_intent": true,
+    "do_not_add_new_constraints": true,
+    "do_not_remove_required_constraints": true,
+    "output_json_only": true
+  },
+  "validation_policy": {
+    "require_json_array": true,
+    "max_variants_per_plan": 7,
+    "min_variants_per_plan": 1,
+    "drop_if_contains_unrendered_placeholder": true,
+    "drop_if_mojibake": true,
+    "drop_if_duplicate_global": true,
+    "drop_if_too_long_chars": 500,
+    "drop_if_year_missing_for_non_followup": true,
+    "drop_if_country_missing_for_non_followup": true,
+    "drop_if_missing_required_surface_terms": false
+  },
+  "fallback_policy": {
+    "allow_fill_missing_with_deterministic_variants": true,
+    "max_fill_ratio": 0.15,
+    "max_no_progress_rounds": 3
+  },
+  "resume_policy": {
+    "resume_from_existing_output": true,
+    "checkpoint_every_requests": 20,
+    "raw_response_log": true
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "version": "v1",
+  "target_total_samples": 30000,
+  "splits": {
+    "train": 24000,
+    "validation": 3000,
+    "test": 3000
+  },
+  "split_strategy": {
+    "unit": "plan_group_id",
+    "reason": "Keep paraphrases of the same base plan in the same split to avoid leakage."
+  },
+  "intent_targets": {
+    "VALUE_LOOKUP": 1500,
+    "LATEST_VALUE": 1000,
+    "TIME_SERIES": 2000,
+    "TREND_ANALYSIS": 1800,
+    "COMPARE_COUNTRIES": 2500,
+    "COMPARE_INDICATORS": 900,
+    "COMPARE_PERIODS": 1000,
+    "RANKING": 2000,
+    "RANK_BY_CHANGE": 1000,
+    "COVERAGE": 1000,
+    "MISSING_DATA": 900,
+    "DATA_QUALITY": 700,
+    "ANOMALY_DETECTION": 1300,
+    "ANOMALY_EXPLANATION": 600,
+    "RISK_ALERT": 700,
+    "CRISIS_ANALYSIS": 900,
+    "CLUSTER_MEMBERSHIP": 700,
+    "CLUSTER_BENCHMARK": 800,
+    "COUNTRY_PROFILE": 800,
+    "THEME_SUMMARY": 600,
+    "CONDITIONAL_FILTER": 900,
+    "INDICATOR_DEFINITION": 800,
+    "FOLLOW_UP": 1400,
+    "VISUALIZATION_REQUEST": 800,
+    "NEED_CLARIFICATION": 1600,
+    "OFF_TOPIC": 1000,
+    "UNSUPPORTED": 800
+  },
+  "generation_mix": {
+    "deterministic_template": 0.55,
+    "llm_paraphrase": 0.30,
+    "hard_cases": 0.10,
+    "off_topic_unsupported": 0.05
+  }
+}

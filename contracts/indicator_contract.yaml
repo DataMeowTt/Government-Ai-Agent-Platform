@@ -1,0 +1,1877 @@
+# Unified indicator contract for Government AI Agent Platform
+# Root keys are indicator/technical-column codes.
+# Runtime services should not read this YAML directly; generated artifacts will be created in the next release step.
+#
+# NOTE:
+# imputation_policy is the desired contract behavior.
+# Current pipeline must be aligned in the next pipeline/audit release step so poverty_headcount,
+# poverty_change_5yr and crisis flags are not interpolated.
+#
+# MIGRATION NOTE:
+# This patch script temporarily imports the old AI catalog only to migrate metadata into this contract.
+# After this release step, generators must read from indicator_contract.yaml, not from the old AI catalog.
+
+rGDP_growth_YoY:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tăng trưởng GDP thực hằng năm
+  name_en: Real GDP Growth Year-over-Year
+  category: growth_dynamics
+  description_vi: Tốc độ tăng trưởng GDP thực so với cùng kỳ năm trước.
+  description_en: ''
+  source_indicator: rgdp_growth_yoy
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: rGDP_growth_YoY
+  additional_gold_locations:
+  - gold_table: gold_crisis_risk
+    gold_column: rGDP_growth_YoY
+    role: support_feature
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - tăng trưởng GDP thực
+  - tăng trưởng GDP thực hằng năm
+  aliases_en:
+  - real GDP growth
+  - real GDP growth YoY
+rolling_mean_5yr:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Trung bình trượt 5 năm
+  name_en: 5-Year Rolling Mean Growth
+  category: growth_dynamics
+  description_vi: Trung bình trượt 5 năm của tăng trưởng GDP.
+  description_en: ''
+  source_indicator: rolling_mean_5yr
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: rolling_mean_5yr
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - trung bình trượt 5 năm
+  - tăng trưởng trung bình 5 năm
+  aliases_en:
+  - rolling mean 5 year
+  - 5-year growth average
+GDP_growth_YoY:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tăng trưởng GDP danh nghĩa hằng năm
+  name_en: Nominal GDP Growth Year-over-Year
+  category: growth_dynamics
+  description_vi: Tốc độ tăng trưởng GDP danh nghĩa so với năm trước.
+  description_en: ''
+  source_indicator: gdp_growth_yoy
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: GDP_growth_YoY
+  additional_gold_locations:
+  - gold_table: gold_structural_composition
+    gold_column: GDP_growth_YoY
+    role: support_feature
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tăng trưởng GDP danh nghĩa
+  aliases_en:
+  - nominal GDP growth
+  - GDP growth YoY
+GDP_growth_trend_5yr:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Xu hướng tăng trưởng GDP 5 năm
+  name_en: GDP Growth Trend 5-year
+  category: growth_dynamics
+  description_vi: Xu hướng tăng trưởng GDP trong khung 5 năm.
+  description_en: ''
+  source_indicator: gdp_growth_trend_5yr
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: GDP_growth_trend_5yr
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - xu hướng GDP 5 năm
+  - xu hướng tăng trưởng GDP 5 năm
+  aliases_en:
+  - GDP growth trend 5 year
+  - GDP trend
+trend_deviation:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Độ lệch xu hướng
+  name_en: Trend Deviation
+  category: growth_dynamics
+  description_vi: Độ lệch của tăng trưởng thực tế so với xu hướng dài hạn.
+  description_en: ''
+  source_indicator: trend_deviation
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: trend_deviation
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - độ lệch xu hướng
+  aliases_en:
+  - trend deviation
+  - deviation from trend
+GDP_pc_growth_gap:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Chênh lệch tăng trưởng GDP bình quân đầu người
+  name_en: GDP per Capita Growth Gap
+  category: growth_dynamics
+  description_vi: Chênh lệch giữa tăng trưởng GDP tổng và tăng trưởng GDP bình quân đầu người.
+  description_en: ''
+  source_indicator: gdp_pc_growth_gap
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: GDP_pc_growth_gap
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - chênh lệch GDP bình quân đầu người
+  aliases_en:
+  - GDP per capita growth gap
+  - GDP pc growth gap
+log_rGDP_pc_USD:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Log GDP thực bình quân đầu người
+  name_en: Log Real GDP per Capita USD
+  category: growth_dynamics
+  description_vi: Logarit GDP thực bình quân đầu người tính bằng USD.
+  description_en: ''
+  source_indicator: log_rgdp_pc_usd
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_growth_dynamics
+  gold_column: log_rGDP_pc_USD
+  unit: log
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - GDP bình quân đầu người
+  - log GDP thực bình quân đầu người
+  aliases_en:
+  - GDP per capita
+  - real GDP per capita
+  - log real GDP per capita
+govdebt_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Nợ công/GDP
+  name_en: Government Debt / GDP
+  category: fiscal_monetary
+  description_vi: Tỷ lệ nợ công trên GDP, thường dùng để theo dõi rủi ro tài khóa.
+  description_en: ''
+  source_indicator: govdebt_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: govdebt_GDP
+  additional_gold_locations:
+  - gold_table: gold_crisis_risk
+    gold_column: govdebt_GDP
+    role: support_feature
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - nợ công
+  - nợ công/GDP
+  aliases_en:
+  - government debt
+  - public debt
+  - debt to GDP
+  - debt/GDP
+debt_change_YoY:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Thay đổi nợ công hằng năm
+  name_en: Debt Change Year-over-Year
+  category: fiscal_monetary
+  description_vi: Biến động nợ công so với năm trước.
+  description_en: ''
+  source_indicator: debt_change_yoy
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: debt_change_YoY
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - biến động nợ công
+  - thay đổi nợ công hằng năm
+  aliases_en:
+  - debt change
+  - debt change YoY
+govrev_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Thu ngân sách/GDP
+  name_en: Government Revenue / GDP
+  category: fiscal_monetary
+  description_vi: Tỷ lệ thu ngân sách chính phủ trên GDP.
+  description_en: ''
+  source_indicator: govrev_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: govrev_GDP
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thu ngân sách
+  - thu ngân sách/GDP
+  aliases_en:
+  - government revenue
+  - revenue to GDP
+govexp_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Chi ngân sách/GDP
+  name_en: Government Expenditure / GDP
+  category: fiscal_monetary
+  description_vi: Tỷ lệ chi tiêu chính phủ trên GDP.
+  description_en: ''
+  source_indicator: govexp_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: govexp_GDP
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - chi ngân sách
+  - chi ngân sách/GDP
+  aliases_en:
+  - government expenditure
+  - expenditure to GDP
+fiscal_balance_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Cân đối ngân sách/GDP
+  name_en: Fiscal Balance / GDP
+  category: fiscal_monetary
+  description_vi: Cân đối ngân sách trên GDP, giá trị âm thường biểu thị thâm hụt.
+  description_en: ''
+  source_indicator: fiscal_balance_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: fiscal_balance_GDP
+  additional_gold_locations:
+  - gold_table: gold_crisis_risk
+    gold_column: fiscal_balance_GDP
+    role: support_feature
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - cân đối ngân sách
+  - cán cân ngân sách/GDP
+  aliases_en:
+  - fiscal balance
+  - budget balance
+  - fiscal balance to GDP
+cumulative_deficit_5yr:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Thâm hụt tích lũy 5 năm
+  name_en: Cumulative Deficit 5-year
+  category: fiscal_monetary
+  description_vi: Tổng thâm hụt tích lũy trong giai đoạn 5 năm.
+  description_en: ''
+  source_indicator: cumulative_deficit_5yr
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: cumulative_deficit_5yr
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thâm hụt tích lũy
+  - thâm hụt tích lũy 5 năm
+  aliases_en:
+  - cumulative deficit
+  - cumulative deficit 5 year
+ltrate:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Lãi suất dài hạn
+  name_en: Long-term Interest Rate
+  category: fiscal_monetary
+  description_vi: Lãi suất dài hạn phản ánh chi phí vốn dài hạn trong nền kinh tế.
+  description_en: ''
+  source_indicator: ltrate
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: ltrate
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lãi suất dài hạn
+  aliases_en:
+  - long-term interest rate
+  - long-term rate
+infl:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Lạm phát theo GDP deflator
+  name_en: Inflation GDP Deflator
+  category: fiscal_monetary
+  description_vi: Lạm phát đo bằng GDP deflator trong bảng tài khóa - tiền tệ.
+  description_en: ''
+  source_indicator: infl
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: infl
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lạm phát GDP deflator
+  aliases_en:
+  - GDP deflator inflation
+  - inflation GDP deflator
+real_interest_rate:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Lãi suất thực
+  name_en: Real Interest Rate
+  category: fiscal_monetary
+  description_vi: Lãi suất thực sau khi điều chỉnh lạm phát.
+  description_en: ''
+  source_indicator: real_interest_rate
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: real_interest_rate
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lãi suất thực
+  aliases_en:
+  - real interest rate
+  - real rate
+tax_revenue_pct_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Thu thuế/GDP
+  name_en: Tax Revenue / GDP
+  category: fiscal_monetary
+  description_vi: Tỷ lệ thu thuế trên GDP.
+  description_en: ''
+  source_indicator: tax_revenue_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: tax_revenue_pct_GDP
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thu thuế
+  - thu thuế/GDP
+  aliases_en:
+  - tax revenue
+  - tax to GDP
+  - tax revenue to GDP
+inflation_cpi:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Lạm phát CPI
+  name_en: Inflation CPI
+  category: fiscal_monetary
+  description_vi: Lạm phát theo chỉ số giá tiêu dùng CPI.
+  description_en: ''
+  source_indicator: inflation_consumer_prices
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: inflation_cpi
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lạm phát CPI
+  aliases_en:
+  - CPI inflation
+  - consumer price inflation
+inflation_deflator:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Lạm phát theo deflator
+  name_en: Inflation Deflator
+  category: fiscal_monetary
+  description_vi: Lạm phát theo GDP deflator, phản ánh thay đổi giá của sản lượng trong nước.
+  description_en: ''
+  source_indicator: inflation_gdp_deflator
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: inflation_deflator
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lạm phát theo deflator
+  aliases_en:
+  - GDP deflator
+  - deflator inflation
+inflation_gap:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Chênh lệch lạm phát
+  name_en: Inflation Gap CPI minus Deflator
+  category: fiscal_monetary
+  description_vi: Chênh lệch giữa lạm phát CPI và lạm phát theo GDP deflator.
+  description_en: ''
+  source_indicator: inflation_gap
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: inflation_gap
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - chênh lệch lạm phát
+  aliases_en:
+  - inflation gap
+  - CPI deflator gap
+rolling_3yr_avg_cpi:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Trung bình CPI 3 năm
+  name_en: 3-Year Average CPI Inflation
+  category: fiscal_monetary
+  description_vi: Trung bình trượt 3 năm của lạm phát CPI.
+  description_en: ''
+  source_indicator: rolling_3yr_avg_cpi
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_fiscal_monetary
+  gold_column: rolling_3yr_avg_cpi
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - trung bình CPI 3 năm
+  aliases_en:
+  - 3-year average CPI inflation
+  - rolling 3-year CPI
+SovDebtCrisis:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Khủng hoảng nợ công
+  name_en: Sovereign Debt Crisis
+  category: crisis_risk
+  description_vi: Biến nhị phân cho biết có khủng hoảng nợ công trong năm hay không.
+  description_en: ''
+  source_indicator: sov_debt_crisis
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: SovDebtCrisis
+  unit: 0/1
+  value_type: boolean_numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - khủng hoảng nợ công
+  aliases_en:
+  - sovereign debt crisis
+  - debt crisis
+CurrencyCrisis:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Khủng hoảng tiền tệ
+  name_en: Currency Crisis
+  category: crisis_risk
+  description_vi: Biến nhị phân cho biết có khủng hoảng tiền tệ trong năm hay không.
+  description_en: ''
+  source_indicator: currency_crisis
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: CurrencyCrisis
+  unit: 0/1
+  value_type: boolean_numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - khủng hoảng tiền tệ
+  aliases_en:
+  - currency crisis
+  - exchange rate crisis
+BankingCrisis:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Khủng hoảng ngân hàng
+  name_en: Banking Crisis
+  category: crisis_risk
+  description_vi: Biến nhị phân cho biết có khủng hoảng ngân hàng trong năm hay không.
+  description_en: ''
+  source_indicator: banking_crisis
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: BankingCrisis
+  unit: 0/1
+  value_type: boolean_numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - khủng hoảng ngân hàng
+  aliases_en:
+  - banking crisis
+  - bank crisis
+crisis_composite:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Chỉ số khủng hoảng tổng hợp
+  name_en: Crisis Composite Index
+  category: crisis_risk
+  description_vi: Chỉ số tổng hợp số loại khủng hoảng xảy ra trong một năm.
+  description_en: ''
+  source_indicator: crisis_composite
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: crisis_composite
+  unit: 0-3
+  value_type: integer
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - chỉ số khủng hoảng tổng hợp
+  aliases_en:
+  - crisis composite
+  - crisis index
+crisis_any:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Có khủng hoảng
+  name_en: Any Crisis Occurred
+  category: crisis_risk
+  description_vi: Biến nhị phân cho biết có ít nhất một loại khủng hoảng trong năm.
+  description_en: ''
+  source_indicator: crisis_any
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: crisis_any
+  unit: 0/1
+  value_type: boolean_numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - có khủng hoảng
+  aliases_en:
+  - any crisis
+  - crisis occurred
+REER_deviation:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Độ lệch REER
+  name_en: REER Deviation
+  category: crisis_risk
+  description_vi: Độ lệch tỷ giá hiệu dụng thực so với xu hướng hoặc mức tham chiếu.
+  description_en: ''
+  source_indicator: reer_deviation
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: REER_deviation
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - độ lệch REER
+  aliases_en:
+  - REER deviation
+  - real effective exchange rate deviation
+spending_efficiency:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Hiệu quả chi tiêu
+  name_en: Spending Efficiency
+  category: crisis_risk
+  description_vi: Thước đo hiệu quả chi tiêu công.
+  description_en: ''
+  source_indicator: spending_efficiency
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_crisis_risk
+  gold_column: spending_efficiency
+  unit: ratio
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - hiệu quả chi tiêu
+  aliases_en:
+  - spending efficiency
+  - public spending efficiency
+unemployment_total:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ thất nghiệp
+  name_en: Unemployment Rate Total
+  category: social_welfare
+  description_vi: Tỷ lệ thất nghiệp của toàn bộ lực lượng lao động.
+  description_en: ''
+  source_indicator: unemployment_total
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: unemployment_total
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thất nghiệp
+  - tỷ lệ thất nghiệp
+  aliases_en:
+  - unemployment
+  - unemployment rate
+  - total unemployment
+unemployment_youth:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ thất nghiệp thanh niên
+  name_en: Youth Unemployment Rate
+  category: social_welfare
+  description_vi: Tỷ lệ thất nghiệp trong nhóm lao động trẻ.
+  description_en: ''
+  source_indicator: unemployment_youth
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: unemployment_youth
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thất nghiệp thanh niên
+  aliases_en:
+  - youth unemployment
+  - youth unemployment rate
+youth_unemployment_gap:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Chênh lệch thất nghiệp thanh niên
+  name_en: Youth Unemployment Gap
+  category: social_welfare
+  description_vi: Chênh lệch giữa thất nghiệp thanh niên và thất nghiệp tổng thể.
+  description_en: ''
+  source_indicator: youth_unemployment_gap
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: youth_unemployment_gap
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - chênh lệch thất nghiệp thanh niên
+  aliases_en:
+  - youth unemployment gap
+  - youth jobless gap
+youth_gap_ratio:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ chênh lệch thất nghiệp thanh niên
+  name_en: Youth Gap Ratio
+  category: social_welfare
+  description_vi: Tỷ lệ thất nghiệp thanh niên so với thất nghiệp tổng thể.
+  description_en: ''
+  source_indicator: youth_gap_ratio
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: youth_gap_ratio
+  unit: ratio
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tỷ lệ chênh lệch thất nghiệp thanh niên
+  aliases_en:
+  - youth gap ratio
+  - youth unemployment ratio
+self_employed_pct:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ lao động tự doanh
+  name_en: Self-Employed Percentage
+  category: social_welfare
+  description_vi: Tỷ lệ lao động tự doanh trong tổng việc làm.
+  description_en: ''
+  source_indicator: self_employed_total
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: self_employed_pct
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - lao động tự doanh
+  - tỷ lệ lao động tự doanh
+  aliases_en:
+  - self-employed
+  - self-employed percentage
+poverty_headcount:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ nghèo
+  name_en: Poverty Headcount Ratio
+  category: social_welfare
+  description_vi: Tỷ lệ dân số sống dưới ngưỡng nghèo.
+  description_en: ''
+  source_indicator: poverty_headcount_ratio
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: poverty_headcount
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - tỷ lệ nghèo
+  aliases_en:
+  - poverty headcount
+  - poverty rate
+poverty_change_5yr:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Biến động nghèo 5 năm
+  name_en: Poverty Change 5-year
+  category: social_welfare
+  description_vi: Biến động tỷ lệ nghèo trong khung 5 năm.
+  description_en: ''
+  source_indicator: poverty_change_5yr
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: poverty_change_5yr
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi:
+  - biến động nghèo
+  - biến động nghèo 5 năm
+  aliases_en:
+  - poverty change
+  - poverty change 5 year
+urban_pop_pct:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ dân số đô thị
+  name_en: Urban Population Percentage
+  category: social_welfare
+  description_vi: Tỷ lệ dân số sống ở khu vực đô thị.
+  description_en: ''
+  source_indicator: urban_population
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: urban_pop_pct
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - dân số đô thị
+  - tỷ lệ dân số đô thị
+  aliases_en:
+  - urban population
+  - urban population percentage
+  - urban population share
+urban_pop_growth:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tăng trưởng dân số đô thị
+  name_en: Urban Population Growth
+  category: social_welfare
+  description_vi: Tốc độ tăng dân số đô thị.
+  description_en: ''
+  source_indicator: urban_population_growth
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: urban_pop_growth
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tăng dân số đô thị
+  aliases_en:
+  - urban population growth
+  - urban growth
+pop_density:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Mật độ dân số
+  name_en: Population Density
+  category: social_welfare
+  description_vi: Mật độ dân số, tính theo người trên km².
+  description_en: ''
+  source_indicator: population_density
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: pop_density
+  unit: people/km2
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - mật độ dân số
+  aliases_en:
+  - population density
+  - pop density
+log_pop_density:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Log mật độ dân số
+  name_en: Log Population Density
+  category: social_welfare
+  description_vi: Logarit của mật độ dân số.
+  description_en: ''
+  source_indicator: log_pop_density
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: log_pop_density
+  unit: log
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - log mật độ dân số
+  aliases_en:
+  - log population density
+  - log pop density
+pop_growth:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tăng trưởng dân số
+  name_en: Population Growth
+  category: social_welfare
+  description_vi: Tốc độ tăng dân số hằng năm.
+  description_en: ''
+  source_indicator: population_growth
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: pop_growth
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tăng trưởng dân số
+  aliases_en:
+  - population growth
+  - pop growth
+hcons_share:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ lệ tiêu dùng hộ gia đình
+  name_en: Household Consumption Share
+  category: social_welfare
+  description_vi: Tỷ lệ tiêu dùng hộ gia đình trên GDP.
+  description_en: ''
+  source_indicator: hcons_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: hcons_share
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tiêu dùng hộ gia đình
+  - tiêu dùng hộ gia đình/GDP
+  aliases_en:
+  - household consumption share
+  - household consumption to GDP
+hcons_growth:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tăng trưởng tiêu dùng hộ gia đình
+  name_en: Household Consumption Growth
+  category: social_welfare
+  description_vi: Tốc độ tăng trưởng tiêu dùng hộ gia đình.
+  description_en: ''
+  source_indicator: hcons_growth
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: hcons_growth
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tăng trưởng tiêu dùng hộ gia đình
+  aliases_en:
+  - household consumption growth
+  - hcons growth
+trade_pct_gdp:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Thương mại/GDP
+  name_en: Trade Percentage of GDP
+  category: social_welfare
+  description_vi: Tổng kim ngạch thương mại so với GDP, thường dùng để đo độ mở thương mại.
+  description_en: ''
+  source_indicator: trade_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_social_welfare
+  gold_column: trade_pct_gdp
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - độ mở thương mại
+  - thương mại/GDP
+  aliases_en:
+  - trade openness
+  - trade to GDP
+  - trade percentage of GDP
+GDP_value:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị GDP
+  name_en: GDP Value
+  category: structural_composition
+  description_vi: Giá trị GDP danh nghĩa theo USD hiện hành.
+  description_en: ''
+  source_indicator: gdp_value
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: GDP_value
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị GDP
+  aliases_en:
+  - GDP value
+  - GDP current USD
+GFCF_value:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị đầu tư tài sản cố định
+  name_en: Gross Fixed Capital Formation Value
+  category: structural_composition
+  description_vi: Giá trị đầu tư tài sản cố định theo USD hiện hành.
+  description_en: ''
+  source_indicator: gfcf_value
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: GFCF_value
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị đầu tư tài sản cố định
+  aliases_en:
+  - GFCF value
+  - investment value
+GNI_value:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị GNI
+  name_en: Gross National Income Value
+  category: structural_composition
+  description_vi: Giá trị tổng thu nhập quốc dân theo USD hiện hành.
+  description_en: ''
+  source_indicator: gni_value
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: GNI_value
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị GNI
+  aliases_en:
+  - GNI value
+  - national income value
+Agri_VA:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị gia tăng nông nghiệp
+  name_en: Agriculture Value Added
+  category: structural_composition
+  description_vi: Giá trị gia tăng nông nghiệp theo USD hiện hành.
+  description_en: ''
+  source_indicator: agri_va
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: Agri_VA
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị gia tăng nông nghiệp
+  aliases_en:
+  - agriculture value added
+  - agri value added
+Manuf_VA:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị gia tăng chế biến chế tạo
+  name_en: Manufacturing Value Added
+  category: structural_composition
+  description_vi: Giá trị gia tăng công nghiệp chế biến chế tạo theo USD hiện hành.
+  description_en: ''
+  source_indicator: manuf_va
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: Manuf_VA
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị gia tăng công nghiệp chế biến
+  aliases_en:
+  - manufacturing value added
+  - manuf value added
+VA_FoodBev:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Giá trị gia tăng thực phẩm và đồ uống
+  name_en: Food and Beverage Value Added
+  category: structural_composition
+  description_vi: Giá trị gia tăng ngành thực phẩm và đồ uống theo USD hiện hành.
+  description_en: ''
+  source_indicator: va_foodbev
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: VA_FoodBev
+  unit: current US$
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - giá trị gia tăng thực phẩm đồ uống
+  aliases_en:
+  - food and beverage value added
+  - food beverage value
+GFCF_to_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Đầu tư tài sản cố định/GDP
+  name_en: Gross Fixed Capital Formation to GDP
+  category: structural_composition
+  description_vi: Tỷ lệ đầu tư tài sản cố định trên GDP.
+  description_en: ''
+  source_indicator: gfcf_to_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: GFCF_to_GDP
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - đầu tư tài sản cố định/GDP
+  - đầu tư cố định gộp/GDP
+  aliases_en:
+  - GFCF to GDP
+  - gross fixed capital formation to GDP
+  - investment to GDP
+GNI_to_GDP:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: GNI/GDP
+  name_en: Gross National Income to GDP
+  category: structural_composition
+  description_vi: Tỷ lệ tổng thu nhập quốc dân trên GDP.
+  description_en: ''
+  source_indicator: gni_to_gdp
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: GNI_to_GDP
+  unit: ratio
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - GNI/GDP
+  - tỷ lệ GNI trên GDP
+  aliases_en:
+  - GNI to GDP
+  - GNI ratio
+agri_va_share:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ trọng nông nghiệp
+  name_en: Agriculture Value Added Share
+  category: structural_composition
+  description_vi: Tỷ trọng giá trị gia tăng nông nghiệp trong GDP.
+  description_en: ''
+  source_indicator: agri_va_share
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: agri_va_share
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tỷ trọng nông nghiệp
+  aliases_en:
+  - agriculture share
+  - agri VA share
+manuf_va_share:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ trọng chế biến chế tạo
+  name_en: Manufacturing Value Added Share
+  category: structural_composition
+  description_vi: Tỷ trọng giá trị gia tăng công nghiệp chế biến chế tạo trong GDP.
+  description_en: ''
+  source_indicator: manuf_va_share
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: manuf_va_share
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: true
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - tỷ trọng chế biến chế tạo
+  - tỷ trọng công nghiệp chế biến
+  aliases_en:
+  - manufacturing share
+  - manuf VA share
+food_bev_share_manuf:
+  public: true
+  technical: false
+  dimension: false
+  name_vi: Tỷ trọng thực phẩm đồ uống trong chế biến
+  name_en: Food and Beverage Share of Manufacturing
+  category: structural_composition
+  description_vi: Tỷ trọng ngành thực phẩm và đồ uống trong sản xuất chế biến.
+  description_en: ''
+  source_indicator: food_bev_share_manuf
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: food_bev_share_manuf
+  unit: '%'
+  value_type: numeric
+  supports_raw: true
+  supports_compare: true
+  supports_ranking: true
+  supports_coverage: true
+  supports_trend: true
+  supports_anomaly: true
+  used_for_cluster: false
+  imputation_policy: linear_limit_2
+  null_policy: preserve_null
+  aliases_vi:
+  - thực phẩm đồ uống
+  - tỷ trọng thực phẩm đồ uống trong chế biến
+  aliases_en:
+  - food beverage manufacturing share
+  - food and beverage manufacturing
+decade:
+  public: false
+  technical: true
+  dimension: true
+  name_vi: Thập kỷ
+  name_en: Decade
+  category: structural_composition
+  description_vi: Thập kỷ của quan sát trong bảng cơ cấu kinh tế.
+  description_en: ''
+  source_indicator: decade
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: decade
+  unit: year
+  value_type: integer
+  supports_raw: false
+  supports_compare: false
+  supports_ranking: false
+  supports_coverage: false
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi: []
+  aliases_en: []
+flag_score:
+  public: false
+  technical: true
+  dimension: false
+  name_vi: Điểm cờ chất lượng dữ liệu
+  name_en: Data Quality Flag
+  category: quality
+  description_vi: Điểm hoặc cờ chất lượng dữ liệu trong bảng gold.
+  description_en: ''
+  source_indicator: flag_score
+  source_priority:
+  - gmd
+  - wdi
+  - macro
+  gold_table: gold_structural_composition
+  gold_column: flag_score
+  unit: 0-3
+  value_type: integer
+  supports_raw: false
+  supports_compare: false
+  supports_ranking: false
+  supports_coverage: false
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi: []
+  aliases_en: []
+completeness_score:
+  public: false
+  technical: true
+  dimension: false
+  name_vi: Điểm đầy đủ dữ liệu
+  name_en: Data Completeness Score
+  category: quality
+  description_vi: Điểm kỹ thuật đo tỷ lệ trường dữ liệu không null trong một dòng Gold.
+  description_en: Technical score measuring the share of non-null data fields in a Gold row.
+  source_indicator: null
+  source_priority: []
+  gold_table: null
+  gold_column: completeness_score
+  applies_to_gold_tables:
+  - gold_growth_dynamics
+  - gold_fiscal_monetary
+  - gold_crisis_risk
+  - gold_social_welfare
+  - gold_structural_composition
+  unit: ratio
+  value_type: numeric
+  supports_raw: false
+  supports_compare: false
+  supports_ranking: false
+  supports_coverage: false
+  supports_trend: false
+  supports_anomaly: false
+  used_for_cluster: false
+  imputation_policy: no_interpolate
+  null_policy: preserve_null
+  aliases_vi: []
+  aliases_en: []

@@ -1,0 +1,141 @@
+{
+  "actual_sizes": {
+    "test": 3000,
+    "train": 24000,
+    "validation": 3000
+  },
+  "leakage_check": {
+    "plan_group_id_overlap_between_splits": 0
+  },
+  "plan_groups_by_split": {
+    "test": 600,
+    "train": 4802,
+    "validation": 600
+  },
+  "question_families_covered": {
+    "test": 151,
+    "train": 151,
+    "validation": 151
+  },
+  "samples_by_generation_source": {
+    "test": {
+      "deterministic_template": 1765,
+      "hard_cases": 370,
+      "llm_paraphrase": 715,
+      "off_topic_unsupported": 150
+    },
+    "train": {
+      "deterministic_template": 13227,
+      "hard_cases": 3257,
+      "llm_paraphrase": 6016,
+      "off_topic_unsupported": 1500
+    },
+    "validation": {
+      "deterministic_template": 1765,
+      "hard_cases": 370,
+      "llm_paraphrase": 715,
+      "off_topic_unsupported": 150
+    }
+  },
+  "samples_by_intent": {
+    "test": {
+      "ANOMALY_DETECTION": 135,
+      "ANOMALY_EXPLANATION": 60,
+      "CLUSTER_BENCHMARK": 85,
+      "CLUSTER_MEMBERSHIP": 75,
+      "COMPARE_COUNTRIES": 265,
+      "COMPARE_INDICATORS": 90,
+      "COMPARE_PERIODS": 105,
+      "CONDITIONAL_FILTER": 95,
+      "COUNTRY_PROFILE": 80,
+      "COVERAGE": 100,
+      "CRISIS_ANALYSIS": 95,
+      "DATA_QUALITY": 70,
+      "FOLLOW_UP": 145,
+      "INDICATOR_DEFINITION": 80,
+      "LATEST_VALUE": 100,
+      "MISSING_DATA": 90,
+      "NEED_CLARIFICATION": 150,
+      "OFF_TOPIC": 85,
+      "RANKING": 200,
+      "RANK_BY_CHANGE": 105,
+      "RISK_ALERT": 70,
+      "THEME_SUMMARY": 60,
+      "TIME_SERIES": 205,
+      "TREND_ANALYSIS": 180,
+      "UNSUPPORTED": 65,
+      "VALUE_LOOKUP": 125,
+      "VISUALIZATION_REQUEST": 85
+    },
+    "train": {
+      "ANOMALY_DETECTION": 1035,
+      "ANOMALY_EXPLANATION": 475,
+      "CLUSTER_BENCHMARK": 630,
+      "CLUSTER_MEMBERSHIP": 550,
+      "COMPARE_COUNTRIES": 1975,
+      "COMPARE_INDICATORS": 720,
+      "COMPARE_PERIODS": 790,
+      "CONDITIONAL_FILTER": 710,
+      "COUNTRY_PROFILE": 635,
+      "COVERAGE": 800,
+      "CRISIS_ANALYSIS": 710,
+      "DATA_QUALITY": 555,
+      "FOLLOW_UP": 1110,
+      "INDICATOR_DEFINITION": 640,
+      "LATEST_VALUE": 800,
+      "MISSING_DATA": 720,
+      "NEED_CLARIFICATION": 1300,
+      "OFF_TOPIC": 830,
+      "RANKING": 1600,
+      "RANK_BY_CHANGE": 795,
+      "RISK_ALERT": 560,
+      "THEME_SUMMARY": 480,
+      "TIME_SERIES": 1585,
+      "TREND_ANALYSIS": 1440,
+      "UNSUPPORTED": 670,
+      "VALUE_LOOKUP": 1250,
+      "VISUALIZATION_REQUEST": 635
+    },
+    "validation": {
+      "ANOMALY_DETECTION": 130,
+      "ANOMALY_EXPLANATION": 65,
+      "CLUSTER_BENCHMARK": 85,
+      "CLUSTER_MEMBERSHIP": 75,
+      "COMPARE_COUNTRIES": 260,
+      "COMPARE_INDICATORS": 90,
+      "COMPARE_PERIODS": 105,
+      "CONDITIONAL_FILTER": 95,
+      "COUNTRY_PROFILE": 85,
+      "COVERAGE": 100,
+      "CRISIS_ANALYSIS": 95,
+      "DATA_QUALITY": 75,
+      "FOLLOW_UP": 145,
+      "INDICATOR_DEFINITION": 80,
+      "LATEST_VALUE": 100,
+      "MISSING_DATA": 90,
+      "NEED_CLARIFICATION": 150,
+      "OFF_TOPIC": 85,
+      "RANKING": 200,
+      "RANK_BY_CHANGE": 100,
+      "RISK_ALERT": 70,
+      "THEME_SUMMARY": 60,
+      "TIME_SERIES": 210,
+      "TREND_ANALYSIS": 180,
+      "UNSUPPORTED": 65,
+      "VALUE_LOOKUP": 125,
+      "VISUALIZATION_REQUEST": 80
+    }
+  },
+  "split_strategy": {
+    "leakage_prevention": "All samples with the same plan_group_id are assigned to one split.",
+    "random_seed": 42,
+    "unit": "plan_group_id"
+  },
+  "target_sizes": {
+    "test": 3000,
+    "train": 24000,
+    "validation": 3000
+  },
+  "version": "v1",
+  "warnings": []
+}

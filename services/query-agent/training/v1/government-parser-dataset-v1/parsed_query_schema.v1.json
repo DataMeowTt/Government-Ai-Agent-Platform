@@ -1,0 +1,99 @@
+{
+  "type": "object",
+  "required": [
+    "intent",
+    "question_family",
+    "indicators",
+    "countries",
+    "country_groups",
+    "start_year",
+    "end_year",
+    "relative_time",
+    "event_time",
+    "ranking_order",
+    "limit",
+    "threshold",
+    "aggregation",
+    "chart_preference",
+    "needs_clarification",
+    "clarification_questions",
+    "confidence"
+  ],
+  "properties": {
+    "intent": {
+      "type": "string"
+    },
+    "question_family": {
+      "type": "string"
+    },
+    "indicators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "countries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}$"
+      }
+    },
+    "country_groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "start_year": {
+      "type": ["integer", "null"],
+      "minimum": 1900,
+      "maximum": 2100
+    },
+    "end_year": {
+      "type": ["integer", "null"],
+      "minimum": 1900,
+      "maximum": 2100
+    },
+    "relative_time": {
+      "type": ["string", "null"]
+    },
+    "event_time": {
+      "type": ["string", "null"]
+    },
+    "ranking_order": {
+      "type": ["string", "null"],
+      "enum": ["asc", "desc", null]
+    },
+    "limit": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 100
+    },
+    "threshold": {
+      "type": ["number", "null"]
+    },
+    "aggregation": {
+      "type": ["string", "null"]
+    },
+    "chart_preference": {
+      "type": ["string", "null"],
+      "enum": ["line", "bar", "scatter", "table", "none", null]
+    },
+    "needs_clarification": {
+      "type": "boolean"
+    },
+    "clarification_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "additionalProperties": false
+}

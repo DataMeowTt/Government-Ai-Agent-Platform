@@ -1,0 +1,45 @@
+{
+  "total": 500,
+  "valid_json_rate": 1.0,
+  "schema_pass_rate": 1.0,
+  "exact_full_json_rate": 0.824,
+  "intent_accuracy_on_schema_pass": 0.966,
+  "question_family_accuracy_on_schema_pass": 0.89,
+  "year_exact_accuracy_on_schema_pass": 0.888,
+  "ranking_order_accuracy_on_schema_pass": 1.0,
+  "aggregation_accuracy_on_schema_pass": 1.0,
+  "chart_preference_accuracy_on_schema_pass": 1.0,
+  "needs_clarification_accuracy_on_schema_pass": 1.0,
+  "indicator_micro": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 550,
+    "fp": 0,
+    "fn": 0
+  },
+  "country_micro": {
+    "precision": 0.9675213675213675,
+    "recall": 0.9758620689655172,
+    "f1": 0.9716738197424893,
+    "tp": 566,
+    "fp": 19,
+    "fn": 14
+  },
+  "country_group_micro": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 25,
+    "fp": 0,
+    "fn": 0
+  },
+  "executable_plan_rate": 1.0,
+  "dangerous_wrong_query_rate": 0.176,
+  "dangerous_wrong_query_count": 88,
+  "schema_error_top": {},
+  "split": "validation",
+  "num_samples": 500,
+  "runtime_seconds": 1922.1,
+  "prediction_path": "/kaggle/working/government-parser-finetune/outputs/reports/validation_predictions.jsonl"
+}

@@ -1,0 +1,38 @@
+{
+  "version": "v1",
+  "language_styles": [
+    "vi",
+    "vi_no_diacritics",
+    "en",
+    "mixed_vi_en",
+    "technical_code",
+    "short_chat"
+  ],
+  "indicator_alias_policy": {
+    "include_code_alias": true,
+    "include_english_name": true,
+    "include_vietnamese_alias": true,
+    "include_no_diacritics_alias": true,
+    "max_aliases_per_indicator_per_sample": 1
+  },
+  "country_alias_policy": {
+    "include_iso3": true,
+    "include_english_name": true,
+    "include_vietnamese_alias": true,
+    "include_no_diacritics_alias": true,
+    "max_aliases_per_country_per_sample": 1
+  },
+  "noise_policy": {
+    "allow_light_typos": true,
+    "allow_missing_diacritics": true,
+    "allow_lowercase_country": true,
+    "allow_abbreviations": true,
+    "typo_rate_max": 0.05
+  },
+  "forbidden_generation_rules": [
+    "Do not change canonical indicator labels.",
+    "Do not change canonical country labels.",
+    "Do not create aliases that map to multiple countries unless the sample is an ambiguous_country NEED_CLARIFICATION case.",
+    "Do not create aliases that map to multiple indicators unless the sample is an ambiguous_indicator NEED_CLARIFICATION case."
+  ]
+}
