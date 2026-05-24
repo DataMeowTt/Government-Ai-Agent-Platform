@@ -33,6 +33,8 @@ class PipelineRunMetadata:
     last_successful_run_id: str | None
     last_successful_run_date: str | None
     published_at: str | None
+    latest_data_year: int | None
+    sources_json: str | None
     error_message: str | None
     force_requested: bool
     force_applied: bool
@@ -75,6 +77,8 @@ def build_default_metadata(
         last_successful_run_id=None,
         last_successful_run_date=None,
         published_at=None,
+        latest_data_year=None,
+        sources_json=None,
         error_message=None,
         force_requested=force_requested,
         force_applied=False,

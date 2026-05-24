@@ -21,7 +21,7 @@ const suggestedPrompts = [
 
 const followupPrompts = [
   'Phân tích nguyên nhân chính của xu hướng này',
-  'Mở rộng thêm Indonesia',
+  'Mở rộng thêm Indonesia vào yêu cầu trên',
   'Đổi sang giai đoạn 2015 đến 2023',
 ];
 

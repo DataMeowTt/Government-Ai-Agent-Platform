@@ -137,3 +137,18 @@ export interface CountryIndicatorsResponse {
   rows: CountryIndicatorRow[];
   summary: CountryIndicatorSummary[];
 }
+
+export interface DataFreshnessSource {
+  name: string;
+  version: string | null;
+  updated_at: string | null;
+}
+
+export interface DataFreshnessResponse {
+  available: boolean;
+  last_successful_run_id: string | null;
+  last_successful_sync_at: string | null;
+  latest_data_year: number | null;
+  sources: DataFreshnessSource[];
+  status: 'success' | 'unavailable';
+}

@@ -114,3 +114,18 @@ export const countryIndicatorsResponseSchema = z.object({
   rows: z.array(countryIndicatorRowSchema),
   summary: z.array(countryIndicatorSummarySchema).optional(),
 });
+
+export const dataFreshnessSourceSchema = z.object({
+  name: z.string(),
+  version: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+
+export const dataFreshnessResponseSchema = z.object({
+  available: z.boolean(),
+  last_successful_run_id: z.string().nullable(),
+  last_successful_sync_at: z.string().nullable(),
+  latest_data_year: z.number().nullable(),
+  sources: z.array(dataFreshnessSourceSchema),
+  status: z.enum(['success', 'unavailable']),
+});

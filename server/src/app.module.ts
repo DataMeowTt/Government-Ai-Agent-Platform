@@ -6,6 +6,7 @@ import { IndicatorsModule } from './indicators/indicators.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AiChatModule } from './ai-chat/ai-chat.module';
 import { CompareModule } from './compare/compare.module';
+import { SystemModule } from './system/system.module';
 
 function createDatabaseModule(): DynamicModule | undefined {
   const dataSource = process.env.BACKEND_DATA_SOURCE;
@@ -43,6 +44,7 @@ const databaseModule = createDatabaseModule();
     AnalyticsModule,
     AiChatModule,
     CompareModule,
+    SystemModule,
   ],
   controllers: [],
   providers: [],

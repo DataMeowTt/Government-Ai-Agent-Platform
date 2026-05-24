@@ -51,7 +51,11 @@ PIPELINE_RUN_METADATA_REQUIRED = (
     "source_changed",
     "change_reason",
     "warehouse_publish_performed",
+    "publish_performed",
     "last_successful_updated",
+    "published_at",
+    "latest_data_year",
+    "sources_json",
 )
 
 

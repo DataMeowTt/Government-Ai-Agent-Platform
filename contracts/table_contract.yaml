@@ -378,6 +378,47 @@ ops:
       finished_at: { type: TIMESTAMP, nullable: true }
       error_message: { type: STRING, nullable: true }
 
+  pipeline_run_metadata:
+    dataset: gov_ai_ops
+    grain:
+      - run_id
+    partition:
+      type: date
+      column: run_date
+    cluster:
+      - status
+    columns:
+      run_id: { type: STRING, nullable: false }
+      run_date: { type: DATE, nullable: false }
+      execution_mode: { type: STRING, nullable: false }
+      status: { type: STRING, nullable: false }
+      started_at: { type: TIMESTAMP, nullable: false }
+      finished_at: { type: TIMESTAMP, nullable: true }
+      enabled_sources: { type: JSON, nullable: false }
+      source_changed: { type: BOOLEAN, nullable: true }
+      change_reason: { type: STRING, nullable: true }
+      candidate_source_manifest_path: { type: STRING, nullable: true }
+      baseline_success_manifest_path: { type: STRING, nullable: true }
+      changed_sources: { type: JSON, nullable: false }
+      validation_status: { type: STRING, nullable: true }
+      data_quality_status: { type: STRING, nullable: true }
+      bronze_write_planned: { type: BOOLEAN, nullable: false }
+      bronze_write_performed: { type: BOOLEAN, nullable: false }
+      warehouse_publish_planned: { type: BOOLEAN, nullable: false }
+      warehouse_publish_performed: { type: BOOLEAN, nullable: false }
+      last_successful_updated: { type: BOOLEAN, nullable: false }
+      last_successful_run_id: { type: STRING, nullable: true }
+      last_successful_run_date: { type: STRING, nullable: true }
+      published_at: { type: TIMESTAMP, nullable: true }
+      latest_data_year: { type: INTEGER, nullable: true }
+      sources_json: { type: STRING, nullable: true }
+      error_message: { type: STRING, nullable: true }
+      force_requested: { type: BOOLEAN, nullable: false }
+      force_applied: { type: BOOLEAN, nullable: false }
+      planned_actions: { type: JSON, nullable: false }
+      cloud_write: { type: BOOLEAN, nullable: false }
+      publish_performed: { type: BOOLEAN, nullable: false }
+
   source_snapshots:
     dataset: gov_ai_ops
     grain:

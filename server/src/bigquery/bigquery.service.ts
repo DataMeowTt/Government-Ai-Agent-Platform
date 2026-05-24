@@ -14,6 +14,8 @@ import {
   BigQueryCountryIndicatorRow,
   BigQueryCountryIndicatorsResponse,
   BigQueryCountryItem,
+  DataFreshnessResponse,
+  DataFreshnessSourceItem,
 } from './bigquery.types';
 import {
   GeneratedIndicatorContract,
@@ -25,6 +27,7 @@ const DEFAULT_PROJECT_ID = 'western-pivot-452008-a6';
 const DEFAULT_LOCATION = 'asia-southeast1';
 const DEFAULT_GOLD_DATASET = 'gov_ai_gold';
 const DEFAULT_ANALYTICS_DATASET = 'gov_ai_analytics';
+const DEFAULT_OPS_DATASET = 'gov_ai_ops';
 const DEFAULT_MAX_BYTES_BILLED = 100000000;
 const DEFAULT_CACHE_TTL_SECONDS = 300;
 const MAX_LIMIT = 100;
@@ -40,6 +43,7 @@ type BigQueryTables = {
   analyticsGoldSocialWelfare: string;
   analyticsGoldStructuralComposition: string;
   analyticsGoldCrisisRisk: string;
+  opsPipelineRunMetadata: string;
 };
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -58,6 +62,7 @@ export class BigQueryService {
   private readonly location: string;
   private readonly goldDataset: string;
   private readonly analyticsDataset: string;
+  private readonly opsDataset: string;
   private readonly maximumBytesBilled: number;
   private readonly cacheTtlSeconds: number;
   private readonly client: BigQuery;
@@ -95,6 +100,9 @@ export class BigQueryService {
     this.analyticsDataset =
       this.configService.get<string>('BIGQUERY_ANALYTICS_DATASET') ||
       DEFAULT_ANALYTICS_DATASET;
+    this.opsDataset =
+      this.configService.get<string>('BIGQUERY_OPS_DATASET') ||
+      DEFAULT_OPS_DATASET;
     this.maximumBytesBilled = Number(
       this.configService.get<string>('BIGQUERY_MAX_BYTES_BILLED') ||
         DEFAULT_MAX_BYTES_BILLED,
@@ -146,6 +154,10 @@ export class BigQueryService {
         this.analyticsDataset,
         'analytics_gold_crisis_risk',
       ),
+      opsPipelineRunMetadata: this.buildTableRef(
+        this.opsDataset,
+        'pipeline_run_metadata',
+      ),
     };
 
     this.whitelistedTables = new Set<string>([
@@ -160,6 +172,7 @@ export class BigQueryService {
       this.tables.analyticsGoldSocialWelfare,
       this.tables.analyticsGoldStructuralComposition,
       this.tables.analyticsGoldCrisisRisk,
+      this.tables.opsPipelineRunMetadata,
     ]);
 
     this.indicators.forEach(indicator => {
@@ -851,8 +864,121 @@ export class BigQueryService {
     };
   }
 
+  async getDataFreshness(): Promise<DataFreshnessResponse> {
+    const sql = `
+      SELECT
+        run_id,
+        published_at,
+        latest_data_year,
+        sources_json
+      FROM \`${this.tables.opsPipelineRunMetadata}\`
+      WHERE status = 'SUCCESS'
+        AND warehouse_publish_performed = TRUE
+        AND publish_performed = TRUE
+        AND last_successful_updated = TRUE
+        AND published_at IS NOT NULL
+      ORDER BY published_at DESC
+      LIMIT 1
+    `;
+
+    const rows = await this.executeQuery<
+      {
+        run_id?: string | null;
+        published_at?: string | Date | null;
+        latest_data_year?: number | string | null;
+        sources_json?: string | null;
+      }
+    >(sql, {});
+
+    const row = rows[0];
+    if (!row) {
+      return {
+        available: false,
+        last_successful_run_id: null,
+        last_successful_sync_at: null,
+        latest_data_year: null,
+        sources: [],
+        status: 'unavailable',
+      };
+    }
+
+    return {
+      available: true,
+      last_successful_run_id:
+        row.run_id == null ? null : String(row.run_id),
+      last_successful_sync_at: this.normalizeIsoDateTime(row.published_at),
+      latest_data_year: this.normalizeNullableInteger(row.latest_data_year),
+      sources: this.parseSourcesJson(row.sources_json),
+      status: 'success',
+    };
+  }
+
   private buildTableRef(dataset: string, table: string): string {
     return `${this.projectId}.${dataset}.${table}`;
+  }
+
+  private normalizeIsoDateTime(value?: string | Date | null): string | null {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    const text = String(value).trim();
+    return text ? text : null;
+  }
+
+  private normalizeNullableInteger(value?: number | string | null): number | null {
+    if (value == null) {
+      return null;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    return Math.trunc(numeric);
+  }
+
+  private parseSourcesJson(raw?: string | null): DataFreshnessSourceItem[] {
+    if (!raw) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      const normalized = parsed
+        .map((item): DataFreshnessSourceItem | null => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const source = item as Record<string, unknown>;
+          const name =
+            source.name == null ? '' : String(source.name).trim();
+          if (!name) {
+            return null;
+          }
+          return {
+            name,
+            version: this.normalizeNullableString(source.version),
+            updated_at: this.normalizeNullableString(source.updated_at),
+          };
+        })
+        .filter((item): item is DataFreshnessSourceItem => item !== null);
+      return normalized;
+    } catch {
+      return [];
+    }
+  }
+
+  private normalizeNullableString(value: unknown): string | null {
+    if (value == null) {
+      return null;
+    }
+    const text = String(value).trim();
+    return text ? text : null;
   }
 
   private getGoldTableRefOrThrow(tableName: string | null): string {

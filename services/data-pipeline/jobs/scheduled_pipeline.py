@@ -136,6 +136,8 @@ def run(argv: list[str] | None = None) -> int:
                 "last_successful_run_id": None,
                 "last_successful_run_date": None,
                 "published_at": None,
+                "latest_data_year": None,
+                "sources_json": None,
                 "force_applied": force_applied,
                 "planned_actions": _planned_actions_payload() if publish_planned else [],
                 "cloud_write": False,

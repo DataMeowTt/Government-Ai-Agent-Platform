@@ -143,3 +143,18 @@ export interface BigQueryCountryIndicatorsResponse {
   rows: BigQueryCountryIndicatorRow[];
   summary: BigQueryCountryIndicatorSummary[];
 }
+
+export interface DataFreshnessSourceItem {
+  name: string;
+  version: string | null;
+  updated_at: string | null;
+}
+
+export interface DataFreshnessResponse {
+  available: boolean;
+  last_successful_run_id: string | null;
+  last_successful_sync_at: string | null;
+  latest_data_year: number | null;
+  sources: DataFreshnessSourceItem[];
+  status: 'success' | 'unavailable';
+}

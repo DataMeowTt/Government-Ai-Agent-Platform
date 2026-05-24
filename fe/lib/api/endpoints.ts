@@ -39,3 +39,7 @@ export const aiChatApi = {
     }),
   health: () => apiClient.get('/api/v1/ai/health'),
 };
+
+export const systemApi = {
+  getDataFreshness: () => apiClient.get('/api/v1/system/data-freshness'),
+};

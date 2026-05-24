@@ -8,6 +8,7 @@ import StateBlock from '@/components/ui/StateBlock';
 import { useCountries } from '@/lib/hooks/useCountries';
 import { useIndicators } from '@/lib/hooks/useIndicators';
 import { useClusters } from '@/lib/hooks/useClusters';
+import { useDataFreshness } from '@/lib/hooks/useDataFreshness';
 
 function MetricErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -40,16 +41,47 @@ export default function DashboardPage() {
   const countriesQuery = useCountries();
   const indicatorsQuery = useIndicators();
   const clustersQuery = useClusters(2025);
+  const dataFreshnessQuery = useDataFreshness();
 
   const clusterCount = clustersQuery.data ? new Set(clustersQuery.data.map((item) => item.cluster_id)).size : 0;
   const latestClusterYear =
     clustersQuery.data && clustersQuery.data.length > 0
       ? Math.max(...clustersQuery.data.map((item) => item.latest_valid_year ?? item.year))
       : null;
+  const freshness = dataFreshnessQuery.data;
+  const freshnessAvailable = Boolean(freshness?.available && freshness.status === 'success');
+  const latestDataYear = freshnessAvailable ? freshness?.latest_data_year : null;
+  const sourceNames = freshnessAvailable
+    ? Array.from(new Set((freshness?.sources || []).map((source) => source.name).filter(Boolean)))
+    : [];
 
-  const updateYearText = latestClusterYear
-    ? `Dữ liệu cập nhật đến năm ${latestClusterYear}`
-    : 'Thời điểm cập nhật hệ thống: chưa có thông tin công bố';
+  const syncAtText = (() => {
+    if (!freshnessAvailable || !freshness?.last_successful_sync_at) {
+      return 'Thông tin lần đồng bộ thành công gần nhất chưa sẵn sàng.';
+    }
+    const date = new Date(freshness.last_successful_sync_at);
+    if (Number.isNaN(date.getTime())) {
+      return 'Thông tin lần đồng bộ thành công gần nhất chưa sẵn sàng.';
+    }
+    return date.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  })();
+
+  const dataYearText =
+    freshnessAvailable && latestDataYear != null
+      ? `Dữ liệu cập nhật đến năm: ${latestDataYear}`
+      : 'Thông tin lần đồng bộ thành công gần nhất chưa sẵn sàng.';
+  const sourceText =
+    freshnessAvailable && sourceNames.length > 0
+      ? `Nguồn dữ liệu: ${sourceNames.join(', ')}`
+      : 'Nguồn dữ liệu: đang cập nhật.';
 
   return (
     <div className="space-y-6">
@@ -88,9 +120,9 @@ export default function DashboardPage() {
           />
         )}
         <StatCard
-          label="Năm dữ liệu gần nhất"
-          value={latestClusterYear ? String(latestClusterYear) : 'Chưa rõ'}
-          note={updateYearText}
+          label="Năm dữ liệu đồng bộ"
+          value={latestDataYear != null ? String(latestDataYear) : 'Chưa rõ'}
+          note={dataYearText}
           icon={<Layers className="h-5 w-5" />}
         />
         {clustersQuery.isError ? (
@@ -104,6 +136,18 @@ export default function DashboardPage() {
           />
         )}
       </section>
+
+      <SectionCard title="Trạng thái đồng bộ dữ liệu">
+        <div className="space-y-2 text-sm text-slate-700">
+          <p>{dataYearText}</p>
+          <p>
+            {freshnessAvailable
+              ? `Lần đồng bộ thành công gần nhất: ${syncAtText}`
+              : 'Thông tin lần đồng bộ thành công gần nhất chưa sẵn sàng.'}
+          </p>
+          <p>{sourceText}</p>
+        </div>
+      </SectionCard>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard title="Nhóm chỉ số chính">

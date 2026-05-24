@@ -29,6 +29,8 @@ def _metadata() -> PipelineRunMetadata:
         last_successful_run_id="run-0",
         last_successful_run_date="2026-04-24",
         published_at="2026-05-24T02:09:59Z",
+        latest_data_year=2025,
+        sources_json='[{"name":"wdi","version":null,"updated_at":null}]',
         error_message=None,
         force_requested=False,
         force_applied=False,
@@ -58,13 +60,13 @@ def test_pipeline_run_metadata_validates_and_stays_dry_run() -> None:
 
 def test_pipeline_run_metadata_missing_required_field_fails_validation() -> None:
     record = build_pipeline_run_metadata_record(_metadata())
-    record.pop("change_reason")
+    record.pop("sources_json")
     plan = build_ops_writer_plan({"pipeline_run_metadata": [record]}, project_id="western-pivot-452008-a6")
     entry = _metadata_entry(plan)
 
     assert entry["dry_run"] is True
     assert entry["validation"]["status"] == "failed"
     assert entry["validation"]["required_fields"] == list(PIPELINE_RUN_METADATA_REQUIRED)
-    assert "change_reason" in entry["validation"]["required_fields"]
+    assert "sources_json" in entry["validation"]["required_fields"]
     assert "write_performed" not in entry
     assert "warehouse_operation_performed" not in entry

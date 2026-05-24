@@ -135,4 +135,103 @@ describe('BigQueryService', () => {
       expect(query).not.toMatch(/\bdecade\b/i);
     });
   });
+
+  it('returns normalized successful data freshness response', async () => {
+    mockQuery.mockResolvedValue([
+      [
+        {
+          run_id: 'run-current-success',
+          published_at: '2026-05-24T02:00:00Z',
+          latest_data_year: 2025,
+          sources_json:
+            '[{"name":"wdi","version":null,"updated_at":null}]',
+        },
+      ],
+    ]);
+
+    const result = await service.getDataFreshness();
+
+    expect(result).toEqual({
+      available: true,
+      last_successful_run_id: 'run-current-success',
+      last_successful_sync_at: '2026-05-24T02:00:00Z',
+      latest_data_year: 2025,
+      sources: [{ name: 'wdi', version: null, updated_at: null }],
+      status: 'success',
+    });
+  });
+
+  it('returns unavailable freshness response when no successful row is found', async () => {
+    mockQuery.mockResolvedValue([[]]);
+
+    await expect(service.getDataFreshness()).resolves.toEqual({
+      available: false,
+      last_successful_run_id: null,
+      last_successful_sync_at: null,
+      latest_data_year: null,
+      sources: [],
+      status: 'unavailable',
+    });
+  });
+
+  it('uses success-only predicates and selected columns for freshness query', async () => {
+    mockQuery.mockResolvedValue([[]]);
+
+    await service.getDataFreshness();
+    const queryText = String(mockQuery.mock.calls[0][0].query);
+
+    expect(queryText).toContain('SELECT');
+    expect(queryText).toContain('run_id');
+    expect(queryText).toContain('published_at');
+    expect(queryText).toContain('latest_data_year');
+    expect(queryText).toContain('sources_json');
+    expect(queryText).not.toMatch(/\bSELECT\s+\*/i);
+    expect(queryText).toContain("status = 'SUCCESS'");
+    expect(queryText).toContain('warehouse_publish_performed = TRUE');
+    expect(queryText).toContain('publish_performed = TRUE');
+    expect(queryText).toContain('last_successful_updated = TRUE');
+    expect(queryText).toContain('published_at IS NOT NULL');
+    expect(queryText).toContain('ORDER BY published_at DESC');
+    expect(queryText).toContain('LIMIT 1');
+  });
+
+  it('maps public latest-success identifier from run_id, not persisted last_successful_run_id', async () => {
+    mockQuery.mockResolvedValue([
+      [
+        {
+          run_id: 'run-current-success',
+          last_successful_run_id: 'run-previous-success',
+          published_at: '2026-05-24T02:00:00Z',
+          latest_data_year: 2025,
+          sources_json:
+            '[{"name":"wdi","version":null,"updated_at":null}]',
+        },
+      ],
+    ]);
+
+    const result = await service.getDataFreshness();
+    const queryText = String(mockQuery.mock.calls[0][0].query);
+
+    expect(result.last_successful_run_id).toBe('run-current-success');
+    expect(result.last_successful_run_id).not.toBe('run-previous-success');
+    expect(queryText).toContain('run_id');
+    expect(queryText).not.toContain('last_successful_run_id');
+  });
+
+  it('returns empty sources when sources_json is malformed', async () => {
+    mockQuery.mockResolvedValue([
+      [
+        {
+          run_id: 'run-current-success',
+          published_at: '2026-05-24T02:00:00Z',
+          latest_data_year: 2025,
+          sources_json: '{invalid-json}',
+        },
+      ],
+    ]);
+
+    const result = await service.getDataFreshness();
+    expect(result.sources).toEqual([]);
+    expect(result.status).toBe('success');
+  });
 });

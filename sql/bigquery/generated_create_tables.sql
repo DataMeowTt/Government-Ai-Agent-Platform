@@ -414,6 +414,42 @@ PARTITION BY `run_date`
 CLUSTER BY `status`
 ;
 
+CREATE TABLE IF NOT EXISTS `gov_ai_ops.pipeline_run_metadata` (
+  `run_id` STRING NOT NULL,
+  `run_date` DATE NOT NULL,
+  `execution_mode` STRING NOT NULL,
+  `status` STRING NOT NULL,
+  `started_at` TIMESTAMP NOT NULL,
+  `finished_at` TIMESTAMP,
+  `enabled_sources` JSON NOT NULL,
+  `source_changed` BOOL,
+  `change_reason` STRING,
+  `candidate_source_manifest_path` STRING,
+  `baseline_success_manifest_path` STRING,
+  `changed_sources` JSON NOT NULL,
+  `validation_status` STRING,
+  `data_quality_status` STRING,
+  `bronze_write_planned` BOOL NOT NULL,
+  `bronze_write_performed` BOOL NOT NULL,
+  `warehouse_publish_planned` BOOL NOT NULL,
+  `warehouse_publish_performed` BOOL NOT NULL,
+  `last_successful_updated` BOOL NOT NULL,
+  `last_successful_run_id` STRING,
+  `last_successful_run_date` STRING,
+  `published_at` TIMESTAMP,
+  `latest_data_year` INTEGER,
+  `sources_json` STRING,
+  `error_message` STRING,
+  `force_requested` BOOL NOT NULL,
+  `force_applied` BOOL NOT NULL,
+  `planned_actions` JSON NOT NULL,
+  `cloud_write` BOOL NOT NULL,
+  `publish_performed` BOOL NOT NULL
+)
+PARTITION BY `run_date`
+CLUSTER BY `status`
+;
+
 CREATE TABLE IF NOT EXISTS `gov_ai_ops.pipeline_runs` (
   `run_id` STRING NOT NULL,
   `run_date` DATE NOT NULL,

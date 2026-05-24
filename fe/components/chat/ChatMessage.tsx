@@ -1,6 +1,7 @@
-﻿import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ChatChart from '@/components/chat/ChatChart';
 import ChatDataTable from '@/components/chat/ChatDataTable';
 import type { ChatMessage as ChatMessageType } from '@/lib/types/aiChat';
 
@@ -135,8 +136,10 @@ export default function ChatMessage({ message, onClarificationClick }: ChatMessa
             ))}
           </div>
         ) : null}
+        <ChatChart chart={response?.chart} />
         <ChatDataTable response={response} />
       </div>
     </div>
   );
 }
+

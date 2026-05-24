@@ -54,7 +54,12 @@ def test_unchanged_candidate_skips_publish_and_success_update(tmp_path: Path, mo
     assert metadata["source_changed"] is False
     assert metadata["publish_performed"] is False
     assert metadata["last_successful_updated"] is False
+    assert metadata["latest_data_year"] is None
+    assert metadata["sources_json"] is None
+    assert metadata["cloud_write"] is False
+    assert metadata["warehouse_publish_performed"] is False
     assert plan["planned_actions"] == []
+    assert plan["publish_performed"] is False
 
 
 def test_changed_candidate_has_ordered_actions_but_not_executed(tmp_path: Path, monkeypatch) -> None:
@@ -69,8 +74,14 @@ def test_changed_candidate_has_ordered_actions_but_not_executed(tmp_path: Path, 
     assert metadata["source_changed"] is True
     assert metadata["warehouse_publish_planned"] is True
     assert metadata["warehouse_publish_performed"] is False
+    assert metadata["latest_data_year"] is None
+    assert metadata["sources_json"] is None
+    assert metadata["cloud_write"] is False
+    assert metadata["publish_performed"] is False
     assert [item["action"] for item in plan["planned_actions"]] == scheduled_pipeline.PLANNED_ACTIONS
     assert all(item["executed"] is False for item in plan["planned_actions"])
+    assert all(item["cloud_write"] is False for item in plan["planned_actions"])
+    assert plan["publish_performed"] is False
 
 
 def test_failed_acquisition_is_failed_and_no_last_success_update(tmp_path: Path, monkeypatch) -> None:
@@ -82,6 +93,9 @@ def test_failed_acquisition_is_failed_and_no_last_success_update(tmp_path: Path,
     assert metadata["status"] == "FAILED"
     assert metadata["publish_performed"] is False
     assert metadata["last_successful_updated"] is False
+    assert metadata["cloud_write"] is False
+    assert metadata["latest_data_year"] is None
+    assert metadata["sources_json"] is None
 
 
 def test_baseline_path_is_last_successful_manifest_input(tmp_path: Path, monkeypatch) -> None:
