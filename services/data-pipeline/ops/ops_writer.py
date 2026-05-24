@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 
 OPS_DATASET = "gov_ai_ops"
 WRITE_DISPOSITION = "WRITE_APPEND"
@@ -58,6 +60,21 @@ PIPELINE_RUN_METADATA_REQUIRED = (
     "sources_json",
 )
 
+NON_PUBLISHING_READINESS_STATUSES = {
+    "PLANNED_CHANGED",
+    "PLANNED_UNCHANGED",
+    "DRY_RUN_CHANGED",
+    "SKIPPED_UNCHANGED",
+}
+
+FAILURE_STATUSES = {
+    "FAILED",
+    "VALIDATION_FAILED",
+    "PUBLISH_FAILED",
+    "ACQUISITION_FAILED",
+    "BASELINE_INVALID",
+}
+
 
 def build_table_id(project_id: str | None, dataset: str, table: str) -> str | None:
     clean_project = str(project_id or "").strip()
@@ -77,6 +94,101 @@ def validate_rows(table: str, rows: list[dict]) -> dict:
     return {
         "status": "passed" if not row_errors else "failed",
         "required_fields": list(required),
+        "row_errors": row_errors,
+    }
+
+
+def _is_blank(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    return False
+
+
+def _is_valid_latest_data_year(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return value > 0
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return False
+        try:
+            return int(text) > 0
+        except ValueError:
+            return False
+    return False
+
+
+def _is_valid_sources_json(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text:
+        return False
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(parsed, (dict, list))
+
+
+def _metadata_semantic_errors(row: dict) -> list[str]:
+    status = str(row.get("status") or "").strip().upper()
+    errors: list[str] = []
+    warehouse_publish_performed = row.get("warehouse_publish_performed")
+    publish_performed = row.get("publish_performed")
+    last_successful_updated = row.get("last_successful_updated")
+    published_at = row.get("published_at")
+
+    if status == "SUCCESS":
+        if warehouse_publish_performed is not True:
+            errors.append("SUCCESS requires warehouse_publish_performed=True")
+        if publish_performed is not True:
+            errors.append("SUCCESS requires publish_performed=True")
+        if last_successful_updated is not True:
+            errors.append("SUCCESS requires last_successful_updated=True")
+        if _is_blank(published_at):
+            errors.append("SUCCESS requires published_at to be non-empty")
+        if not _is_valid_latest_data_year(row.get("latest_data_year")):
+            errors.append("SUCCESS requires latest_data_year to be a valid integer")
+        if not _is_valid_sources_json(row.get("sources_json")):
+            errors.append("SUCCESS requires sources_json to be valid JSON metadata")
+        return errors
+
+    if status in NON_PUBLISHING_READINESS_STATUSES or status in FAILURE_STATUSES or status.endswith("FAILED"):
+        if warehouse_publish_performed is not False:
+            errors.append(f"{status} requires warehouse_publish_performed=False")
+        if publish_performed is not False:
+            errors.append(f"{status} requires publish_performed=False")
+        if last_successful_updated is not False:
+            errors.append(f"{status} requires last_successful_updated=False")
+        if not _is_blank(published_at):
+            errors.append(f"{status} requires published_at to be empty")
+    return errors
+
+
+def _validate_pipeline_run_metadata_rows(rows: list[dict]) -> dict:
+    row_errors: list[dict] = []
+    required = list(PIPELINE_RUN_METADATA_REQUIRED)
+
+    for index, row in enumerate(rows):
+        missing_fields = [field for field in required if field not in row]
+        semantic_errors = _metadata_semantic_errors(row)
+        if missing_fields or semantic_errors:
+            row_errors.append(
+                {
+                    "row_index": index,
+                    "missing_fields": missing_fields,
+                    "semantic_errors": semantic_errors,
+                }
+            )
+
+    return {
+        "status": "passed" if not row_errors else "failed",
+        "required_fields": required,
         "row_errors": row_errors,
     }
 
@@ -108,12 +220,7 @@ def build_ops_writer_plan(ops_records: dict, *, project_id: str | None = None) -
                 "rows_preview": metadata_rows[:1],
                 "dry_run": True,
                 "write_disposition": WRITE_DISPOSITION,
-                "validation": {
-                    "status": "passed"
-                    if all(all(field in row for field in PIPELINE_RUN_METADATA_REQUIRED) for row in metadata_rows)
-                    else "failed",
-                    "required_fields": list(PIPELINE_RUN_METADATA_REQUIRED),
-                },
+                "validation": _validate_pipeline_run_metadata_rows(metadata_rows),
             }
         )
     return plan
