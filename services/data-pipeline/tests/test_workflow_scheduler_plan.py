@@ -131,3 +131,44 @@ def test_check_mode_passes_and_reports_validation_json(capsys) -> None:
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "PASS"
     assert any(check["name"] == "source_execution_apis" for check in result["checks"])
+
+
+def test_controlled_execution_overrides_are_execution_scoped() -> None:
+    module = _load_module()
+    overrides = module.build_controlled_execution_overrides(
+        run_id="controlled-refresh-20260524T153000Z",
+        run_date="2026-05-24",
+    )
+    assert "--mode" in overrides["args"]
+    assert "execute" in overrides["args"]
+    assert "--allow-network" in overrides["args"]
+    assert overrides["env"]["CLOUD_WRITE_APPROVED"] == "true"
+    assert overrides["env"]["BIGQUERY_WRITE_APPROVED"] == "true"
+    assert overrides["env"]["BIGQUERY_WAREHOUSE_WRITE_APPROVED"] == "true"
+    assert overrides["env"]["BIGQUERY_OPS_WRITE_APPROVED"] == "true"
+    assert overrides["env"]["RECOVERY_TABLE_RETENTION_DAYS"] == "45"
+
+
+def test_monthly_workflow_source_includes_dynamic_execute_overrides_only_when_enabled() -> None:
+    module = _load_module()
+    plan_source = module.build_monthly_workflow_source(execute_mode=False)
+    execute_source = module.build_monthly_workflow_source(execute_mode=True)
+
+    assert "runtime_mode: \"plan_only_readiness\"" in plan_source
+    assert "submitted_plan_only_cloud_run_job" in plan_source
+    assert "containerOverrides" not in plan_source
+
+    assert "runtime_mode: \"execute_monthly\"" in execute_source
+    assert "containerOverrides" in execute_source
+    assert "--mode" in execute_source
+    assert "execute" in execute_source
+    assert "CLOUD_WRITE_APPROVED" in execute_source
+    assert "BIGQUERY_WAREHOUSE_WRITE_APPROVED" in execute_source
+    assert "RECOVERY_TABLE_RETENTION_DAYS" in execute_source
+
+
+def test_monthly_workflow_run_date_uses_time_format_not_string_now() -> None:
+    module = _load_module()
+    execute_source = module.build_monthly_workflow_source(execute_mode=True)
+    assert "${text.substring(time.format(sys.now()), 0, 10)}" in execute_source
+    assert "${text.substring(string(sys.now()), 0, 10)}" not in execute_source

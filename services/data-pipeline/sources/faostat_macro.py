@@ -38,9 +38,24 @@ def default_fetch_catalog() -> list[dict]:
     except Exception as exc:
         raise AcquisitionError(f"FAOSTAT catalog fetch failed: {exc}") from exc
     try:
-        return json.loads(raw_payload.decode("utf-8"))
+        decoded = json.loads(raw_payload.decode("utf-8"))
     except Exception as exc:
         raise AcquisitionError(f"FAOSTAT catalog parse failed: {exc}") from exc
+    if isinstance(decoded, list):
+        return [item for item in decoded if isinstance(item, dict)]
+    if isinstance(decoded, dict):
+        datasets = decoded.get("Datasets")
+        if isinstance(datasets, dict):
+            entries = datasets.get("Dataset")
+            if isinstance(entries, list):
+                return [item for item in entries if isinstance(item, dict)]
+            if isinstance(entries, dict):
+                return [entries]
+        if isinstance(datasets, list):
+            return [item for item in datasets if isinstance(item, dict)]
+        if isinstance(decoded.get("Dataset"), list):
+            return [item for item in decoded["Dataset"] if isinstance(item, dict)]
+    raise AcquisitionError("FAOSTAT catalog format is unsupported for dataset extraction.")
 
 
 def default_download_bytes(url: str) -> bytes:

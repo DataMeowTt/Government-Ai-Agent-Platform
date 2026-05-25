@@ -41,6 +41,13 @@ def materialize_gmd(
         raise AcquisitionError(f"GMD package loader initialization failed: {exc}") from exc
     try:
         dataframe = loader(show_preview=False)
+    except TypeError as exc:
+        if "Unexpected keyword argument" not in str(exc):
+            raise AcquisitionError(f"GMD full dataset acquisition failed: {exc}") from exc
+        try:
+            dataframe = loader()
+        except Exception as fallback_exc:
+            raise AcquisitionError(f"GMD full dataset acquisition failed: {fallback_exc}") from fallback_exc
     except AcquisitionError:
         raise
     except Exception as exc:

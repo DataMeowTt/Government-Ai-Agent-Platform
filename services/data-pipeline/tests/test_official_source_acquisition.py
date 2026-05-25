@@ -12,10 +12,10 @@ import pytest
 
 from jobs.fetch_official_sources import main as fetch_main
 from jobs.fetch_official_sources import _selected_sources, decide_source_change, run_acquisition
-from sources.faostat_macro import FAO_REQUIRED_FILES, materialize_fao_macro
+from sources.faostat_macro import FAO_REQUIRED_FILES, default_fetch_catalog, materialize_fao_macro
 from sources.global_macro_database import materialize_gmd
 from sources.official_acquisition import AcquisitionError
-from sources.world_bank_wdi import WDI_REQUIRED_FILES, materialize_wdi
+from sources.world_bank_wdi import WDI_REQUIRED_FILES, default_wdi_archive_resolver, materialize_wdi
 
 
 def _zip_bytes(file_map: dict[str, str]) -> bytes:
@@ -52,6 +52,11 @@ def test_wdi_missing_required_member_fails(tmp_path: Path) -> None:
         materialize_wdi(runtime_raw_dir=tmp_path, allow_network=True, resolve_archive_url=lambda: "x", download_bytes=lambda _: payload)
 
 
+def test_default_wdi_archive_resolver_points_to_public_bulk_endpoint() -> None:
+    resolved = default_wdi_archive_resolver()
+    assert resolved == "https://databank.worldbank.org/data/download/WDI_CSV.zip"
+
+
 def test_fao_selects_mk_and_uses_catalog_file_location(tmp_path: Path) -> None:
     payload = _zip_bytes({name: "c1,c2\n1,2\n" for name in FAO_REQUIRED_FILES})
     seen: list[str] = []
@@ -83,6 +88,33 @@ def test_fao_missing_codebook_fails(tmp_path: Path) -> None:
         )
 
 
+def test_default_fetch_catalog_parses_current_nested_shape(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sources import faostat_macro as mod
+
+    payload = {
+        "Datasets": {
+            "-xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "Dataset": [
+                {"DatasetCode": "MK", "DatasetName": "Macro-Economic Indicators", "FileLocation": "https://example/mk.zip"}
+            ],
+        }
+    }
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return json.dumps(payload).encode("utf-8")
+
+    monkeypatch.setattr(mod, "urlopen", lambda *_args, **_kwargs: _Resp())
+    entries = default_fetch_catalog()
+    assert entries[0]["DatasetCode"] == "MK"
+
+
 def test_gmd_materializes_full_dataset_and_src(tmp_path: Path) -> None:
     calls: list[bool] = []
 
@@ -110,6 +142,21 @@ def test_gmd_package_missing_produces_clear_error(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr(mod, "_import_gmd_callable", lambda: (_ for _ in ()).throw(Exception("missing")))
     with pytest.raises(AcquisitionError):
         mod.materialize_gmd(runtime_raw_dir=tmp_path, allow_network=True)
+
+
+def test_gmd_loader_fallback_without_show_preview_keyword(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def fallback_loader(**kwargs):
+        if kwargs:
+            calls.append("with_kwargs")
+            raise TypeError("Unexpected keyword argument(s): show_preview")
+        calls.append("no_kwargs")
+        return pd.DataFrame({"countryname": ["A"], "iso3": ["AAA"], "year": [2000]})
+
+    entry = materialize_gmd(runtime_raw_dir=tmp_path, allow_network=True, gmd_callable=fallback_loader)
+    assert calls == ["with_kwargs", "no_kwargs"]
+    assert entry["validation_status"] == "valid"
 
 
 def test_selected_sources_default_and_all_behavior() -> None:
@@ -268,3 +315,9 @@ def test_plan_mode_no_acquisition_calls(tmp_path: Path, monkeypatch: pytest.Monk
         "should_build_downstream": False,
     }
     assert not runtime_raw.exists() or not any(runtime_raw.rglob("*"))
+
+
+def test_global_macro_data_import_smoke() -> None:
+    from global_macro_data import gmd
+
+    assert callable(gmd)

@@ -119,8 +119,14 @@ def test_execute_upload_plan_first_object_failure_reports_zero_uploaded(tmp_path
     local_file = tmp_path / "file-1.txt"
     _write_text(local_file, "payload-1\n")
 
-    def failing_uploader(*, local_path: str, target_gcs_uri: str, content_type: str | None = None) -> dict:
-        del local_path, target_gcs_uri, content_type
+    def failing_uploader(
+        *,
+        local_path: str,
+        target_gcs_uri: str,
+        content_type: str | None = None,
+        if_generation_match: int | None = None,
+    ) -> dict:
+        del local_path, target_gcs_uri, content_type, if_generation_match
         raise RuntimeError("upload failed object-1")
 
     payload = execute_upload_plan(
@@ -155,8 +161,14 @@ def test_execute_upload_plan_second_object_failure_reports_partial_uploaded(tmp_
     _write_text(local_file_2, "payload-2\n")
     call_count = {"n": 0}
 
-    def partial_failing_uploader(*, local_path: str, target_gcs_uri: str, content_type: str | None = None) -> dict:
-        del local_path, content_type
+    def partial_failing_uploader(
+        *,
+        local_path: str,
+        target_gcs_uri: str,
+        content_type: str | None = None,
+        if_generation_match: int | None = None,
+    ) -> dict:
+        del local_path, content_type, if_generation_match
         call_count["n"] += 1
         if call_count["n"] == 2:
             raise RuntimeError("upload failed object-2")
@@ -238,3 +250,71 @@ def test_ingest_sources_dry_run_generates_upload_plan_json(tmp_path: Path) -> No
         "/manifests/pipeline_manifest/run_date=2026-05-18/pipeline_manifest.json" in item["target_gcs_uri"]
         for item in plan["objects"]
     )
+
+
+def test_build_upload_plan_run_scoped_paths_include_run_id_and_are_distinct(tmp_path: Path) -> None:
+    output_dir = _build_local_bronze_fixture(tmp_path)
+    plan_a = build_upload_plan(
+        output_dir=output_dir,
+        bucket="western-pivot-452008-a6-gov-ai-economic-data",
+        run_id="run-a",
+        run_date="2026-05-18",
+        dry_run=False,
+        cloud_approved=True,
+        run_scoped=True,
+        atomic_create_only=True,
+    )
+    plan_b = build_upload_plan(
+        output_dir=output_dir,
+        bucket="western-pivot-452008-a6-gov-ai-economic-data",
+        run_id="run-b",
+        run_date="2026-05-18",
+        dry_run=False,
+        cloud_approved=True,
+        run_scoped=True,
+        atomic_create_only=True,
+    )
+    assert plan_a["run_scoped"] is True
+    assert plan_a["atomic_create_only"] is True
+    assert all("run_id=run-a/" in obj["target_gcs_uri"] for obj in plan_a["objects"] if obj["status"] != "missing")
+    assert all("run_id=run-b/" in obj["target_gcs_uri"] for obj in plan_b["objects"] if obj["status"] != "missing")
+    assert set(obj["target_gcs_uri"] for obj in plan_a["objects"]) != set(obj["target_gcs_uri"] for obj in plan_b["objects"])
+    assert all(obj.get("if_generation_match") == 0 for obj in plan_a["objects"] if obj["status"] != "missing")
+
+
+def test_execute_upload_plan_atomic_precondition_failure_reports_destination_collision(tmp_path: Path) -> None:
+    local_file = tmp_path / "file-1.txt"
+    _write_text(local_file, "payload-1\n")
+
+    def conflict_uploader(
+        *,
+        local_path: str,
+        target_gcs_uri: str,
+        content_type: str | None = None,
+        if_generation_match: int | None = None,
+    ) -> dict:
+        del local_path, target_gcs_uri, content_type
+        assert if_generation_match == 0
+        raise RuntimeError("PreconditionFailed: 412 if_generation_match")
+
+    payload = execute_upload_plan(
+        {
+            "cloud_write_approved": True,
+            "run_id": "run-1",
+            "run_date": "2026-05-24",
+            "gcs_bucket": "bucket",
+            "objects": [
+                {
+                    "status": "planned",
+                    "local_path": str(local_file),
+                    "target_gcs_uri": "gs://bucket/path/file-1.txt",
+                    "content_type": "text/plain",
+                    "if_generation_match": 0,
+                }
+            ],
+        },
+        uploader=conflict_uploader,
+    )
+    assert payload["status"] == "DESTINATION_COLLISION"
+    assert payload["uploaded_count"] == 0
+    assert payload["atomic_precondition_failed"] is True

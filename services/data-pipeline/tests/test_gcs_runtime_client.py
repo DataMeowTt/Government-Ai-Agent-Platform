@@ -20,10 +20,15 @@ class _FakeBlob:
         self._storage = storage
         self._calls = calls
 
-    def upload_from_filename(self, filename: str, content_type: str | None = None) -> None:
+    def upload_from_filename(
+        self,
+        filename: str,
+        content_type: str | None = None,
+        if_generation_match: int | None = None,
+    ) -> None:
         payload = Path(filename).read_bytes()
         self._storage[self._name] = payload
-        self._calls["writes"].append(f"{self._name}|{content_type or ''}")
+        self._calls["writes"].append(f"{self._name}|{content_type or ''}|{if_generation_match}")
 
     def download_as_bytes(self) -> bytes:
         self._calls["reads"].append(self._name)
@@ -86,9 +91,10 @@ def test_approved_upload_uses_python_runtime_seam_and_no_subprocess(tmp_path: Pa
         local_path=local_file,
         target_gcs_uri="gs://bucket/manifests/source_manifest/run_date=2026-05-24/source_manifest.json",
         content_type="application/json",
+        if_generation_match=0,
         client=client,
     )
-    assert calls["writes"] == ["manifests/source_manifest/run_date=2026-05-24/source_manifest.json|application/json"]
+    assert calls["writes"] == ["manifests/source_manifest/run_date=2026-05-24/source_manifest.json|application/json|0"]
 
 
 def test_execute_upload_plan_uses_uploader_callback_for_approved_writes(tmp_path: Path) -> None:
@@ -96,9 +102,16 @@ def test_execute_upload_plan_uses_uploader_callback_for_approved_writes(tmp_path
     local_file.write_text("payload\n", encoding="utf-8")
     upload_calls: list[tuple[str, str]] = []
 
-    def fake_uploader(*, local_path: str | Path, target_gcs_uri: str, content_type: str | None = None) -> dict:
+    def fake_uploader(
+        *,
+        local_path: str | Path,
+        target_gcs_uri: str,
+        content_type: str | None = None,
+        if_generation_match: int | None = None,
+    ) -> dict:
         del content_type
         upload_calls.append((str(local_path), target_gcs_uri))
+        assert if_generation_match == 0
         return {"ok": True}
 
     payload = execute_upload_plan(
@@ -113,6 +126,7 @@ def test_execute_upload_plan_uses_uploader_callback_for_approved_writes(tmp_path
                     "local_path": str(local_file),
                     "target_gcs_uri": "gs://bucket/path/file.txt",
                     "content_type": "text/plain",
+                    "if_generation_match": 0,
                 }
             ],
         },

@@ -12,6 +12,7 @@ from warehouse.bigquery_warehouse_rebuild import (
     derive_runtime_metadata,
     run_silver_preflight,
 )
+import warehouse.bigquery_warehouse_rebuild as warehouse_rebuild
 from warehouse.bigquery_warehouse_validation import load_table_contract
 from jobs.rebuild_bigquery_warehouse import parse_args as parse_rebuild_args
 
@@ -209,3 +210,24 @@ def test_explicit_expected_row_count_still_fails_on_mismatch() -> None:
 def test_rebuild_cli_defaults_to_dynamic_validation() -> None:
     args = parse_rebuild_args([])
     assert args.expected_silver_row_count is None
+
+
+def test_indicator_contract_fallback_when_analytics_worker_not_packaged(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    contract = warehouse_rebuild._load_indicator_contract_module(repo_root)
+
+    assert "gold_growth_dynamics" in contract.TABLES_INDICATORS
+    assert "GFCF_to_GDP" in contract.INDICATORS_FOR_CLUSTER
+    assert contract.PUBLIC_INDICATORS["urban_pop_pct"]["gold_table"] == "gold_social_welfare"
+
+
+def test_rebuild_get_active_project_falls_back_to_runtime_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PROJECT_ID", "western-pivot-452008-a6")
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("GCLOUD_PROJECT", raising=False)
+    monkeypatch.setattr("warehouse.bigquery_warehouse_rebuild.shutil.which", lambda _name: None)
+
+    assert warehouse_rebuild.get_active_gcloud_project() == "western-pivot-452008-a6"

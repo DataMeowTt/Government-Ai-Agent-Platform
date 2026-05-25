@@ -14,6 +14,7 @@ DEFAULT_SCHEDULER_NAME = "economic-data-pipeline-monthly"
 DEFAULT_SERVICE_ACCOUNT = "gov-ai-runner@western-pivot-452008-a6.iam.gserviceaccount.com"
 DEFAULT_RUN_ID = "{run_id}"
 DEFAULT_RUN_DATE = "{run_date}"
+DEFAULT_CLOUD_RUN_JOB = "gov-ai-snapshot-plan"
 
 STEP_ORDER = [
     "initialize_run",
@@ -38,6 +39,101 @@ EXECUTION_APIS = {
     "subprocess": {"run", "Popen", "call", "check_call", "check_output"},
     "os": {"system", "popen"},
 }
+
+
+def build_controlled_execution_overrides(*, run_id: str, run_date: str) -> dict[str, Any]:
+    return {
+        "args": [
+            "-m",
+            "jobs.scheduled_pipeline",
+            "--mode",
+            "execute",
+            "--run-id",
+            run_id,
+            "--run-date",
+            run_date,
+            "--source",
+            "all",
+            "--allow-network",
+            "--runtime-dir",
+            "/tmp/gov-ai/runtime",
+            "--output-dir",
+            "/tmp/gov-ai/output",
+        ],
+        "env": {
+            "CLOUD_WRITE_APPROVED": "true",
+            "BIGQUERY_WRITE_APPROVED": "true",
+            "BIGQUERY_WAREHOUSE_WRITE_APPROVED": "true",
+            "BIGQUERY_OPS_WRITE_APPROVED": "true",
+            "RECOVERY_TABLE_RETENTION_DAYS": "45",
+        },
+    }
+
+
+def build_monthly_workflow_source(*, execute_mode: bool) -> str:
+    if not execute_mode:
+        return (
+            "main:\n"
+            "  params: [args]\n"
+            "  steps:\n"
+            "    - init:\n"
+            "        assign:\n"
+            "          - project_id: ${sys.get_env(\"GOOGLE_CLOUD_PROJECT_ID\")}\n"
+            "          - location: \"asia-southeast1\"\n"
+            "          - job_name: \"gov-ai-snapshot-plan\"\n"
+            "          - runtime_mode: \"plan_only_readiness\"\n"
+            "    - run_plan_only_job:\n"
+            "        call: googleapis.run.v2.projects.locations.jobs.run\n"
+            "        args:\n"
+            "          name: ${\"projects/\" + project_id + \"/locations/\" + location + \"/jobs/\" + job_name}\n"
+            "        result: run_result\n"
+            "    - finish:\n"
+            "        return:\n"
+            "          status: \"submitted_plan_only_cloud_run_job\"\n"
+            "          runtime_mode: ${runtime_mode}\n"
+            "          run_result: ${run_result}\n"
+        )
+
+    overrides = build_controlled_execution_overrides(
+        run_id="${\"scheduled-refresh-\" + string(int(sys.now()))}",
+        run_date="${text.substring(time.format(sys.now()), 0, 10)}",
+    )
+    args_yaml = ", ".join([f"\"{item}\"" for item in overrides["args"]])
+    env_yaml = "\n".join(
+        [
+            f"                      - name: {key}\n"
+            f"                        value: \"{value}\""
+            for key, value in overrides["env"].items()
+        ]
+    )
+    return (
+        "main:\n"
+        "  params: [args]\n"
+        "  steps:\n"
+        "    - init:\n"
+        "        assign:\n"
+        "          - project_id: ${sys.get_env(\"GOOGLE_CLOUD_PROJECT_ID\")}\n"
+        "          - location: \"asia-southeast1\"\n"
+        f"          - job_name: \"{DEFAULT_CLOUD_RUN_JOB}\"\n"
+        "          - runtime_mode: \"execute_monthly\"\n"
+        "    - run_execute_job:\n"
+        "        call: googleapis.run.v2.projects.locations.jobs.run\n"
+        "        args:\n"
+        "          name: ${\"projects/\" + project_id + \"/locations/\" + location + \"/jobs/\" + job_name}\n"
+        "          body:\n"
+        "            overrides:\n"
+        "              containerOverrides:\n"
+        "                - args:\n"
+        f"                    [{args_yaml}]\n"
+        "                  env:\n"
+        f"{env_yaml}\n"
+        "        result: run_result\n"
+        "    - finish:\n"
+        "        return:\n"
+        "          status: \"submitted_execute_cloud_run_job\"\n"
+        "          runtime_mode: ${runtime_mode}\n"
+        "          run_result: ${run_result}\n"
+    )
 
 
 def validate_no_cloud_command_text(text: str) -> list[str]:

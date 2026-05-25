@@ -55,6 +55,18 @@ ANALYTICS_TABLE_NAMES = (
 CLUSTER_BASELINE_YEARS = (2000, 2010, 2020)
 
 
+def _resolve_repo_root() -> Path:
+    current = Path(__file__).resolve()
+    candidates = [current.parent, *current.parents]
+    for candidate in candidates:
+        if (candidate / "contracts" / "table_contract.yaml").exists():
+            return candidate
+    raise FileNotFoundError(
+        "Unable to resolve repository root containing contracts/table_contract.yaml "
+        f"from {current}"
+    )
+
+
 @dataclass(frozen=True)
 class RuntimeMetadata:
     run_id: str
@@ -169,6 +181,11 @@ class BigQueryExecutor:
 
 
 def get_active_gcloud_project() -> str:
+    for env_name in ("GOOGLE_CLOUD_PROJECT", "PROJECT_ID", "GCLOUD_PROJECT"):
+        env_value = str(os.environ.get(env_name) or "").strip()
+        if env_value:
+            return env_value
+
     executable = shutil.which("gcloud.cmd") or shutil.which("gcloud")
     if not executable:
         raise RuntimeError("Unable to find gcloud executable on PATH.")
@@ -444,11 +461,44 @@ def build_gold_tables(
 
 def _load_indicator_contract_module(repo_root: Path) -> Any:
     worker_root = repo_root / "services" / "analytics-worker"
-    if str(worker_root) not in sys.path:
-        sys.path.insert(0, str(worker_root))
-    from src.generated import indicator_contract  # type: ignore
+    if worker_root.exists():
+        if str(worker_root) not in sys.path:
+            sys.path.insert(0, str(worker_root))
+        try:
+            from src.generated import indicator_contract  # type: ignore
 
-    return indicator_contract
+            return indicator_contract
+        except Exception:
+            pass
+
+    class _FallbackIndicatorContract:
+        TABLES_INDICATORS = {
+            "gold_growth_dynamics": ["GDP_growth_YoY", "GDP_pc_growth_gap", "rGDP_growth_YoY", "rolling_mean_5yr", "trend_deviation"],
+            "gold_fiscal_monetary": ["fiscal_balance_GDP", "govdebt_GDP", "inflation_cpi", "inflation_gap", "real_interest_rate", "tax_revenue_pct_GDP"],
+            "gold_crisis_risk": ["REER_deviation", "spending_efficiency"],
+            "gold_social_welfare": ["hcons_growth", "poverty_change_5yr", "poverty_headcount", "unemployment_total", "youth_unemployment_gap"],
+            "gold_structural_composition": ["GFCF_to_GDP", "GNI_to_GDP", "agri_va_share", "food_bev_share_manuf", "manuf_va_share"],
+        }
+        INDICATORS_FOR_CLUSTER = [
+            "GFCF_to_GDP",
+            "GNI_to_GDP",
+            "agri_va_share",
+            "manuf_va_share",
+            "poverty_headcount",
+            "unemployment_total",
+            "urban_pop_pct",
+        ]
+        PUBLIC_INDICATORS = {
+            "GFCF_to_GDP": {"gold_table": "gold_structural_composition"},
+            "GNI_to_GDP": {"gold_table": "gold_structural_composition"},
+            "agri_va_share": {"gold_table": "gold_structural_composition"},
+            "manuf_va_share": {"gold_table": "gold_structural_composition"},
+            "poverty_headcount": {"gold_table": "gold_social_welfare"},
+            "unemployment_total": {"gold_table": "gold_social_welfare"},
+            "urban_pop_pct": {"gold_table": "gold_social_welfare"},
+        }
+
+    return _FallbackIndicatorContract
 
 
 def _compute_trend_and_anomaly_for_indicator(df: pd.DataFrame, indicator: str) -> pd.DataFrame:
@@ -759,7 +809,7 @@ def run_warehouse_rebuild(
     expected_silver_row_count: int | None = None,
     max_validation_bytes: int = DEFAULT_MAX_VALIDATION_BYTES,
 ) -> dict[str, Any]:
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = _resolve_repo_root()
     output_path = _ensure_dir(Path(output_dir).expanduser().resolve())
     require_active_project(project_id)
     executor = BigQueryExecutor(project_id=project_id, location=location)

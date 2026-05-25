@@ -4,7 +4,8 @@ import io
 import zipfile
 from pathlib import Path
 from typing import Callable
-from urllib.request import urlopen
+
+import requests
 
 from sources.official_acquisition import (
     AcquisitionError,
@@ -19,6 +20,8 @@ WDI_REQUIRED_FILES = ["WDICSV.csv", "WDICountry.csv", "WDISeries.csv"]
 WDI_OPTIONAL_FILES = ["WDIcountry-series.csv", "WDIseries-time.csv", "WDIfootnote.csv"]
 WDI_OFFICIAL_REFERENCE = "https://wdi.worldbank.org/"
 WDI_DATASET_NAME = "World Development Indicators"
+WDI_BULK_DOWNLOAD_URL = "https://databank.worldbank.org/data/download/WDI_CSV.zip"
+WDI_ACCESS_PRIMER_URL = "https://datatopics.worldbank.org/world-development-indicators/"
 
 
 class WdiNetworkBlockedError(AcquisitionError):
@@ -26,15 +29,67 @@ class WdiNetworkBlockedError(AcquisitionError):
 
 
 def default_wdi_archive_resolver() -> str:
-    raise AcquisitionError("WDI archive resolver is not configured for live resolution.")
+    # Stable public bulk endpoint referenced by World Bank's WDI topics page.
+    return WDI_BULK_DOWNLOAD_URL
 
 
 def default_download_bytes(url: str) -> bytes:
-    try:
-        with urlopen(url, timeout=60) as response:  # nosec B310
-            return response.read()
-    except Exception as exc:
-        raise AcquisitionError(f"WDI download failed: {exc}") from exc
+    # The WDI bulk file is large and occasionally terminates early.
+    # Use ranged retries with fresh sessions to resume safely.
+    buffer = bytearray()
+    downloaded = 0
+    total_size: int | None = None
+    last_error: Exception | None = None
+
+    for _ in range(120):
+        session = requests.Session()
+        session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            }
+        )
+        try:
+            # Prime access path used by World Bank before requesting the archive.
+            session.get(WDI_ACCESS_PRIMER_URL, timeout=60)
+            headers = {"Accept-Encoding": "identity", "Range": f"bytes={downloaded}-"}
+            with session.get(url, timeout=120, stream=True, allow_redirects=True, headers=headers) as response:
+                if response.status_code == 403:
+                    continue
+                response.raise_for_status()
+
+                content_range = response.headers.get("Content-Range", "")
+                if "/" in content_range:
+                    try:
+                        total_size = int(content_range.split("/")[-1])
+                    except ValueError:
+                        total_size = total_size
+                elif total_size is None:
+                    content_length = response.headers.get("Content-Length")
+                    if content_length and content_length.isdigit():
+                        total_size = int(content_length)
+
+                if downloaded > 0 and response.status_code == 200:
+                    buffer = bytearray()
+                    downloaded = 0
+
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if not chunk:
+                        continue
+                    buffer.extend(chunk)
+                    downloaded += len(chunk)
+
+                if total_size is not None and downloaded >= total_size:
+                    return bytes(buffer)
+                if total_size is None and downloaded > 0:
+                    return bytes(buffer)
+                last_error = RuntimeError("WDI download yielded no progress.")
+        except Exception as exc:
+            last_error = exc
+
+    raise AcquisitionError(
+        f"WDI download failed after resumable retries: downloaded={downloaded} total={total_size} error={last_error}"
+    ) from last_error
 
 
 def _is_html_like(payload: bytes) -> bool:

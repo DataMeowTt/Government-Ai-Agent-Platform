@@ -30,6 +30,7 @@ def upload_file_to_gcs_uri(
     local_path: str | Path,
     target_gcs_uri: str,
     content_type: str | None = None,
+    if_generation_match: int | None = None,
     client_factory: Callable[[], Any] | None = None,
     client: Any | None = None,
 ) -> dict[str, Any]:
@@ -41,12 +42,16 @@ def upload_file_to_gcs_uri(
     active_client = client or _build_storage_client(client_factory)
     bucket = active_client.bucket(bucket_name)
     blob = bucket.blob(object_path)
-    blob.upload_from_filename(str(file_path), content_type=content_type)
+    upload_kwargs: dict[str, Any] = {"content_type": content_type}
+    if if_generation_match is not None:
+        upload_kwargs["if_generation_match"] = int(if_generation_match)
+    blob.upload_from_filename(str(file_path), **upload_kwargs)
     return {
         "bucket": bucket_name,
         "object_path": object_path,
         "target_gcs_uri": f"gs://{bucket_name}/{object_path}",
         "local_path": str(file_path),
+        "if_generation_match": if_generation_match,
     }
 
 

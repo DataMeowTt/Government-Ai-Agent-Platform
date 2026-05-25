@@ -47,7 +47,15 @@ class SilverArtifacts:
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    current = Path(__file__).resolve()
+    candidates = [current.parent, *current.parents]
+    for candidate in candidates:
+        if (candidate / "contracts" / "table_contract.yaml").exists():
+            return candidate
+    raise FileNotFoundError(
+        "Unable to resolve repository root containing contracts/table_contract.yaml "
+        f"from {current}"
+    )
 
 
 def _contract_path(repo_root: Path) -> Path:

@@ -52,63 +52,74 @@ def _with_bucket(path: str, bucket: str | None = None) -> str:
     return f"gs://{clean_bucket}/{path}"
 
 
-def bronze_prefix(source_name: str, run_date: str, bucket: str | None = None) -> str:
+def _run_scope_segment(run_id: str | None = None) -> str:
+    if not run_id:
+        return ""
+    return f"run_id={validate_run_id(run_id)}/"
+
+
+def bronze_prefix(source_name: str, run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     source = validate_source_name(source_name)
     date_value = validate_run_date(run_date)
-    return _with_bucket(f"bronze/{source}/run_date={date_value}/", bucket)
+    return _with_bucket(f"bronze/{source}/run_date={date_value}/{_run_scope_segment(run_id)}", bucket)
 
 
-def silver_prefix(run_date: str, bucket: str | None = None) -> str:
+def silver_prefix(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
-    return _with_bucket(f"silver/run_date={date_value}/", bucket)
+    return _with_bucket(f"silver/run_date={date_value}/{_run_scope_segment(run_id)}", bucket)
 
 
-def gold_prefix(run_date: str, bucket: str | None = None) -> str:
+def gold_prefix(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
-    return _with_bucket(f"gold/run_date={date_value}/", bucket)
+    return _with_bucket(f"gold/run_date={date_value}/{_run_scope_segment(run_id)}", bucket)
 
 
-def analytics_prefix(run_date: str, bucket: str | None = None) -> str:
+def analytics_prefix(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
-    return _with_bucket(f"analytics/run_date={date_value}/", bucket)
+    return _with_bucket(f"analytics/run_date={date_value}/{_run_scope_segment(run_id)}", bucket)
 
 
-def source_manifest_path(run_date: str, bucket: str | None = None) -> str:
+def source_manifest_path(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
     return _with_bucket(
-        f"manifests/source_manifest/run_date={date_value}/source_manifest.json",
+        f"manifests/source_manifest/run_date={date_value}/{_run_scope_segment(run_id)}source_manifest.json",
         bucket,
     )
 
 
-def pipeline_manifest_path(run_date: str, bucket: str | None = None) -> str:
+def pipeline_manifest_path(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
     return _with_bucket(
-        f"manifests/pipeline_manifest/run_date={date_value}/pipeline_manifest.json",
+        f"manifests/pipeline_manifest/run_date={date_value}/{_run_scope_segment(run_id)}pipeline_manifest.json",
         bucket,
     )
 
 
-def data_quality_report_path(run_date: str, bucket: str | None = None) -> str:
+def data_quality_report_path(run_date: str, bucket: str | None = None, run_id: str | None = None) -> str:
     date_value = validate_run_date(run_date)
     return _with_bucket(
-        f"reports/data_quality/run_date={date_value}/data_quality_report.json",
+        f"reports/data_quality/run_date={date_value}/{_run_scope_segment(run_id)}data_quality_report.json",
         bucket,
     )
 
 
-def build_layout(run_date: str, sources: list[str] | tuple[str, ...], bucket: str | None = None) -> dict:
+def build_layout(
+    run_date: str,
+    sources: list[str] | tuple[str, ...],
+    bucket: str | None = None,
+    run_id: str | None = None,
+) -> dict:
     date_value = validate_run_date(run_date)
     source_names = sorted(validate_source_name(source) for source in sources)
     return {
         "bronze": {
-            source: bronze_prefix(source, date_value, bucket)
+            source: bronze_prefix(source, date_value, bucket, run_id=run_id)
             for source in source_names
         },
-        "silver": silver_prefix(date_value, bucket),
-        "gold": gold_prefix(date_value, bucket),
-        "analytics": analytics_prefix(date_value, bucket),
-        "source_manifest": source_manifest_path(date_value, bucket),
-        "pipeline_manifest": pipeline_manifest_path(date_value, bucket),
-        "data_quality_report": data_quality_report_path(date_value, bucket),
+        "silver": silver_prefix(date_value, bucket, run_id=run_id),
+        "gold": gold_prefix(date_value, bucket, run_id=run_id),
+        "analytics": analytics_prefix(date_value, bucket, run_id=run_id),
+        "source_manifest": source_manifest_path(date_value, bucket, run_id=run_id),
+        "pipeline_manifest": pipeline_manifest_path(date_value, bucket, run_id=run_id),
+        "data_quality_report": data_quality_report_path(date_value, bucket, run_id=run_id),
     }

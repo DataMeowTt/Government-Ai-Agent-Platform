@@ -30,7 +30,8 @@ def _default_append_rows(*, table_id: str, rows: list[dict[str, Any]]) -> dict[s
 
     project_id = table_id.split(".", 1)[0]
     client = bigquery.Client(project=project_id)
-    errors = client.insert_rows_json(table_id, rows)
+    table = client.get_table(table_id)
+    errors = client.insert_rows(table=table, rows=rows)
     if errors:
         raise RuntimeError(f"BigQuery insert_rows_json failed for {table_id}: {errors}")
     return {"table_id": table_id, "inserted_row_count": len(rows)}

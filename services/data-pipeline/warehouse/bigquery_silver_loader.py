@@ -388,6 +388,11 @@ def require_approval(env_name: str) -> str:
 
 
 def get_active_gcloud_project() -> str:
+    for env_name in ("GOOGLE_CLOUD_PROJECT", "PROJECT_ID", "GCLOUD_PROJECT"):
+        env_value = str(os.environ.get(env_name) or "").strip()
+        if env_value:
+            return env_value
+
     executable = shutil.which("gcloud.cmd") or shutil.which("gcloud")
     if not executable:
         raise RuntimeError("Unable to find gcloud executable on PATH.")

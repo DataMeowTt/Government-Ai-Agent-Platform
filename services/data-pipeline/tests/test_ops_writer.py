@@ -61,16 +61,16 @@ def test_pipeline_run_metadata_validates_and_stays_dry_run() -> None:
 
 def test_pipeline_run_metadata_missing_required_field_fails_validation() -> None:
     record = build_pipeline_run_metadata_record(_metadata())
-    record.pop("sources_json")
+    record.pop("started_at")
     plan = build_ops_writer_plan({"pipeline_run_metadata": [record]}, project_id="western-pivot-452008-a6")
     entry = _metadata_entry(plan)
 
     assert entry["dry_run"] is True
     assert entry["validation"]["status"] == "failed"
     assert entry["validation"]["required_fields"] == list(PIPELINE_RUN_METADATA_REQUIRED)
-    assert "sources_json" in entry["validation"]["required_fields"]
+    assert "started_at" in entry["validation"]["required_fields"]
     assert any(
-        "sources_json" in row_error["missing_fields"]
+        "started_at" in row_error["missing_fields"]
         for row_error in entry["validation"]["row_errors"]
     )
     assert "write_performed" not in entry
@@ -120,7 +120,7 @@ def test_success_rejects_missing_candidate_source_manifest_path() -> None:
 
     assert entry["validation"]["status"] == "failed"
     assert any(
-        "candidate_source_manifest_path" in row_error["missing_fields"]
+        "SUCCESS requires candidate_source_manifest_path to be non-empty" in row_error["semantic_errors"]
         for row_error in entry["validation"]["row_errors"]
     )
 

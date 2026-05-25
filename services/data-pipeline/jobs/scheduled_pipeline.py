@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -35,6 +36,13 @@ from warehouse.bigquery_warehouse_publish import (
 from warehouse.bigquery_warehouse_rebuild import run_warehouse_rebuild
 from warehouse.candidate_data_quality_gate import run_candidate_data_quality_gate
 from warehouse.bigquery_warehouse_validation import get_table_contract_columns, load_table_contract
+from warehouse.bigquery_recovery import (
+    PRODUCTION_TABLE_ORDER,
+    RecoveryCollisionError,
+    prepare_recovery_backups,
+    restore_production_tables,
+    retention_days_from_env,
+)
 
 
 PLANNED_ACTIONS = [
@@ -46,12 +54,113 @@ PLANNED_ACTIONS = [
     "stage_validate_gold_analytics_candidates",
     "promote_silver_production",
     "promote_gold_analytics_production",
+    "prepare_recovery_backups",
     "record_success_freshness",
 ]
 
 BLOCKED_STATUS = "BLOCKED_APPROVAL_REQUIRED"
 STATUS_SUCCESS = "SUCCESS"
 STATUS_PARTIAL_FAILED = "PARTIAL_FAILED"
+
+
+PIPELINE_RUN_METADATA_COLUMNS = (
+    "run_id",
+    "run_date",
+    "execution_mode",
+    "status",
+    "started_at",
+    "finished_at",
+    "enabled_sources",
+    "source_changed",
+    "change_reason",
+    "candidate_source_manifest_path",
+    "baseline_success_manifest_path",
+    "changed_sources",
+    "validation_status",
+    "data_quality_status",
+    "bronze_write_planned",
+    "bronze_write_performed",
+    "warehouse_publish_planned",
+    "warehouse_publish_performed",
+    "last_successful_updated",
+    "last_successful_run_id",
+    "last_successful_run_date",
+    "published_at",
+    "latest_data_year",
+    "sources_json",
+    "error_message",
+    "force_requested",
+    "force_applied",
+    "planned_actions",
+    "cloud_write",
+    "publish_performed",
+)
+
+
+def _metadata_storage_row(metadata: dict[str, Any]) -> dict[str, Any]:
+    return {column: metadata.get(column) for column in PIPELINE_RUN_METADATA_COLUMNS}
+
+
+def _tail_nonempty_lines(text: str, *, max_lines: int = 20) -> list[str]:
+    lines = [line.strip() for line in str(text or "").splitlines() if line and line.strip()]
+    if len(lines) <= max_lines:
+        return lines
+    return lines[-max_lines:]
+
+
+def _is_low_signal_subprocess_line(line: str) -> bool:
+    lowered = line.strip().lower()
+    if not lowered:
+        return True
+    if lowered.startswith("warning: using incubator modules"):
+        return True
+    if lowered.startswith("using spark's default log4j profile"):
+        return True
+    if lowered.startswith("setting default log level to"):
+        return True
+    if lowered.startswith("[stage "):
+        return True
+    return False
+
+
+def _pick_subprocess_failure_reason(stderr_tail: list[str], stdout_tail: list[str]) -> str:
+    combined_tail = [*stderr_tail, *stdout_tail]
+    for line in reversed(combined_tail):
+        if not _is_low_signal_subprocess_line(line):
+            return line
+    for line in reversed(combined_tail):
+        if line.strip():
+            return line.strip()
+    return "subprocess returned non-zero exit code"
+
+
+def _format_exception_message(exc: Exception, *, max_length: int = 500) -> str:
+    if isinstance(exc, KeyError):
+        return repr(exc)[:max_length]
+    message = str(exc).splitlines()[0].strip() if str(exc) else ""
+    if not message:
+        message = repr(exc)
+    return message[:max_length]
+
+
+def _traceback_tail(exc: Exception, *, max_lines: int = 16, max_chars: int = 2500) -> str:
+    lines = [line.rstrip() for line in traceback.format_exception(type(exc), exc, exc.__traceback__) if line and line.strip()]
+    tail = "\n".join(lines[-max_lines:]).strip()
+    if len(tail) > max_chars:
+        tail = tail[-max_chars:]
+    return tail
+
+
+def _apply_failure_diagnostics(
+    metadata: dict[str, Any],
+    *,
+    failed_step: str | None,
+    exc: Exception,
+) -> None:
+    metadata["failed_step"] = failed_step
+    metadata["exception_type"] = type(exc).__name__
+    metadata["error_message"] = _format_exception_message(exc)
+    metadata["traceback_tail"] = _traceback_tail(exc)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -182,7 +291,14 @@ def _run_build_silver_candidate(
     ]
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        raise RuntimeError(f"build_silver failed: {result.stderr.strip() or result.stdout.strip()}")
+        stderr_tail = _tail_nonempty_lines(result.stderr, max_lines=20)
+        stdout_tail = _tail_nonempty_lines(result.stdout, max_lines=20)
+        reason = _pick_subprocess_failure_reason(stderr_tail, stdout_tail)
+        raise RuntimeError(
+            "build_silver failed "
+            f"(exit_code={result.returncode}; reason={reason}; "
+            f"stderr_tail={stderr_tail}; stdout_tail={stdout_tail})"
+        )
     manifest_path = output_dir / "silver_manifest.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"silver_manifest.json not found after build: {manifest_path}")
@@ -209,6 +325,19 @@ def _required_columns_for_table(contract: dict[str, Any], dataset: str, table_na
     return ["country_code", "country", "year", "run_id", "run_date", "loaded_at"]
 
 
+def _resolve_contract_path() -> Path:
+    current = Path(__file__).resolve()
+    candidates = [current.parent, *current.parents]
+    for candidate in candidates:
+        contract_path = candidate / "contracts" / "table_contract.yaml"
+        if contract_path.exists():
+            return contract_path
+    raise FileNotFoundError(
+        "Unable to resolve contracts/table_contract.yaml from "
+        f"{current}"
+    )
+
+
 @dataclass
 class Dependencies:
     resolve_baseline: Callable[..., dict[str, Any]] = resolve_baseline_manifest_for_run
@@ -224,6 +353,9 @@ class Dependencies:
     stage_warehouse_candidate: Callable[..., Any] = stage_and_validate_candidate
     promote_warehouse_candidate: Callable[..., Any] = promote_validated_candidate
     run_data_quality_gate: Callable[..., dict[str, Any]] = run_candidate_data_quality_gate
+    prepare_recovery_backups_fn: Callable[..., dict[str, Any]] = prepare_recovery_backups
+    restore_production_tables_fn: Callable[..., dict[str, Any]] = restore_production_tables
+    recovery_retention_days: Callable[..., int] = retention_days_from_env
     append_metadata_row: Callable[..., dict[str, Any]] = append_pipeline_run_metadata_row
     read_success_metadata_rows: Callable[..., list[dict[str, Any]]] = read_latest_success_metadata_rows
     fetch_manifest_text: Callable[[str], str | bytes] = fetch_manifest_text_from_gcs
@@ -255,8 +387,12 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
     steps: list[dict[str, Any]] = []
     touched_production_tables: list[str] = []
     candidate_validations: list[dict[str, Any]] = []
+    promoted_production_tables: list[str] = []
+    recovery_backups: dict[str, Any] | None = None
+    restore_attempt: dict[str, Any] | None = None
     publish_performed = False
     baseline_path_for_compare = args.previous_success_manifest
+    active_step: str | None = None
 
     def add_step(name: str, status: str, *, executed: bool, cloud_write: bool, details: dict[str, Any] | None = None) -> None:
         steps.append(
@@ -269,6 +405,10 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
             }
         )
 
+    def set_active_step(name: str) -> None:
+        nonlocal active_step
+        active_step = name
+
     baseline_result = {
         "status": "NO_BASELINE",
         "reason": "not_required",
@@ -277,6 +417,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
     }
     try:
         if args.mode == "execute":
+            set_active_step("resolve_baseline_manifest")
             resolve_kwargs: dict[str, Any] = {
                 "runtime_dir": baseline_runtime_dir,
                 "explicit_baseline_path": args.previous_success_manifest,
@@ -311,6 +452,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                     details={"allow_network": False},
                 )
             else:
+                set_active_step("acquire_official_sources")
                 acquisition_args = argparse.Namespace(**{**vars(args), "runtime_raw_dir": str(runtime_raw_dir)})
                 manifest, errors = run_acquisition(args=acquisition_args, selected_sources=selected_sources)
                 add_step(
@@ -369,6 +511,9 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                 "latest_data_year": None,
                 "sources_json": None,
                 "error_message": None,
+                "failed_step": None,
+                "exception_type": None,
+                "traceback_tail": None,
                 "force_applied": force_applied,
                 "planned_actions": _planned_actions_payload() if publish_planned else [],
                 "cloud_write": False,
@@ -389,6 +534,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
             warehouse_output_dir = runtime_dir / "warehouse_candidate"
             run_token = _safe_identifier(args.run_id)
 
+            set_active_step("materialize_official_bronze")
             bronze_payload = dependencies.build_official_bronze(
                 acquisition_manifest=manifest,
                 runtime_raw_dir=runtime_raw_dir,
@@ -412,6 +558,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                 metadata["data_quality_status"] = "NOT_EXECUTED"
                 add_step("upload_bronze_snapshot_and_manifests", "BLOCKED_APPROVAL_REQUIRED", executed=False, cloud_write=False)
             else:
+                set_active_step("upload_bronze_snapshot_and_manifests")
                 upload_plan = dependencies.build_upload_plan_fn(
                     output_dir=bronze_output_dir,
                     bucket=args.gcs_bucket,
@@ -419,7 +566,10 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                     run_date=args.run_date,
                     dry_run=False,
                     cloud_approved=True,
+                    run_scoped=True,
+                    atomic_create_only=True,
                 )
+                set_active_step("upload_bronze_snapshot_and_manifests")
                 upload_result = dependencies.execute_upload_plan_fn(upload_plan)
                 upload_status = str(upload_result.get("status") or "").upper()
                 upload_cloud_write_performed = bool(upload_result.get("cloud_write_performed")) or int(upload_result.get("uploaded_count") or 0) > 0
@@ -463,6 +613,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                 if manifest_upload_entry is None:
                     raise RuntimeError("source_manifest upload entry not found in upload plan")
 
+                set_active_step("verify_uploaded_source_manifest")
                 verify_payload = dependencies.verify_uploaded_source_manifest(
                     local_path=manifest_upload_entry["local_path"],
                     target_gcs_uri=manifest_upload_entry["target_gcs_uri"],
@@ -509,6 +660,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                         if not required_path.exists():
                             raise FileNotFoundError(f"Official runtime input missing: {required_path}")
 
+                    set_active_step("build_silver_candidate")
                     silver_build = dependencies.build_silver_candidate(
                         run_id=args.run_id,
                         run_date=args.run_date,
@@ -527,6 +679,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                         details={"silver_manifest_path": silver_build["manifest_path"]},
                     )
 
+                    set_active_step("build_silver_load_plan")
                     silver_plan = dependencies.build_silver_load_plan_fn(
                         silver_output_dir=silver_build["silver_output_path"],
                         silver_manifest=silver_build["manifest_path"],
@@ -540,6 +693,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                     silver_plan_path = warehouse_output_dir / "silver_load_plan.json"
                     _write_json(silver_plan_path, silver_plan)
 
+                    set_active_step("stage_validate_silver_candidate")
                     silver_stage_payload = dependencies.stage_silver_candidate(
                         plan=silver_plan,
                         load_plan_path=str(silver_plan_path),
@@ -567,6 +721,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                         metadata["error_message"] = "BIGQUERY_WAREHOUSE_WRITE_APPROVED must be true"
                         add_step("stage_validate_gold_analytics_candidates", "BLOCKED_APPROVAL_REQUIRED", executed=False, cloud_write=False)
                     else:
+                        set_active_step("build_gold_analytics_candidates")
                         rebuild_payload = dependencies.rebuild_warehouse(
                             project_id=args.project_id,
                             location=args.location,
@@ -582,8 +737,9 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                         summary_by_table.update(
                             {item["table_name"]: item for item in rebuild_payload.get("analytics_summary", [])}
                         )
-                        contract = load_table_contract(Path(__file__).resolve().parents[3] / "contracts" / "table_contract.yaml")
+                        contract = load_table_contract(_resolve_contract_path())
                         staged_candidates: list[Any] = []
+                        set_active_step("stage_validate_gold_analytics_candidates")
                         for table_plan in list(rebuild_payload["publish_plan"]["tables"]):
                             table_name = str(table_plan["production_table"])
                             dataset = str(table_plan["dataset"])
@@ -623,6 +779,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                             table_name = str(table_plan["production_table"])
                             candidate_artifacts[table_name] = str(summary_by_table[table_name]["parquet_path"])
 
+                        set_active_step("run_candidate_data_quality_gate")
                         quality_gate_payload = dependencies.run_data_quality_gate(
                             expected_tables=expected_candidate_tables,
                             candidate_artifacts=candidate_artifacts,
@@ -664,6 +821,42 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                 add_step("record_success_freshness", "BLOCKED_APPROVAL_REQUIRED", executed=False, cloud_write=False)
                             else:
                                 try:
+                                    ordered_production_tables = [
+                                        f"{args.project_id}.gov_ai_silver.silver_indicators",
+                                        *[
+                                            f"{args.project_id}.{str(item['dataset'])}.{str(item['production_table'])}"
+                                            for item in list(rebuild_payload["publish_plan"]["tables"])
+                                        ],
+                                    ]
+                                    if args.project_id == "western-pivot-452008-a6":
+                                        if ordered_production_tables != PRODUCTION_TABLE_ORDER:
+                                            raise RuntimeError(
+                                                "production_table_order_mismatch: expected exactly all canonical scheduled production targets"
+                                            )
+
+                                    set_active_step("prepare_recovery_backups")
+                                    retention_days = dependencies.recovery_retention_days(dependencies.env_getter)
+                                    recovery_backups = dependencies.prepare_recovery_backups_fn(
+                                        project_id=args.project_id,
+                                        location=args.location,
+                                        production_table_ids=ordered_production_tables,
+                                        run_id=args.run_id,
+                                        retention_days=retention_days,
+                                        approval_env="BIGQUERY_WAREHOUSE_WRITE_APPROVED",
+                                        env_getter=dependencies.env_getter,
+                                    )
+                                    add_step(
+                                        "prepare_recovery_backups",
+                                        str(recovery_backups.get("status") or "RECOVERY_READY"),
+                                        executed=True,
+                                        cloud_write=True,
+                                        details={
+                                            "backup_count": len(recovery_backups.get("backups") or []),
+                                            "retention_days": recovery_backups.get("retention_days"),
+                                        },
+                                    )
+
+                                    set_active_step("promote_silver_production")
                                     silver_promotion = dependencies.promote_silver_candidate_fn(
                                         project_id=args.project_id,
                                         dataset="gov_ai_silver",
@@ -674,6 +867,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                         approval_env="BIGQUERY_WRITE_APPROVED",
                                     )
                                     touched_production_tables.append(silver_promotion["target_table_id"])
+                                    promoted_production_tables.append(silver_promotion["target_table_id"])
                                     add_step(
                                         "promote_silver_production",
                                         "PROMOTED",
@@ -683,6 +877,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                     )
 
                                     warehouse_writes: list[dict[str, Any]] = []
+                                    set_active_step("promote_gold_analytics_production")
                                     for candidate in staged_candidates:
                                         promoted = dependencies.promote_warehouse_candidate(
                                             project_id=args.project_id,
@@ -690,6 +885,7 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                             candidate=candidate,
                                         )
                                         touched_production_tables.append(promoted.production_table_id)
+                                        promoted_production_tables.append(promoted.production_table_id)
                                         warehouse_writes.append(
                                             {
                                                 "dataset": promoted.dataset,
@@ -722,23 +918,10 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                         }
                                     )
 
+                                    metadata["finished_at"] = utc_now_iso()
+                                    set_active_step("record_success_freshness")
                                     metadata_write = dependencies.append_metadata_row(
-                                        row={
-                                            "run_id": metadata["run_id"],
-                                            "run_date": metadata["run_date"],
-                                            "execution_mode": metadata["execution_mode"],
-                                            "status": metadata["status"],
-                                            "source_changed": metadata["source_changed"],
-                                            "change_reason": metadata["change_reason"],
-                                            "candidate_source_manifest_path": metadata["candidate_source_manifest_path"],
-                                            "baseline_success_manifest_path": metadata["baseline_success_manifest_path"],
-                                            "warehouse_publish_performed": metadata["warehouse_publish_performed"],
-                                            "publish_performed": metadata["publish_performed"],
-                                            "last_successful_updated": metadata["last_successful_updated"],
-                                            "published_at": metadata["published_at"],
-                                            "latest_data_year": metadata["latest_data_year"],
-                                            "sources_json": metadata["sources_json"],
-                                        },
+                                        row=_metadata_storage_row(metadata),
                                         project_id=args.project_id,
                                         env_getter=dependencies.env_getter,
                                         approval_env="BIGQUERY_OPS_WRITE_APPROVED",
@@ -751,7 +934,40 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                         cloud_write=True,
                                         details={"table_id": metadata_write["table_id"]},
                                     )
+                                except RecoveryCollisionError as exc:
+                                    metadata.update(
+                                        {
+                                            "status": "FAILED",
+                                            "publish_performed": False,
+                                            "warehouse_publish_performed": False,
+                                            "last_successful_updated": False,
+                                            "published_at": None,
+                                            "latest_data_year": None,
+                                            "sources_json": None,
+                                            "validation_status": "FAILED",
+                                            "data_quality_status": "FAILED",
+                                        }
+                                    )
+                                    _apply_failure_diagnostics(metadata, failed_step=active_step, exc=exc)
                                 except Exception as exc:
+                                    triggering_step = active_step
+                                    if recovery_backups and promoted_production_tables:
+                                        set_active_step("restore_production_from_recovery")
+                                        restore_attempt = dependencies.restore_production_tables_fn(
+                                            project_id=args.project_id,
+                                            location=args.location,
+                                            touched_production_tables=promoted_production_tables,
+                                            backup_payload=recovery_backups,
+                                            approval_env="BIGQUERY_WAREHOUSE_WRITE_APPROVED",
+                                            env_getter=dependencies.env_getter,
+                                        )
+                                        add_step(
+                                            "restore_production_from_recovery",
+                                            str(restore_attempt.get("status") or "RESTORE_FAILED"),
+                                            executed=True,
+                                            cloud_write=True,
+                                            details=restore_attempt,
+                                        )
                                     metadata.update(
                                         {
                                             "status": STATUS_PARTIAL_FAILED if touched_production_tables else "FAILED",
@@ -763,12 +979,13 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                                             "sources_json": None,
                                             "validation_status": "FAILED",
                                             "data_quality_status": "FAILED",
-                                            "error_message": str(exc).splitlines()[0][:500],
                                         }
                                     )
+                                    _apply_failure_diagnostics(metadata, failed_step=triggering_step, exc=exc)
 
     except Exception as exc:
         if metadata.get("status") not in {STATUS_SUCCESS, BLOCKED_STATUS, STATUS_PARTIAL_FAILED, "VALIDATION_FAILED"}:
+            _apply_failure_diagnostics(metadata, failed_step=active_step, exc=exc)
             metadata.update(
                 {
                     "status": "FAILED",
@@ -776,12 +993,19 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
                     "change_reason": metadata.get("change_reason") or "exception",
                     "validation_status": "FAILED",
                     "data_quality_status": "FAILED",
-                    "error_message": str(exc).splitlines()[0][:500],
                 }
             )
+        elif not metadata.get("exception_type"):
+            metadata["failed_step"] = active_step
+            metadata["exception_type"] = type(exc).__name__
+            metadata["traceback_tail"] = _traceback_tail(exc)
+            if isinstance(exc, KeyError):
+                metadata["error_message"] = _format_exception_message(exc)
 
     metadata["finished_at"] = utc_now_iso()
     metadata["planned_actions"] = steps if steps else metadata.get("planned_actions", [])
+    metadata["recovery_backups"] = recovery_backups or {}
+    metadata["restore_attempt"] = restore_attempt or {}
 
     final_status = str(metadata.get("status") or "FAILED")
     if final_status in {BLOCKED_STATUS, "SKIPPED_UNCHANGED", "DRY_RUN_CHANGED", "PLANNED_CHANGED", "PLANNED_UNCHANGED"}:
@@ -797,6 +1021,10 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
         "status": metadata["status"],
         "source_changed": metadata.get("source_changed"),
         "change_reason": metadata.get("change_reason"),
+        "failed_step": metadata.get("failed_step"),
+        "exception_type": metadata.get("exception_type"),
+        "error_message": metadata.get("error_message"),
+        "traceback_tail": metadata.get("traceback_tail"),
         "force_requested": bool(args.force),
         "force_applied": bool(metadata.get("force_applied")),
         "publish_performed": bool(publish_performed and metadata.get("status") == STATUS_SUCCESS),
@@ -805,6 +1033,8 @@ def run(argv: list[str] | None = None, *, deps: Dependencies | None = None) -> i
         "touched_production_tables": touched_production_tables,
         "baseline": baseline_result,
         "candidate_validations": candidate_validations,
+        "recovery_backups": recovery_backups or {},
+        "restore_attempt": restore_attempt or {},
         "planned_actions": steps if steps else metadata.get("planned_actions", []),
         "artifacts": {
             "source_acquisition_manifest_path": str(output_dir / "source_acquisition_manifest.json"),

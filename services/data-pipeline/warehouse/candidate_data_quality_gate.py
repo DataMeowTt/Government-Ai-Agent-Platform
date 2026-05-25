@@ -39,6 +39,19 @@ FALLBACK_REQUIRED_COLUMNS = {
 }
 
 
+def _default_contract_path() -> Path:
+    current = Path(__file__).resolve()
+    candidates = [current.parent, *current.parents]
+    for candidate in candidates:
+        contract_path = candidate / "contracts" / "table_contract.yaml"
+        if contract_path.exists():
+            return contract_path
+    raise FileNotFoundError(
+        "Unable to resolve contracts/table_contract.yaml from "
+        f"{current}"
+    )
+
+
 def _load_candidate_frame(payload: Any) -> pd.DataFrame:
     if isinstance(payload, pd.DataFrame):
         return payload.copy()
@@ -94,7 +107,7 @@ def run_candidate_data_quality_gate(
     contract_path: str | Path | None = None,
     contract_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    contract = contract_payload or load_table_contract(contract_path or Path(__file__).resolve().parents[3] / "contracts" / "table_contract.yaml")
+    contract = contract_payload or load_table_contract(contract_path or _default_contract_path())
     checks: list[dict[str, Any]] = []
     errors: list[str] = []
     checked_tables: list[str] = []

@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from jobs import scheduled_pipeline
+from warehouse.bigquery_recovery import PRODUCTION_TABLE_ORDER
 
 
 def _manifest(fingerprint: str, status: str = "valid") -> dict[str, Any]:
@@ -67,6 +68,110 @@ def _deps_no_cloud_baseline(**kwargs: Any) -> scheduled_pipeline.Dependencies:
     }
     base.update(kwargs)
     return scheduled_pipeline.Dependencies(**base)
+
+
+def _mock_recovery_ready(production_table_ids: list[str], retention_days: int) -> dict[str, Any]:
+    return {
+        "status": "RECOVERY_READY",
+        "retention_days": retention_days,
+        "backups": [
+            {
+                "production_table_id": table_id,
+                "recovery_table_id": f"{table_id}_recovery",
+                "copy_job_id": "job-1",
+                "source_row_count": 1,
+                "recovery_row_count": 1,
+                "expiration_time_utc": "2026-07-08T00:00:00+00:00",
+            }
+            for table_id in production_table_ids
+        ],
+    }
+
+
+def _canonical_publish_tables(*, row_count: int) -> list[dict[str, Any]]:
+    tables: list[dict[str, Any]] = []
+    for table_id in PRODUCTION_TABLE_ORDER[1:]:
+        _, dataset, table = table_id.split(".", 2)
+        tables.append(
+            {
+                "dataset": dataset,
+                "staging_table": f"{table}_staging_run_run_1",
+                "production_table": table,
+                "row_count": row_count,
+            }
+        )
+    return tables
+
+
+def test_run_build_silver_candidate_failure_surfaces_non_warning_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class _Result:
+        returncode = 1
+        stdout = ""
+        stderr = "\n".join(
+            [
+                "WARNING: Using incubator modules: jdk.incubator.vector",
+                "Traceback (most recent call last):",
+                "RuntimeError: parquet write failed",
+            ]
+        )
+
+    monkeypatch.setattr(scheduled_pipeline.subprocess, "run", lambda *_a, **_k: _Result())
+
+    with pytest.raises(RuntimeError) as exc_info:
+        scheduled_pipeline._run_build_silver_candidate(
+            run_id="run-1",
+            run_date="2026-05-24",
+            output_dir=tmp_path / "out",
+            source="all",
+            output_format="parquet",
+            wdi_path=tmp_path / "wdi",
+            gmd_path=tmp_path / "gmd",
+            fao_macro_path=tmp_path / "fao",
+        )
+
+    message = str(exc_info.value)
+    assert "exit_code=1" in message
+    assert "RuntimeError: parquet write failed" in message
+    assert "reason=WARNING: Using incubator modules" not in message
+
+
+def test_run_build_silver_candidate_failure_uses_stdout_when_stderr_is_only_low_signal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class _Result:
+        returncode = 1
+        stdout = "\n".join(
+            [
+                "[Stage 1:>                                                        (0 + 1) / 1]",
+                "ValueError: failed to parse source row",
+            ]
+        )
+        stderr = "\n".join(
+            [
+                "WARNING: Using incubator modules: jdk.incubator.vector",
+                "Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties",
+            ]
+        )
+
+    monkeypatch.setattr(scheduled_pipeline.subprocess, "run", lambda *_a, **_k: _Result())
+
+    with pytest.raises(RuntimeError) as exc_info:
+        scheduled_pipeline._run_build_silver_candidate(
+            run_id="run-1",
+            run_date="2026-05-24",
+            output_dir=tmp_path / "out",
+            source="all",
+            output_format="parquet",
+            wdi_path=tmp_path / "wdi",
+            gmd_path=tmp_path / "gmd",
+            fao_macro_path=tmp_path / "fao",
+        )
+
+    message = str(exc_info.value)
+    assert "ValueError: failed to parse source row" in message
+    assert "exit_code=1" in message
 
 
 def test_plan_mode_keeps_no_write_behavior(tmp_path: Path) -> None:
@@ -388,27 +493,22 @@ def test_execute_candidate_first_ordering_and_success_metadata_write(
             self.staging_columns = ["country_code", "year"]
             self.load_job_id = f"load-{name}"
 
+    canonical_tables = _canonical_publish_tables(row_count=3)
+
     def fake_rebuild_warehouse(**_kwargs: Any) -> dict[str, Any]:
         return {
             "silver_preflight": {"year_max": 2025},
-            "gold_summary": [{"table_name": "gold_growth_dynamics", "parquet_path": str(tmp_path / "g1.parquet")}],
-            "analytics_summary": [{"table_name": "analytics_clusters", "parquet_path": str(tmp_path / "a1.parquet")}],
-            "publish_plan": {
-                "tables": [
-                    {
-                        "dataset": "gov_ai_gold",
-                        "staging_table": "gold_growth_dynamics_staging_run_run_1",
-                        "production_table": "gold_growth_dynamics",
-                        "row_count": 3,
-                    },
-                    {
-                        "dataset": "gov_ai_analytics",
-                        "staging_table": "analytics_clusters_staging_run_run_1",
-                        "production_table": "analytics_clusters",
-                        "row_count": 3,
-                    },
-                ]
-            },
+            "gold_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_gold"
+            ],
+            "analytics_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_analytics"
+            ],
+            "publish_plan": {"tables": canonical_tables},
         }
 
     def fake_stage_warehouse_candidate(*, production_table: str, **_kwargs: Any) -> Any:
@@ -462,6 +562,11 @@ def test_execute_candidate_first_ordering_and_success_metadata_write(
         run_data_quality_gate=lambda **_: (call_order.append("quality_gate") or {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators", "gold_growth_dynamics", "analytics_clusters"]}),
         promote_silver_candidate_fn=fake_promote_silver_candidate_fn,
         promote_warehouse_candidate=fake_promote_warehouse_candidate,
+        recovery_retention_days=lambda *_: 45,
+        prepare_recovery_backups_fn=lambda **kwargs: _mock_recovery_ready(
+            production_table_ids=list(kwargs["production_table_ids"]),
+            retention_days=int(kwargs["retention_days"]),
+        ),
         append_metadata_row=fake_append_metadata_row,
         execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 3},
         verify_uploaded_source_manifest=lambda **_: (call_order.append("verify_upload") or {"status": "VERIFIED", "matched": True}),
@@ -779,6 +884,8 @@ def test_execute_partial_failed_after_production_mutation_begins(
             },
         )()
 
+    canonical_tables = _canonical_publish_tables(row_count=3)
+
     deps = scheduled_pipeline.Dependencies(
         read_success_metadata_rows=lambda **_: [],
         build_silver_candidate=lambda **_: {
@@ -809,24 +916,17 @@ def test_execute_partial_failed_after_production_mutation_begins(
         },
         rebuild_warehouse=lambda **_: {
             "silver_preflight": {"year_max": 2025},
-            "gold_summary": [{"table_name": "gold_growth_dynamics", "parquet_path": str(tmp_path / "g1.parquet")}],
-            "analytics_summary": [{"table_name": "analytics_clusters", "parquet_path": str(tmp_path / "a1.parquet")}],
-            "publish_plan": {
-                "tables": [
-                    {
-                        "dataset": "gov_ai_gold",
-                        "staging_table": "gold_growth_dynamics_staging_run_run_1",
-                        "production_table": "gold_growth_dynamics",
-                        "row_count": 3,
-                    },
-                    {
-                        "dataset": "gov_ai_analytics",
-                        "staging_table": "analytics_clusters_staging_run_run_1",
-                        "production_table": "analytics_clusters",
-                        "row_count": 3,
-                    },
-                ]
-            },
+            "gold_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_gold"
+            ],
+            "analytics_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_analytics"
+            ],
+            "publish_plan": {"tables": canonical_tables},
         },
         stage_warehouse_candidate=lambda *, production_table, **_kwargs: _Candidate(production_table),
         run_data_quality_gate=lambda **_: {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators"]},
@@ -834,6 +934,11 @@ def test_execute_partial_failed_after_production_mutation_begins(
             "target_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators"
         },
         promote_warehouse_candidate=promote_warehouse,
+        recovery_retention_days=lambda *_: 45,
+        prepare_recovery_backups_fn=lambda **kwargs: _mock_recovery_ready(
+            production_table_ids=list(kwargs["production_table_ids"]),
+            retention_days=int(kwargs["retention_days"]),
+        ),
         append_metadata_row=lambda **_: (_ for _ in ()).throw(AssertionError("metadata write should not run")),
         execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 1},
         verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
@@ -1112,6 +1217,393 @@ def test_execute_blocks_without_bigquery_warehouse_write_approval(
     assert calls["metadata_append"] == 0
 
 
+def test_execute_prepares_recovery_backups_for_all_production_tables_before_promotion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WAREHOUSE_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_OPS_WRITE_APPROVED", "true")
+    monkeypatch.setenv("RECOVERY_TABLE_RETENTION_DAYS", "45")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [
+                    {
+                        "source_name": "wdi",
+                        "combined_fingerprint": "new",
+                        "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()),
+                        "present_files": ["WDICSV.csv"],
+                        "validation_status": "valid",
+                    }
+                ],
+            },
+            [],
+        ),
+    )
+
+    call_order: list[str] = []
+    captured: dict[str, Any] = {}
+
+    class _Candidate:
+        def __init__(self, dataset: str, table_name: str) -> None:
+            self.dataset = dataset
+            self.production_table = table_name
+            self.production_table_id = f"western-pivot-452008-a6.{dataset}.{table_name}"
+            self.staging_table_id = f"{self.production_table_id}_staging"
+            self.staging_table = f"{table_name}_staging"
+            self.local_row_count = 1
+            self.staging_row_count = 1
+            self.staging_columns = ["country_code", "year"]
+            self.load_job_id = f"load-{table_name}"
+
+    publish_tables = [
+        {"dataset": "gov_ai_gold", "production_table": "gold_growth_dynamics", "staging_table": "gold_growth_dynamics_staging", "row_count": 1},
+        {"dataset": "gov_ai_gold", "production_table": "gold_fiscal_monetary", "staging_table": "gold_fiscal_monetary_staging", "row_count": 1},
+        {"dataset": "gov_ai_gold", "production_table": "gold_crisis_risk", "staging_table": "gold_crisis_risk_staging", "row_count": 1},
+        {"dataset": "gov_ai_gold", "production_table": "gold_social_welfare", "staging_table": "gold_social_welfare_staging", "row_count": 1},
+        {"dataset": "gov_ai_gold", "production_table": "gold_structural_composition", "staging_table": "gold_structural_composition_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_growth_dynamics", "staging_table": "analytics_gold_growth_dynamics_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_fiscal_monetary", "staging_table": "analytics_gold_fiscal_monetary_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_crisis_risk", "staging_table": "analytics_gold_crisis_risk_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_social_welfare", "staging_table": "analytics_gold_social_welfare_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_structural_composition", "staging_table": "analytics_gold_structural_composition_staging", "row_count": 1},
+        {"dataset": "gov_ai_analytics", "production_table": "analytics_clusters", "staging_table": "analytics_clusters_staging", "row_count": 1},
+    ]
+
+    deps = scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {"manifest_path": str(tmp_path / "silver_manifest.json"), "manifest": {"validation_summary": {"row_count": 1}}, "silver_output_path": str(tmp_path / "silver_output")},
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: {"result": {"staging_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators_staging_run_run_1"}, "validation": {"local_validation": {"row_count": 1}}},
+        rebuild_warehouse=lambda **_: {
+            "silver_preflight": {"year_max": 2025},
+            "gold_summary": [{"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")} for item in publish_tables if item["dataset"] == "gov_ai_gold"],
+            "analytics_summary": [{"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")} for item in publish_tables if item["dataset"] == "gov_ai_analytics"],
+            "publish_plan": {"tables": publish_tables},
+        },
+        stage_warehouse_candidate=lambda *, dataset, production_table, **_kwargs: _Candidate(dataset, production_table),
+        run_data_quality_gate=lambda **_: {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators"]},
+        prepare_recovery_backups_fn=lambda **kwargs: (
+            captured.update({"production_table_ids": kwargs["production_table_ids"], "retention_days": kwargs["retention_days"]})
+            or call_order.append("recovery")
+            or {"status": "RECOVERY_READY", "retention_days": kwargs["retention_days"], "backups": [{"production_table_id": table_id, "recovery_table_id": table_id + "_recovery"} for table_id in kwargs["production_table_ids"]]}
+        ),
+        promote_silver_candidate_fn=lambda **_: (call_order.append("promote_silver") or {"target_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators"}),
+        promote_warehouse_candidate=lambda *, candidate, **_kwargs: (
+            call_order.append(f"promote_{candidate.production_table}")
+            or type("P", (), {"dataset": candidate.dataset, "production_table_id": candidate.production_table_id, "staging_table_id": candidate.staging_table_id})()
+        ),
+        append_metadata_row=lambda **_: {"table_id": "western-pivot-452008-a6.gov_ai_ops.pipeline_run_metadata"},
+    )
+    code, _result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 0
+    assert metadata["status"] == "SUCCESS"
+    assert captured["production_table_ids"] == PRODUCTION_TABLE_ORDER
+    assert captured["retention_days"] == 45
+    assert call_order.index("recovery") < call_order.index("promote_silver")
+
+
+def test_execute_recovery_collision_blocks_promotion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WAREHOUSE_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_OPS_WRITE_APPROVED", "true")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [{"source_name": "wdi", "combined_fingerprint": "new", "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()), "present_files": ["WDICSV.csv"], "validation_status": "valid"}],
+            },
+            [],
+        ),
+    )
+    calls = {"promote": 0}
+    deps = scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {"manifest_path": str(tmp_path / "silver_manifest.json"), "manifest": {"validation_summary": {"row_count": 1}}, "silver_output_path": str(tmp_path / "silver_output")},
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: {"result": {"staging_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators_staging_run_run_1"}, "validation": {"local_validation": {"row_count": 1}}},
+        rebuild_warehouse=lambda **_: {
+            "silver_preflight": {"year_max": 2025},
+            "gold_summary": [{"table_name": "gold_growth_dynamics", "parquet_path": str(tmp_path / "g1.parquet")}],
+            "analytics_summary": [{"table_name": "analytics_clusters", "parquet_path": str(tmp_path / "a1.parquet")}],
+            "publish_plan": {"tables": [{"dataset": "gov_ai_gold", "production_table": "gold_growth_dynamics", "staging_table": "gold_growth_dynamics_staging", "row_count": 1}, {"dataset": "gov_ai_analytics", "production_table": "analytics_clusters", "staging_table": "analytics_clusters_staging", "row_count": 1}]},
+        },
+        stage_warehouse_candidate=lambda *, dataset, production_table, **_kwargs: type("C", (), {"dataset": dataset, "production_table": production_table, "production_table_id": f"western-pivot-452008-a6.{dataset}.{production_table}", "staging_table_id": "x", "staging_table": "x", "local_row_count": 1, "staging_row_count": 1, "staging_columns": ["country_code", "year"], "load_job_id": "j1"})(),
+        run_data_quality_gate=lambda **_: {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators"]},
+        prepare_recovery_backups_fn=lambda **_: (_ for _ in ()).throw(scheduled_pipeline.RecoveryCollisionError("collision")),
+        promote_silver_candidate_fn=lambda **_: (calls.__setitem__("promote", calls["promote"] + 1) or {}),
+        promote_warehouse_candidate=lambda **_: (calls.__setitem__("promote", calls["promote"] + 1) or {}),
+    )
+    code, _result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 1
+    assert metadata["status"] == "FAILED"
+    assert calls["promote"] == 0
+
+
+def _build_execute_deps_with_publish_plan(
+    *,
+    tmp_path: Path,
+    publish_tables: list[dict[str, Any]],
+    calls: dict[str, int],
+) -> scheduled_pipeline.Dependencies:
+    class _Candidate:
+        def __init__(self, dataset: str, table_name: str) -> None:
+            self.dataset = dataset
+            self.production_table = table_name
+            self.production_table_id = f"western-pivot-452008-a6.{dataset}.{table_name}"
+            self.staging_table_id = f"{self.production_table_id}_staging"
+            self.staging_table = f"{table_name}_staging"
+            self.local_row_count = 1
+            self.staging_row_count = 1
+            self.staging_columns = ["country_code", "year"]
+            self.load_job_id = f"load-{table_name}"
+
+    return scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {
+            "manifest_path": str(tmp_path / "silver_manifest.json"),
+            "manifest": {"validation_summary": {"row_count": 1}},
+            "silver_output_path": str(tmp_path / "silver_output"),
+        },
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: {
+            "result": {"staging_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators_staging_run_run_1"},
+            "validation": {"local_validation": {"row_count": 1}},
+        },
+        rebuild_warehouse=lambda **_: {
+            "silver_preflight": {"year_max": 2025},
+            "gold_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in publish_tables
+                if item["dataset"] == "gov_ai_gold"
+            ],
+            "analytics_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in publish_tables
+                if item["dataset"] == "gov_ai_analytics"
+            ],
+            "publish_plan": {"tables": publish_tables},
+        },
+        stage_warehouse_candidate=lambda *, dataset, production_table, **_kwargs: _Candidate(dataset, production_table),
+        run_data_quality_gate=lambda **_: {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators"]},
+        prepare_recovery_backups_fn=lambda **kwargs: (
+            calls.__setitem__("recovery", calls["recovery"] + 1)
+            or {"status": "RECOVERY_READY", "retention_days": kwargs["retention_days"], "backups": []}
+        ),
+        promote_silver_candidate_fn=lambda **_: (
+            calls.__setitem__("promote", calls["promote"] + 1)
+            or {"target_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators"}
+        ),
+        promote_warehouse_candidate=lambda *, candidate, **_kwargs: (
+            calls.__setitem__("promote", calls["promote"] + 1)
+            or type("P", (), {"dataset": candidate.dataset, "production_table_id": candidate.production_table_id, "staging_table_id": candidate.staging_table_id})()
+        ),
+        append_metadata_row=lambda **_: {"table_id": "western-pivot-452008-a6.gov_ai_ops.pipeline_run_metadata"},
+    )
+
+
+@pytest.mark.parametrize(
+    "publish_tables",
+    [
+        PRODUCTION_TABLE_ORDER[2:],
+        [
+            {"dataset": "gov_ai_gold", "production_table": "gold_growth_dynamics", "staging_table": "gold_growth_dynamics_staging", "row_count": 1},
+            {"dataset": "gov_ai_gold", "production_table": "gold_growth_dynamics", "staging_table": "gold_growth_dynamics_staging_dup", "row_count": 1},
+            *[
+                {"dataset": "gov_ai_gold", "production_table": "gold_fiscal_monetary", "staging_table": "gold_fiscal_monetary_staging", "row_count": 1},
+                {"dataset": "gov_ai_gold", "production_table": "gold_crisis_risk", "staging_table": "gold_crisis_risk_staging", "row_count": 1},
+                {"dataset": "gov_ai_gold", "production_table": "gold_social_welfare", "staging_table": "gold_social_welfare_staging", "row_count": 1},
+                {"dataset": "gov_ai_gold", "production_table": "gold_structural_composition", "staging_table": "gold_structural_composition_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_growth_dynamics", "staging_table": "analytics_gold_growth_dynamics_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_fiscal_monetary", "staging_table": "analytics_gold_fiscal_monetary_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_crisis_risk", "staging_table": "analytics_gold_crisis_risk_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_social_welfare", "staging_table": "analytics_gold_social_welfare_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_structural_composition", "staging_table": "analytics_gold_structural_composition_staging", "row_count": 1},
+                {"dataset": "gov_ai_analytics", "production_table": "analytics_clusters", "staging_table": "analytics_clusters_staging", "row_count": 1},
+            ],
+        ],
+        [
+            {"dataset": "gov_ai_gold", "production_table": "gold_fiscal_monetary", "staging_table": "gold_fiscal_monetary_staging", "row_count": 1},
+            {"dataset": "gov_ai_gold", "production_table": "gold_growth_dynamics", "staging_table": "gold_growth_dynamics_staging", "row_count": 1},
+            {"dataset": "gov_ai_gold", "production_table": "gold_crisis_risk", "staging_table": "gold_crisis_risk_staging", "row_count": 1},
+            {"dataset": "gov_ai_gold", "production_table": "gold_social_welfare", "staging_table": "gold_social_welfare_staging", "row_count": 1},
+            {"dataset": "gov_ai_gold", "production_table": "gold_structural_composition", "staging_table": "gold_structural_composition_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_growth_dynamics", "staging_table": "analytics_gold_growth_dynamics_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_fiscal_monetary", "staging_table": "analytics_gold_fiscal_monetary_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_crisis_risk", "staging_table": "analytics_gold_crisis_risk_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_social_welfare", "staging_table": "analytics_gold_social_welfare_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_gold_structural_composition", "staging_table": "analytics_gold_structural_composition_staging", "row_count": 1},
+            {"dataset": "gov_ai_analytics", "production_table": "analytics_clusters", "staging_table": "analytics_clusters_staging", "row_count": 1},
+        ],
+    ],
+)
+def test_execute_requires_exact_12_canonical_production_targets_before_recovery_and_promotion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, publish_tables: list[Any]
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WAREHOUSE_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_OPS_WRITE_APPROVED", "true")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [
+                    {
+                        "source_name": "wdi",
+                        "combined_fingerprint": "new",
+                        "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()),
+                        "present_files": ["WDICSV.csv"],
+                        "validation_status": "valid",
+                    }
+                ],
+            },
+            [],
+        ),
+    )
+    calls = {"recovery": 0, "promote": 0}
+    if publish_tables and isinstance(publish_tables[0], str):
+        normalized_publish_tables = []
+    else:
+        normalized_publish_tables = publish_tables
+    deps = _build_execute_deps_with_publish_plan(
+        tmp_path=tmp_path,
+        publish_tables=normalized_publish_tables,
+        calls=calls,
+    )
+    code, _result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 1
+    assert metadata["status"] == "FAILED"
+    assert metadata["error_message"] == (
+        "production_table_order_mismatch: expected exactly all canonical scheduled production targets"
+    )
+    assert calls["recovery"] == 0
+    assert calls["promote"] == 0
+
+
+def test_execute_metadata_append_failure_after_promotion_triggers_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WAREHOUSE_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_OPS_WRITE_APPROVED", "true")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [{"source_name": "wdi", "combined_fingerprint": "new", "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()), "present_files": ["WDICSV.csv"], "validation_status": "valid"}],
+            },
+            [],
+        ),
+    )
+    restore_calls: list[dict[str, Any]] = []
+
+    class _Candidate:
+        def __init__(self, table_name: str) -> None:
+            self.dataset = "gov_ai_gold"
+            self.production_table = table_name
+            self.production_table_id = f"western-pivot-452008-a6.gov_ai_gold.{table_name}"
+            self.staging_table_id = "x"
+            self.staging_table = "x"
+            self.local_row_count = 1
+            self.staging_row_count = 1
+            self.staging_columns = ["country_code", "year"]
+            self.load_job_id = "j1"
+
+    canonical_tables = _canonical_publish_tables(row_count=1)
+
+    deps = scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "uploaded", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {"manifest_path": str(tmp_path / "silver_manifest.json"), "manifest": {"validation_summary": {"row_count": 1}}, "silver_output_path": str(tmp_path / "silver_output")},
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: {"result": {"staging_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators_staging_run_run_1"}, "validation": {"local_validation": {"row_count": 1}}},
+        rebuild_warehouse=lambda **_: {
+            "silver_preflight": {"year_max": 2025},
+            "gold_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_gold"
+            ],
+            "analytics_summary": [
+                {"table_name": item["production_table"], "parquet_path": str(tmp_path / f"{item['production_table']}.parquet")}
+                for item in canonical_tables
+                if item["dataset"] == "gov_ai_analytics"
+            ],
+            "publish_plan": {"tables": canonical_tables},
+        },
+        stage_warehouse_candidate=lambda *, production_table, **_kwargs: _Candidate(production_table),
+        run_data_quality_gate=lambda **_: {"status": "PASSED", "errors": [], "checked_tables": ["silver_indicators"]},
+        prepare_recovery_backups_fn=lambda **kwargs: {
+            "status": "RECOVERY_READY",
+            "retention_days": kwargs["retention_days"],
+            "backups": [
+                {"production_table_id": table_id, "recovery_table_id": table_id + "_recovery"}
+                for table_id in kwargs["production_table_ids"]
+            ],
+        },
+        promote_silver_candidate_fn=lambda **_: {"target_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators"},
+        promote_warehouse_candidate=lambda *, candidate, **_kwargs: type("P", (), {"dataset": candidate.dataset, "production_table_id": candidate.production_table_id, "staging_table_id": candidate.staging_table_id})(),
+        append_metadata_row=lambda **_: (_ for _ in ()).throw(RuntimeError("metadata write failed")),
+        restore_production_tables_fn=lambda **kwargs: (restore_calls.append(kwargs) or {"status": "RESTORE_SUCCEEDED", "restored": [{"production_table_id": table_id} for table_id in kwargs["touched_production_tables"]], "failed": []}),
+    )
+    code, _result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 1
+    assert metadata["status"] == "PARTIAL_FAILED"
+    assert metadata["last_successful_updated"] is False
+    assert restore_calls
+    assert len(restore_calls[0]["touched_production_tables"]) >= 2
+
+
 def test_execute_blocks_without_bigquery_ops_write_approval_before_promotion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1167,3 +1659,116 @@ def test_execute_blocks_without_bigquery_ops_write_approval_before_promotion(
     assert metadata["status"] == "BLOCKED_APPROVAL_REQUIRED"
     assert calls["promote"] == 0
     assert calls["metadata_append"] == 0
+
+
+def test_execute_failure_records_typed_keyerror_and_failed_step_for_silver_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [
+                    {
+                        "source_name": "wdi",
+                        "combined_fingerprint": "new",
+                        "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()),
+                        "present_files": ["WDICSV.csv"],
+                        "validation_status": "valid",
+                    }
+                ],
+            },
+            [],
+        ),
+    )
+    deps = scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "UPLOADED", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {
+            "manifest_path": str(tmp_path / "silver_manifest.json"),
+            "manifest": {"validation_summary": {"row_count": 1}},
+            "silver_output_path": str(tmp_path / "silver_output"),
+        },
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: (_ for _ in ()).throw(KeyError(3)),
+    )
+    code, result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 1
+    assert metadata["status"] == "FAILED"
+    assert metadata["failed_step"] == "stage_validate_silver_candidate"
+    assert metadata["exception_type"] == "KeyError"
+    assert "KeyError(3)" in metadata["error_message"]
+    assert metadata["traceback_tail"]
+    assert result["failed_step"] == "stage_validate_silver_candidate"
+    assert result["exception_type"] == "KeyError"
+
+
+def test_execute_failure_records_typed_keyerror_and_failed_step_for_warehouse_rebuild(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_raw = _prepare_runtime_raw(tmp_path)
+    monkeypatch.setenv("CLOUD_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WRITE_APPROVED", "true")
+    monkeypatch.setenv("BIGQUERY_WAREHOUSE_WRITE_APPROVED", "true")
+    monkeypatch.setattr(
+        scheduled_pipeline,
+        "run_acquisition",
+        lambda **_: (
+            {
+                "run_id": "run-1",
+                "run_date": "2026-05-24",
+                "status": "valid",
+                "sources": [
+                    {
+                        "source_name": "wdi",
+                        "combined_fingerprint": "new",
+                        "runtime_materialized_path": str((runtime_raw / "worldBank").resolve()),
+                        "present_files": ["WDICSV.csv"],
+                        "validation_status": "valid",
+                    }
+                ],
+            },
+            [],
+        ),
+    )
+    deps = scheduled_pipeline.Dependencies(
+        read_success_metadata_rows=lambda **_: [],
+        execute_upload_plan_fn=lambda _plan: {"status": "UPLOADED", "uploaded_count": 1},
+        verify_uploaded_source_manifest=lambda **_: {"status": "VERIFIED", "matched": True},
+        build_silver_candidate=lambda **_: {
+            "manifest_path": str(tmp_path / "silver_manifest.json"),
+            "manifest": {"validation_summary": {"row_count": 1}},
+            "silver_output_path": str(tmp_path / "silver_output"),
+        },
+        build_silver_load_plan_fn=lambda **_: {"table_id": "x"},
+        stage_silver_candidate=lambda **_: {
+            "result": {"staging_table_id": "western-pivot-452008-a6.gov_ai_silver.silver_indicators_staging_run_run_1"},
+            "validation": {"local_validation": {"row_count": 1}},
+        },
+        rebuild_warehouse=lambda **_: (_ for _ in ()).throw(KeyError(3)),
+    )
+    code, result, metadata = _run(
+        tmp_path,
+        ["--mode", "execute", "--run-id", "run-1", "--run-date", "2026-05-24", "--allow-network"],
+        deps=deps,
+    )
+    assert code == 1
+    assert metadata["status"] == "FAILED"
+    assert metadata["failed_step"] == "build_gold_analytics_candidates"
+    assert metadata["exception_type"] == "KeyError"
+    assert "KeyError(3)" in metadata["error_message"]
+    assert metadata["traceback_tail"]
+    assert result["failed_step"] == "build_gold_analytics_candidates"
+    assert result["exception_type"] == "KeyError"

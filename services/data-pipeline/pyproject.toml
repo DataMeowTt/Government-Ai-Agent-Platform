@@ -18,7 +18,9 @@ dependencies = [
     "fastapi>=0.111,<1",
     "uvicorn[standard]>=0.29,<1",
     "google-cloud-bigquery>=3.25,<4",
+    "db-dtypes>=1.2,<2",
     "google-cloud-storage>=2.16,<4",
+    "global-macro-data==2.0.0",
 ]
 
 [project.optional-dependencies]

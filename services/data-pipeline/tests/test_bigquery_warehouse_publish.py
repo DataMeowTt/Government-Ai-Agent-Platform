@@ -3,11 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from warehouse.bigquery_warehouse_publish import (
     promote_validated_candidate,
     publish_with_staging,
     stage_and_validate_candidate,
+)
+from warehouse.bigquery_recovery import (
+    PRODUCTION_TABLE_ORDER,
+    RecoveryCollisionError,
+    build_recovery_plan,
+    prepare_recovery_backups,
+    recovery_table_id_for,
 )
 
 
@@ -123,3 +131,90 @@ def test_publish_with_staging_keeps_legacy_behavior(tmp_path: Path) -> None:
     assert result.staging_row_count == 2
     assert result.production_row_count == 2
     assert any(call[0] == "copy" for call in writer.calls)
+
+
+def test_recovery_table_id_uses_sanitized_run_scope() -> None:
+    table_id = recovery_table_id_for(
+        "western-pivot-452008-a6.gov_ai_gold.gold_growth_dynamics",
+        "controlled-refresh-2026-05-24T06:30:15Z",
+    )
+    assert table_id.endswith(".gold_growth_dynamics_recovery_run_controlled_refresh_2026_05_24T06_30_15Z")
+
+
+def test_recovery_plan_covers_all_12_production_targets() -> None:
+    plan = build_recovery_plan(production_table_ids=PRODUCTION_TABLE_ORDER, run_id="run-1")
+    assert len(plan) == 12
+    assert [item["production_table_id"] for item in plan] == PRODUCTION_TABLE_ORDER
+
+
+class _RecoveryTable:
+    def __init__(self, rows: int) -> None:
+        self.num_rows = rows
+        self.expires = None
+
+
+class _RecoveryJob:
+    def __init__(self, job_id: str) -> None:
+        self.job_id = job_id
+
+    def result(self) -> None:
+        return None
+
+
+class _RecoveryClient:
+    def __init__(self, existing: set[str] | None = None) -> None:
+        self._existing = set(existing or set())
+        self._rows: dict[str, int] = {}
+        self.copy_calls: list[tuple[str, str, object]] = []
+        self.updated_expirations: list[tuple[object, list[str]]] = []
+
+    def get_table(self, table_id: str) -> _RecoveryTable:
+        if table_id not in self._existing:
+            raise RuntimeError("not found")
+        return _RecoveryTable(self._rows.get(table_id, 1))
+
+    def copy_table(self, source: str, destination: str, *, job_config: object, location: str) -> _RecoveryJob:
+        del location
+        self.copy_calls.append((source, destination, job_config))
+        self._existing.add(destination)
+        self._rows[source] = self._rows.get(source, 1)
+        self._rows[destination] = self._rows[source]
+        return _RecoveryJob("copy-recovery-1")
+
+    def update_table(self, table: _RecoveryTable, fields: list[str]) -> _RecoveryTable:
+        self.updated_expirations.append((table.expires, fields))
+        return table
+
+
+def test_prepare_recovery_backups_uses_non_overwrite_copy_and_retention() -> None:
+    client = _RecoveryClient(existing=set(PRODUCTION_TABLE_ORDER))
+    payload = prepare_recovery_backups(
+        project_id="western-pivot-452008-a6",
+        location="asia-southeast1",
+        production_table_ids=PRODUCTION_TABLE_ORDER,
+        run_id="run-1",
+        retention_days=45,
+        env_getter=lambda _: "true",
+        client_factory=lambda _project_id: client,
+    )
+    assert payload["status"] == "RECOVERY_READY"
+    assert payload["retention_days"] == 45
+    assert len(payload["backups"]) == 12
+    assert len(client.updated_expirations) == 12
+    assert all(fields == ["expires"] for _, fields in client.updated_expirations)
+
+
+def test_prepare_recovery_backups_collision_blocks_before_copy() -> None:
+    first_recovery_id = recovery_table_id_for(PRODUCTION_TABLE_ORDER[0], "run-1")
+    client = _RecoveryClient(existing=set(PRODUCTION_TABLE_ORDER) | {first_recovery_id})
+    with pytest.raises(RecoveryCollisionError):
+        prepare_recovery_backups(
+            project_id="western-pivot-452008-a6",
+            location="asia-southeast1",
+            production_table_ids=PRODUCTION_TABLE_ORDER,
+            run_id="run-1",
+            retention_days=45,
+            env_getter=lambda _: "true",
+            client_factory=lambda _project_id: client,
+        )
+    assert client.copy_calls == []

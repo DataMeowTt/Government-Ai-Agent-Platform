@@ -13,6 +13,7 @@ import pytest
 from warehouse.bigquery_silver_loader import (
     LoadBlockedError,
     execute_silver_load,
+    get_active_gcloud_project,
     validate_local_input,
 )
 
@@ -210,3 +211,14 @@ def test_execute_uses_staging_then_copy(tmp_path: Path, monkeypatch: pytest.Monk
             "western-pivot-452008-a6.gov_ai_silver.silver_indicators",
         )
     ]
+
+
+def test_get_active_gcloud_project_falls_back_to_runtime_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PROJECT_ID", "western-pivot-452008-a6")
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("GCLOUD_PROJECT", raising=False)
+    monkeypatch.setattr("warehouse.bigquery_silver_loader.shutil.which", lambda _name: None)
+
+    assert get_active_gcloud_project() == "western-pivot-452008-a6"

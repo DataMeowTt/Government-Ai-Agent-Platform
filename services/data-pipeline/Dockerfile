@@ -13,14 +13,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openjdk-17-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --upgrade pip \
+RUN python -m pip install --upgrade pip \
     && python -m pip install --retries 10 --timeout 180 pyspark==4.1.1
 
 COPY pyproject.toml ./
 COPY . .
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --retries 10 --timeout 180 -e .
+RUN python -m pip install --retries 10 --timeout 180 -e .
 
 CMD ["python", "-m", "jobs.plan_snapshot", "--help"]
