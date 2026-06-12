@@ -6,7 +6,40 @@ memory/
 logs/
 docs/
 job.txt
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
 infra/gcp/cloud-run/*.env.local
 infra/gcp/cloud-run/secrets.env.local
 *.env.local
 secrets.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node.js and build outputs
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Generated logs and evaluation runs
+*.log
+services/ai-agent-service/evalFullPipeline/result/*
+
+# Editor and OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo

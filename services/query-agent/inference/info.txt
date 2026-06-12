@@ -1,1 +1,0 @@
-api service run on kaggle(fast api), use ngrok to create tunnel.
