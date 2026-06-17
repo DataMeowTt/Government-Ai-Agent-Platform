@@ -1,35 +1,35 @@
 # Government AI Agent Platform
 
-Cloud-native economic data analytics with a governed natural-language interface.
+Nền tảng phân tích dữ liệu kinh tế cloud-native với giao diện truy vấn ngôn ngữ tự nhiên có kiểm soát.
 
-[Live demo](https://gov-ai-frontend-lnv3c6gztq-as.a.run.app) | [Repository](https://github.com/DataMeowTt/Government-Ai-Agent-Platform)
+[Demo trực tuyến](https://gov-ai-frontend-lnv3c6gztq-as.a.run.app) | [Repository](https://github.com/DataMeowTt/Government-Ai-Agent-Platform)
 
-## Overview
+## Tổng quan
 
-Government AI Agent Platform integrates public economic data, prepares it for analytics, and exposes it through both a dashboard and an AI assistant. The system follows a **BigQuery-direct** architecture: BigQuery is the analytical source of truth for the Backend API and the AI Agent, while Google Cloud Storage preserves raw snapshots and operational evidence.
+Government AI Agent Platform tích hợp dữ liệu kinh tế công khai, chuẩn hóa dữ liệu thành các lớp phân tích, rồi cung cấp cho người dùng thông qua dashboard và trợ lý AI. Hệ thống được thiết kế theo kiến trúc **BigQuery-direct**: BigQuery là nguồn dữ liệu phân tích chính cho Backend API và AI Agent, còn Google Cloud Storage lưu snapshot dữ liệu thô và bằng chứng vận hành.
 
-The platform currently integrates:
+Các nguồn dữ liệu hiện được tích hợp:
 
 - World Bank World Development Indicators (WDI)
 - Global Macro Database (GMD)
 - FAOSTAT Macro
 
-The demo dataset contains more than **1.16 million raw rows** before normalization. It supports country profiles, indicator comparison, structural clustering, anomaly exploration, data freshness tracking, and natural-language economic questions.
+Bộ dữ liệu demo có hơn **1.16 triệu dòng dữ liệu thô** trước chuẩn hóa. Hệ thống hỗ trợ hồ sơ quốc gia, so sánh chỉ số, phân nhóm cấu trúc, phát hiện bất thường, theo dõi độ mới dữ liệu và hỏi đáp dữ liệu kinh tế bằng ngôn ngữ tự nhiên.
 
-## Key Features
+## Tính năng chính
 
-- Multi-source ingestion with source fingerprints, snapshots, manifests, and lineage artifacts
-- Layered warehouse design: GCS Bronze and BigQuery Silver, Gold, Analytics, and Ops
-- Contract-driven indicators, tables, and data-quality rules
-- Dashboard pages for countries, indicators, comparison, clusters, anomalies, and AI chat
-- Guarded BigQuery access with table and column allowlists, parameterized inputs, result limits, and query cost limits
-- Natural-language parsing into a typed `ParsedQuery` JSON object instead of free-form SQL generation
-- Schema, catalog, and safe-to-execute validation before any AI data query
-- Read-only AI tools for lookup, comparison, ranking, trends, anomalies, and coverage
-- Monthly Google Cloud automation with Scheduler, Workflows, and a Cloud Run Job
-- Operational freshness metadata exposed to the frontend
+- Thu thập dữ liệu nhiều nguồn với fingerprint, snapshot, manifest và lineage artifact.
+- Thiết kế warehouse theo lớp: GCS Bronze và BigQuery Silver, Gold, Analytics, Ops.
+- Quản lý indicator, table và data-quality rule bằng contract.
+- Dashboard cho quốc gia, chỉ số, so sánh, cluster, anomaly và AI chat.
+- Truy cập BigQuery có guardrail: whitelist bảng/cột, input tham số hóa, giới hạn kết quả và giới hạn chi phí truy vấn.
+- Chuyển câu hỏi tự nhiên thành `ParsedQuery` JSON có kiểu rõ ràng thay vì sinh SQL tự do.
+- Kiểm tra schema, catalog và điều kiện safe-to-execute trước khi AI truy vấn dữ liệu.
+- Bộ công cụ BigQuery read-only cho lookup, compare, ranking, trend, anomaly và coverage.
+- Tự động hóa ETL hằng tháng bằng Cloud Scheduler, Google Workflows và Cloud Run Job.
+- Metadata freshness được ghi vào BigQuery Ops và hiển thị trên Frontend.
 
-## Architecture
+## Kiến trúc
 
 ```mermaid
 flowchart LR
@@ -60,50 +60,50 @@ flowchart LR
     TOOLS --> ANALYTICS
 ```
 
-### Main request flows
+### Luồng request chính
 
-**Dashboard flow**
-
-```text
-User -> Next.js frontend -> NestJS endpoint -> guarded BigQuery query -> table/chart response
-```
-
-**AI flow**
+**Luồng dashboard**
 
 ```text
-Question -> Backend proxy -> AI Agent -> ParsedQuery JSON
-         -> schema/catalog/safety checks -> read-only BigQuery tool
-         -> grounded answer + table data + chart configuration
+Người dùng -> Next.js Frontend -> NestJS endpoint -> truy vấn BigQuery có guardrail -> dữ liệu bảng/biểu đồ
 ```
 
-The AI Agent does not receive permission to write warehouse data or trigger the ETL pipeline.
+**Luồng AI**
 
-## Data Platform
+```text
+Câu hỏi -> Backend proxy -> AI Agent -> ParsedQuery JSON
+       -> schema/catalog/safety checks -> read-only BigQuery tool
+       -> câu trả lời có căn cứ dữ liệu + bảng + cấu hình biểu đồ
+```
 
-### Source scale used by the demo
+AI Agent không có quyền ghi dữ liệu warehouse và không được kích hoạt pipeline ETL.
 
-| Source | Rows | Columns | Source shape |
+## Nền tảng dữ liệu
+
+### Quy mô dữ liệu nguồn trong demo
+
+| Nguồn | Số dòng | Số cột | Dạng dữ liệu nguồn |
 | --- | ---: | ---: | --- |
-| WDI | 403,256 | 70 | World Bank bulk CSV, wide by year |
-| FAOSTAT Macro | 708,632 | 13 | Normalized CSV with codebook |
+| WDI | 403,256 | 70 | World Bank bulk CSV, wide theo năm |
+| FAOSTAT Macro | 708,632 | 13 | Normalized CSV kèm codebook |
 | GMD | 56,864 | 84 | Wide country-year CSV |
-| **Total** | **1,168,752** | - | Raw rows before normalization |
+| **Tổng** | **1,168,752** | - | Dữ liệu thô trước chuẩn hóa |
 
-### Storage layers
+### Các lớp lưu trữ
 
-| Layer | Storage | Purpose |
+| Lớp | Lưu trữ | Mục đích |
 | --- | --- | --- |
-| Bronze | Google Cloud Storage | Raw snapshots, manifests, fingerprints, lineage, and recovery evidence |
-| Silver | BigQuery `gov_ai_silver` | Normalized long-format records by country, year, indicator, and source |
-| Gold | BigQuery `gov_ai_gold` | Curated subject tables for growth, fiscal and monetary data, crisis risk, social welfare, and structural composition |
-| Analytics | BigQuery `gov_ai_analytics` | Derived trend, anomaly, residual, and clustering outputs |
-| Ops | BigQuery `gov_ai_ops` | Pipeline run metadata, publish status, source state, and freshness |
+| Bronze | Google Cloud Storage | Snapshot dữ liệu thô, manifest, fingerprint, lineage và bằng chứng khôi phục |
+| Silver | BigQuery `gov_ai_silver` | Dữ liệu long-format đã chuẩn hóa theo country, year, indicator và source |
+| Gold | BigQuery `gov_ai_gold` | Bảng chủ đề đã curate cho growth, fiscal-monetary, crisis risk, social welfare và structural composition |
+| Analytics | BigQuery `gov_ai_analytics` | Kết quả trend, anomaly, residual và clustering |
+| Ops | BigQuery `gov_ai_ops` | Metadata lần chạy pipeline, trạng thái publish, trạng thái nguồn và freshness |
 
-The shared contracts in [`contracts/`](contracts/) define public indicators, table structure, capabilities, units, mappings, and quality rules. Generated artifacts keep the Python pipeline, TypeScript backend, and AI catalog aligned.
+Các contract trong [`contracts/`](contracts/) mô tả indicator public, cấu trúc bảng, capability, đơn vị, mapping và rule kiểm tra chất lượng. Artifact sinh từ contract giúp Python pipeline, TypeScript backend và AI catalog dùng cùng một định nghĩa.
 
 ## AI Agent
 
-The semantic parser converts a user question into fields such as:
+Semantic parser chuyển câu hỏi của người dùng thành các trường có cấu trúc, ví dụ:
 
 ```json
 {
@@ -117,90 +117,90 @@ The semantic parser converts a user question into fields such as:
 }
 ```
 
-The parser was fine-tuned from `Qwen/Qwen3-4B-Instruct-2507` with QLoRA/LoRA on a 30,000-example domain dataset covering 27 intents, 151 question families, 88 countries, and 56 indicators.
+Parser được fine-tune từ `Qwen/Qwen3-4B-Instruct-2507` bằng QLoRA/LoRA trên bộ dữ liệu miền gồm 30,000 mẫu, bao phủ 27 intent, 151 question family, 88 quốc gia và 56 chỉ số.
 
-### Parser evaluation
+### Kết quả đánh giá parser
 
-Results below are from the report's stratified 1,000-example test evaluation.
+Bảng dưới đây lấy từ đánh giá 1,000 mẫu test stratified trong báo cáo.
 
-| Version | Valid JSON | Schema pass | Catalog pass | Exact JSON | Intent accuracy | Indicator F1 | Country F1 | Safe execute |
+| Phiên bản | Valid JSON | Schema pass | Catalog pass | Exact JSON | Intent accuracy | Indicator F1 | Country F1 | Safe execute |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | v1/v2 | 100.0% | 95.3% | 77.3% | 3.0% | 23.71% | 85.38% | 88.95% | 36.2% |
 | v3 | 100.0% | 99.3% | 83.6% | 63.2% | 95.47% | 97.08% | 94.49% | 70.7% |
 | v3.1 | 100.0% | 99.3% | 85.8% | 63.2% | 95.47% | 97.08% | 94.49% | 71.7% |
 
-`Safe execute` is intentionally lower than JSON validity because the evaluation set includes incomplete, unsupported, and off-topic questions that should be clarified or rejected instead of executed.
+`Safe execute` thấp hơn JSON validity là đúng kỳ vọng vì tập đánh giá có cả câu hỏi thiếu thông tin, không hỗ trợ hoặc ngoài phạm vi. Các câu hỏi này nên được yêu cầu làm rõ hoặc từ chối thay vì cố truy vấn BigQuery.
 
-## Application Pages
+## Các trang ứng dụng
 
-| Route | Purpose |
+| Route | Mục đích |
 | --- | --- |
-| `/` | Platform overview and data freshness |
-| `/countries` | Search and browse countries |
-| `/countries/[code]` | Country profile, indicators, anomalies, and cluster benchmarks |
-| `/indicators` | Public indicator catalog and metadata |
-| `/compare` | Compare indicators across countries and years |
-| `/clusters` | Explore structural country groups |
-| `/anomalies` | Filter and inspect statistically unusual observations |
-| `/chat` | Ask economic data questions in natural language |
+| `/` | Tổng quan nền tảng và freshness dữ liệu |
+| `/countries` | Tìm kiếm và duyệt danh sách quốc gia |
+| `/countries/[code]` | Hồ sơ quốc gia, chỉ số, anomaly và benchmark cluster |
+| `/indicators` | Catalog indicator public và metadata |
+| `/compare` | So sánh indicator theo quốc gia và giai đoạn năm |
+| `/clusters` | Khám phá nhóm cấu trúc quốc gia |
+| `/anomalies` | Lọc và xem các quan sát bất thường thống kê |
+| `/chat` | Hỏi dữ liệu kinh tế bằng ngôn ngữ tự nhiên |
 
-## Technology Stack
+## Công nghệ sử dụng
 
-| Area | Technologies |
+| Khu vực | Công nghệ |
 | --- | --- |
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS, TanStack Query/Table, Recharts, Zustand, Zod |
 | Backend API | NestJS 11, TypeScript, Google Cloud BigQuery client, Axios, TypeORM/PostgreSQL fallback |
-| AI Agent | FastAPI, Pydantic, Google Gen AI SDK, BigQuery client, deterministic and Gemini-assisted composers |
-| Semantic parser | Qwen3 4B Instruct, QLoRA/LoRA adapter, JSON schema and catalog guardrails |
-| Data pipeline | Python 3.11, PySpark 4.1.1, Pandas, PyArrow, Google Cloud Storage and BigQuery clients |
+| AI Agent | FastAPI, Pydantic, Google Gen AI SDK, BigQuery client, deterministic composer và Gemini-assisted composer |
+| Semantic parser | Qwen3 4B Instruct, QLoRA/LoRA adapter, JSON schema và catalog guardrails |
+| Data pipeline | Python 3.11, PySpark 4.1.1, Pandas, PyArrow, Google Cloud Storage và BigQuery clients |
 | Analytics | Pandas, NumPy, scikit-learn |
 | Cloud | Cloud Run services, Cloud Run Jobs, Google Workflows, Cloud Scheduler, GCS, BigQuery, Artifact Registry |
 | Quality | Jest, pytest, Ruff, mypy, data contracts, warehouse validation, smoke tests |
 
-## Repository Structure
+## Cấu trúc repository
 
 ```text
 .
-|-- contracts/                    # Indicator, table, and data-quality contracts
-|-- fe/                           # Next.js dashboard and AI chat frontend
-|-- infra/gcp/cloud-run/          # Cloud Run deployment configuration examples
-|-- scripts/                      # Contract, deployment, ETL, and validation utilities
+|-- contracts/                    # Indicator, table và data-quality contracts
+|-- fe/                           # Next.js dashboard và AI chat frontend
+|-- infra/gcp/cloud-run/          # Ví dụ cấu hình Cloud Run deployment
+|-- scripts/                      # Tiện ích contract, deploy, ETL và validation
 |-- server/                       # NestJS Backend API
 |-- services/
-|   |-- ai-agent-service/         # FastAPI AI Agent and BigQuery tools
-|   |-- analytics-worker/         # Trend, anomaly, clustering, and batch analytics
-|   |-- data-pipeline/            # Source ingestion and Bronze/Silver/Gold publishing
-|   `-- query-agent/              # Parser datasets, training, evaluation, inference, and model artifact
-`-- sql/bigquery/                 # Generated BigQuery DDL
+|   |-- ai-agent-service/         # FastAPI AI Agent và BigQuery tools
+|   |-- analytics-worker/         # Trend, anomaly, clustering và batch analytics
+|   |-- data-pipeline/            # Source ingestion và Bronze/Silver/Gold publishing
+|   `-- query-agent/              # Dataset, training, evaluation, inference và model artifact của parser
+`-- sql/bigquery/                 # BigQuery DDL sinh tự động
 ```
 
-## Getting Started
+## Chạy local
 
-### Prerequisites
+### Yêu cầu
 
 - Node.js 20+
-- Python 3.11+; Python 3.12 is used by the AI Agent container
-- Java 17 for local PySpark pipeline execution
-- Google Cloud CLI and credentials with access to the configured BigQuery datasets
-- Optional: Docker for container builds and Cloud Run parity
+- Python 3.11+; container AI Agent dùng Python 3.12
+- Java 17 để chạy PySpark pipeline local
+- Google Cloud CLI và credential có quyền đọc các BigQuery dataset đã cấu hình
+- Docker nếu muốn build container và chạy gần giống Cloud Run
 
-Authenticate the local BigQuery clients with Application Default Credentials:
+Đăng nhập Application Default Credentials cho BigQuery client local:
 
 ```powershell
 gcloud auth application-default login
 gcloud config set project western-pivot-452008-a6
 ```
 
-Access to the deployed project's datasets is required. For another Google Cloud project, create equivalent datasets and override the environment variables below.
+Bạn cần quyền truy cập dataset của project demo. Nếu dùng Google Cloud project khác, hãy tạo dataset tương đương và override các biến môi trường bên dưới.
 
-### 1. Clone the repository
+### 1. Clone repository
 
 ```powershell
 git clone https://github.com/DataMeowTt/Government-Ai-Agent-Platform.git
 cd Government-Ai-Agent-Platform
 ```
 
-### 2. Start the AI Agent
+### 2. Chạy AI Agent
 
 ```powershell
 cd services/ai-agent-service
@@ -209,7 +209,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Create `services/ai-agent-service/.env`:
+Tạo file `services/ai-agent-service/.env`:
 
 ```dotenv
 PORT=8002
@@ -221,15 +221,15 @@ BIGQUERY_GOLD_DATASET=gov_ai_gold
 BIGQUERY_ANALYTICS_DATASET=gov_ai_analytics
 BIGQUERY_MAX_BYTES_BILLED=100000000
 
-# Required for the fine-tuned external parser path used by the full demo flow.
+# Bắt buộc nếu muốn chạy đủ luồng semantic parser fine-tuned bên ngoài.
 PARSER_SERVICE_BASE_URL=https://your-parser-service.example.com
 
-# Optional Gemini routing/composition.
+# Tùy chọn cho Gemini routing/composition.
 ENABLE_GEMINI=false
 GEMINI_API_KEY=
 ```
 
-Run the service:
+Chạy service:
 
 ```powershell
 uvicorn app.main:app --reload --port 8002
@@ -237,16 +237,16 @@ uvicorn app.main:app --reload --port 8002
 
 Health endpoint: `http://localhost:8002/health`
 
-### 3. Start the Backend API
+### 3. Chạy Backend API
 
-Open another terminal:
+Mở terminal khác:
 
 ```powershell
 cd server
 npm ci
 ```
 
-Create `server/.env`:
+Tạo file `server/.env`:
 
 ```dotenv
 PORT=3001
@@ -265,7 +265,7 @@ AI_AGENT_INTERNAL_API_KEY=dev-internal-key
 CORS_ORIGINS=http://localhost:3000
 ```
 
-Run the API:
+Chạy API:
 
 ```powershell
 npm run start:dev
@@ -273,9 +273,9 @@ npm run start:dev
 
 Backend base URL: `http://localhost:3001`
 
-### 4. Start the Frontend
+### 4. Chạy Frontend
 
-Open a third terminal:
+Mở terminal thứ ba:
 
 ```powershell
 cd fe
@@ -283,42 +283,42 @@ npm ci
 Copy-Item .env.example .env.local
 ```
 
-Set the frontend API URL in `fe/.env.local`:
+Thiết lập API URL trong `fe/.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-Start Next.js:
+Chạy Next.js:
 
 ```powershell
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Mở `http://localhost:3000`.
 
-The dashboard and BigQuery-backed API can run without Gemini. The complete natural-language parsing path additionally needs a reachable parser service; Gemini features need a valid API key when enabled.
+Dashboard và BigQuery-backed API có thể chạy không cần Gemini. Luồng hỏi đáp tự nhiên đầy đủ cần parser service có thể truy cập được; các tính năng Gemini cần API key hợp lệ khi bật.
 
 ## Backend API
 
-| Method | Endpoint | Description |
+| Method | Endpoint | Mô tả |
 | --- | --- | --- |
-| `GET` | `/api/v1/indicators` | Public indicator catalog and capabilities |
-| `GET` | `/api/v1/countries` | Countries available in the warehouse |
-| `GET` | `/api/v1/countries/:code/full-analytics` | Full country analytics profile |
-| `GET` | `/api/v1/countries/:code/indicators` | Country indicator series |
-| `GET` | `/api/v1/countries/:code/anomalies` | Country anomaly records |
-| `GET` | `/api/v1/countries/:code/cluster-benchmark` | Country cluster comparison |
-| `GET` | `/api/v1/compare` | Country/indicator comparison by year range |
-| `GET` | `/api/v1/analytics/clusters` | Structural clustering results |
-| `GET` | `/api/v1/analytics/anomalies` | Paginated anomaly results |
-| `POST` | `/api/v1/ai/chat` | Backend proxy to the AI Agent |
-| `GET` | `/api/v1/ai/health` | AI Agent connectivity check |
-| `GET` | `/api/v1/system/data-freshness` | Latest successful pipeline metadata |
+| `GET` | `/api/v1/indicators` | Catalog indicator public và capability |
+| `GET` | `/api/v1/countries` | Quốc gia có dữ liệu trong warehouse |
+| `GET` | `/api/v1/countries/:code/full-analytics` | Hồ sơ phân tích đầy đủ của quốc gia |
+| `GET` | `/api/v1/countries/:code/indicators` | Chuỗi chỉ số của quốc gia |
+| `GET` | `/api/v1/countries/:code/anomalies` | Bản ghi anomaly của quốc gia |
+| `GET` | `/api/v1/countries/:code/cluster-benchmark` | So sánh quốc gia với cluster |
+| `GET` | `/api/v1/compare` | So sánh country/indicator theo khoảng năm |
+| `GET` | `/api/v1/analytics/clusters` | Kết quả phân nhóm cấu trúc |
+| `GET` | `/api/v1/analytics/anomalies` | Kết quả anomaly có phân trang |
+| `POST` | `/api/v1/ai/chat` | Backend proxy tới AI Agent |
+| `GET` | `/api/v1/ai/health` | Kiểm tra kết nối AI Agent |
+| `GET` | `/api/v1/system/data-freshness` | Metadata lần pipeline thành công gần nhất |
 
 ## Data Pipeline
 
-Install the pipeline and development dependencies:
+Cài pipeline và dependency phát triển:
 
 ```powershell
 cd services/data-pipeline
@@ -327,24 +327,24 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-Inspect the guarded scheduled pipeline options:
+Xem option của guarded scheduled pipeline:
 
 ```powershell
 python -m jobs.scheduled_pipeline --help
 python -m jobs.plan_snapshot --help
 ```
 
-The production demo uses:
+Demo production dùng:
 
 - Cloud Run Job: `gov-ai-snapshot-plan`
 - Workflow: `economic-data-pipeline`
 - Scheduler: `economic-data-pipeline-monthly`
-- Schedule: day 5 of every month at `02:00 UTC`
-- ETL runtime: 2 CPU, 8 GiB memory, 1-hour timeout
+- Lịch chạy: ngày 5 hằng tháng lúc `02:00 UTC`
+- Runtime ETL: 2 CPU, 8 GiB memory, timeout 1 giờ
 
-The base ETL job is kept non-writing. Write approval is passed only through a controlled workflow execution, followed by validation, scoped publish, recovery support, and `SUCCESS` metadata.
+Base ETL job được giữ ở trạng thái không ghi dữ liệu. Quyền ghi chỉ được truyền qua một workflow execution có kiểm soát, sau đó pipeline mới validation, scoped publish, recovery support và ghi metadata `SUCCESS`.
 
-## Testing and Validation
+## Kiểm thử và validation
 
 ### Frontend
 
@@ -387,13 +387,13 @@ python scripts/validate_indicator_contract.py
 python scripts/parser_catalog_audit.py
 ```
 
-## Cloud Deployment
+## Triển khai hệ thống trên Google Cloud
 
-This section is the explicit end-to-end deployment path for Google Cloud. The helper scripts in this repository are scoped to the demo project `western-pivot-452008-a6`; if you deploy to a different project, update the values in `infra/gcp/cloud-run/*.env.local` and remove or adapt the project guard in the deployment scripts.
+Phần này mô tả luồng triển khai end-to-end trên Google Cloud. Các helper script trong repository đang được scope cho project demo `western-pivot-452008-a6`; nếu triển khai sang project khác, hãy sửa giá trị trong `infra/gcp/cloud-run/*.env.local` và điều chỉnh project guard trong script deploy.
 
-### 1. Prepare Google Cloud
+### 1. Chuẩn bị Google Cloud
 
-Install the Google Cloud CLI, authenticate, and select the target project:
+Cài Google Cloud CLI, đăng nhập và chọn project:
 
 ```powershell
 gcloud auth login
@@ -401,7 +401,7 @@ gcloud auth application-default login
 gcloud config set project western-pivot-452008-a6
 ```
 
-Enable the required APIs:
+Bật các API cần thiết:
 
 ```powershell
 $PROJECT_ID = "western-pivot-452008-a6"
@@ -416,7 +416,7 @@ gcloud services enable cloudscheduler.googleapis.com --project $PROJECT_ID
 gcloud services enable workflowexecutions.googleapis.com --project $PROJECT_ID
 ```
 
-Create the Artifact Registry repository if it does not already exist:
+Tạo Artifact Registry repository nếu chưa có:
 
 ```powershell
 $REGION = "asia-southeast1"
@@ -430,7 +430,7 @@ gcloud artifacts repositories create $ARTIFACT_REPOSITORY `
 gcloud auth configure-docker "$REGION-docker.pkg.dev"
 ```
 
-Create or verify the runtime service account:
+Tạo hoặc kiểm tra runtime service account:
 
 ```powershell
 $RUNTIME_SERVICE_ACCOUNT = "gov-ai-runner@$PROJECT_ID.iam.gserviceaccount.com"
@@ -440,7 +440,7 @@ gcloud iam service-accounts create gov-ai-runner `
   --display-name "Government AI Cloud Run runtime"
 ```
 
-Grant the runtime account the permissions needed by the demo services and ETL job:
+Gán quyền cần cho runtime account:
 
 ```powershell
 gcloud projects add-iam-policy-binding $PROJECT_ID `
@@ -468,11 +468,11 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
   --role "roles/logging.logWriter"
 ```
 
-The deploying identity also needs Cloud Run Admin, Artifact Registry Writer, Workflows Admin, Cloud Scheduler Admin, Secret Manager Admin, and `iam.serviceAccounts.actAs` on the runtime service account.
+Tài khoản dùng để deploy cũng cần Cloud Run Admin, Artifact Registry Writer, Workflows Admin, Cloud Scheduler Admin, Secret Manager Admin và quyền `iam.serviceAccounts.actAs` trên runtime service account.
 
-### 2. Prepare environment files and secrets
+### 2. Chuẩn bị env file và secret
 
-Deployment examples live in [`infra/gcp/cloud-run/`](infra/gcp/cloud-run/). Create local copies for environment-specific values:
+Các file ví dụ nằm trong [`infra/gcp/cloud-run/`](infra/gcp/cloud-run/). Tạo bản local:
 
 ```powershell
 Copy-Item infra/gcp/cloud-run/deploy.env.example infra/gcp/cloud-run/deploy.env.local
@@ -481,31 +481,31 @@ Copy-Item infra/gcp/cloud-run/ai-agent.env.example infra/gcp/cloud-run/ai-agent.
 Copy-Item infra/gcp/cloud-run/secrets.env.example infra/gcp/cloud-run/secrets.env.local
 ```
 
-Edit the `.env.local` files:
+Sửa các file `.env.local`:
 
-- `deploy.env.local`: project id, region, Artifact Registry repository, image tag, service names, runtime service account.
-- `backend.env.local`: BigQuery datasets, AI Agent URL, timeout, cache TTL, and CORS origins.
-- `ai-agent.env.local`: BigQuery datasets, Gemini toggle, parser runtime flags.
-- `secrets.env.local`: secret values. Do not commit this file.
+- `deploy.env.local`: project id, region, Artifact Registry repository, image tag, service name, runtime service account.
+- `backend.env.local`: BigQuery dataset, AI Agent URL, timeout, cache TTL và CORS origins.
+- `ai-agent.env.local`: BigQuery dataset, Gemini toggle, parser runtime flags.
+- `secrets.env.local`: giá trị secret. Không commit file này.
 
-Required Secret Manager names used by the scripts:
+Tên Secret Manager được script sử dụng:
 
-| Secret | Runtime env var | Required when |
+| Secret | Runtime env var | Khi nào bắt buộc |
 | --- | --- | --- |
-| `gov-ai-agent-internal-api-key` | `INTERNAL_API_KEY`, `AI_AGENT_INTERNAL_API_KEY` | Always, for Backend to AI Agent calls |
-| `gov-ai-gemini-api-key` | `GEMINI_API_KEY` | `ENABLE_GEMINI=true` |
-| `gov-ai-parser-service-base-url` | `PARSER_SERVICE_BASE_URL` | Full semantic parser flow |
-| `gov-ai-parser-service-api-key` | `PARSER_SERVICE_API_KEY` | Parser service requires an API key |
+| `gov-ai-agent-internal-api-key` | `INTERNAL_API_KEY`, `AI_AGENT_INTERNAL_API_KEY` | Luôn cần cho Backend gọi AI Agent |
+| `gov-ai-gemini-api-key` | `GEMINI_API_KEY` | Khi `ENABLE_GEMINI=true` |
+| `gov-ai-parser-service-base-url` | `PARSER_SERVICE_BASE_URL` | Khi chạy đủ semantic parser flow |
+| `gov-ai-parser-service-api-key` | `PARSER_SERVICE_API_KEY` | Khi parser service yêu cầu API key |
 
-Import the secret values without printing them:
+Import secret mà không in giá trị ra console:
 
 ```powershell
 .\scripts\import_cloud_run_secrets_from_env.ps1
 ```
 
-### 3. Build and push container images
+### 3. Build và push container image
 
-The service deployment script expects images to already exist in Artifact Registry. Build and push the Backend, AI Agent, and data-pipeline images first:
+Script deploy service yêu cầu image đã tồn tại trong Artifact Registry. Build và push image cho Backend, AI Agent và data-pipeline trước:
 
 ```powershell
 $PROJECT_ID = "western-pivot-452008-a6"
@@ -530,13 +530,13 @@ docker build -f services/data-pipeline/Dockerfile `
 docker push "$IMAGE_PREFIX/gov-ai-data-pipeline:$IMAGE_TAG"
 ```
 
-The Frontend image needs the deployed Backend URL at build time, so build it after the Backend service is deployed.
+Frontend image cần URL Backend ở build time, nên hãy build Frontend sau khi Backend đã deploy.
 
-### 4. Deploy AI Agent and Backend
+### 4. Deploy AI Agent và Backend
 
-The service deployment script deploys `gov-ai-agent` and `gov-ai-backend`, then runs smoke checks. It refuses to deploy unless the monthly scheduler is paused, which prevents a data refresh from running while service images are being changed.
+Script deploy sẽ deploy `gov-ai-agent` và `gov-ai-backend`, sau đó chạy smoke checks. Script từ chối deploy nếu scheduler hằng tháng chưa được pause, để tránh pipeline refresh chạy trong lúc đổi image service.
 
-If this is a fresh project and the scheduler does not exist yet, create a paused placeholder first:
+Nếu đây là project mới và scheduler chưa tồn tại, tạo placeholder ở trạng thái paused trước:
 
 ```powershell
 $WORKFLOW_EXECUTION_URI = "https://workflowexecutions.googleapis.com/v1/projects/$PROJECT_ID/locations/$REGION/workflows/economic-data-pipeline/executions"
@@ -559,7 +559,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 ```
 
-Pause the scheduler before deploying or redeploying services:
+Pause scheduler trước khi deploy hoặc redeploy service:
 
 ```powershell
 gcloud scheduler jobs pause economic-data-pipeline-monthly `
@@ -567,26 +567,26 @@ gcloud scheduler jobs pause economic-data-pipeline-monthly `
   --project $PROJECT_ID
 ```
 
-Review the sanitized plan first:
+Xem plan đã được ẩn secret:
 
 ```powershell
 .\scripts\deploy_cloud_run_services.ps1 -PlanOnly
 ```
 
-Deploy and smoke test:
+Deploy và smoke test:
 
 ```powershell
 .\scripts\deploy_cloud_run_services.ps1
 ```
 
-Useful variants:
+Một số biến thể hữu ích:
 
 ```powershell
 .\scripts\deploy_cloud_run_services.ps1 -SkipSmoke
 .\scripts\deploy_cloud_run_services.ps1 -SkipDeploy
 ```
 
-The script prints the deployed `ai_agent_url` and `backend_url`. Save the Backend URL for the next step:
+Script sẽ in `ai_agent_url` và `backend_url`. Lưu Backend URL cho bước tiếp theo:
 
 ```powershell
 $BACKEND_URL = gcloud run services describe gov-ai-backend `
@@ -595,9 +595,9 @@ $BACKEND_URL = gcloud run services describe gov-ai-backend `
   --format "value(status.url)"
 ```
 
-### 5. Deploy the Frontend
+### 5. Deploy Frontend
 
-Build the Frontend with `NEXT_PUBLIC_API_URL` pointing to the deployed Backend:
+Build Frontend với `NEXT_PUBLIC_API_URL` trỏ tới Backend đã deploy:
 
 ```powershell
 $FRONTEND_SERVICE_NAME = "gov-ai-frontend"
@@ -622,7 +622,7 @@ gcloud run deploy $FRONTEND_SERVICE_NAME `
   --set-env-vars "NEXT_PUBLIC_API_URL=$BACKEND_URL"
 ```
 
-Get the Frontend URL and update Backend CORS:
+Lấy Frontend URL và cập nhật CORS cho Backend:
 
 ```powershell
 $FRONTEND_URL = gcloud run services describe $FRONTEND_SERVICE_NAME `
@@ -636,11 +636,11 @@ gcloud run services update gov-ai-backend `
   --update-env-vars "CORS_ORIGINS=http://localhost:3000,http://localhost:3001,$FRONTEND_URL"
 ```
 
-Open `$FRONTEND_URL` and confirm that dashboard pages can call the Backend.
+Mở `$FRONTEND_URL` và kiểm tra các trang dashboard gọi được Backend.
 
-### 6. Deploy the ETL Cloud Run Job
+### 6. Deploy ETL Cloud Run Job
 
-Deploy the data pipeline as a safe default job. The default command is `plan` mode, so it does not write GCS or BigQuery unless the workflow later passes explicit approval environment variables:
+Deploy data pipeline ở chế độ mặc định an toàn. Command mặc định dùng `plan` mode nên không ghi GCS hoặc BigQuery, trừ khi workflow truyền explicit approval env vars:
 
 ```powershell
 $BUCKET = "western-pivot-452008-a6-gov-ai-economic-data"
@@ -659,7 +659,7 @@ gcloud run jobs deploy gov-ai-snapshot-plan `
   --set-env-vars "PYTHONUNBUFFERED=1"
 ```
 
-Run a plan-only job once:
+Chạy thử job ở plan-only mode:
 
 ```powershell
 gcloud run jobs execute gov-ai-snapshot-plan `
@@ -668,7 +668,7 @@ gcloud run jobs execute gov-ai-snapshot-plan `
   --wait
 ```
 
-The planned production path is:
+Luồng production được lên kế hoạch:
 
 ```text
 source acquisition -> change detection -> Bronze snapshot -> Silver candidate
@@ -676,16 +676,16 @@ source acquisition -> change detection -> Bronze snapshot -> Silver candidate
 -> Ops freshness metadata
 ```
 
-### 7. Deploy Workflow and Scheduler
+### 7. Deploy Workflow và Scheduler
 
-Generate and validate the offline workflow/scheduler plan:
+Sinh và validate workflow/scheduler plan offline:
 
 ```powershell
 python scripts/workflow_scheduler_plan.py --check
 python scripts/workflow_scheduler_plan.py --format text
 ```
 
-Create a deployable workflow file, then deploy it. The workflow executes the ETL job with explicit write approvals scoped to that workflow execution:
+Tạo file workflow có thể deploy. Workflow này chạy ETL job với các write approval chỉ nằm trong phạm vi workflow execution:
 
 ```powershell
 $WORKFLOW_FILE = "$env:TEMP\economic-data-pipeline.yaml"
@@ -757,7 +757,7 @@ gcloud workflows deploy economic-data-pipeline `
   --source $WORKFLOW_FILE
 ```
 
-Update the monthly scheduler target and keep it paused until smoke checks pass:
+Cập nhật monthly scheduler target và giữ trạng thái paused tới khi smoke check xong:
 
 ```powershell
 $WORKFLOW_EXECUTION_URI = "https://workflowexecutions.googleapis.com/v1/projects/$PROJECT_ID/locations/$REGION/workflows/economic-data-pipeline/executions"
@@ -778,7 +778,7 @@ gcloud scheduler jobs pause economic-data-pipeline-monthly `
   --location $REGION
 ```
 
-If you skipped the placeholder creation earlier, create the scheduler instead:
+Nếu chưa tạo placeholder scheduler ở bước trước, tạo scheduler mới:
 
 ```powershell
 gcloud scheduler jobs create http economic-data-pipeline-monthly `
@@ -793,7 +793,7 @@ gcloud scheduler jobs create http economic-data-pipeline-monthly `
   --message-body "{}"
 ```
 
-Run a controlled workflow execution manually:
+Chạy workflow thủ công một lần:
 
 ```powershell
 gcloud workflows run economic-data-pipeline `
@@ -801,7 +801,7 @@ gcloud workflows run economic-data-pipeline `
   --location $REGION
 ```
 
-Resume the monthly schedule only after the manual execution and smoke checks pass:
+Chỉ resume lịch chạy hằng tháng sau khi manual execution và smoke check đều pass:
 
 ```powershell
 gcloud scheduler jobs resume economic-data-pipeline-monthly `
@@ -809,7 +809,7 @@ gcloud scheduler jobs resume economic-data-pipeline-monthly `
   --location $REGION
 ```
 
-### 8. Post-deployment smoke checks
+### 8. Smoke check sau triển khai
 
 ```powershell
 curl.exe "$BACKEND_URL/api/v1/system/data-freshness"
@@ -823,11 +823,11 @@ curl.exe -X POST "$BACKEND_URL/api/v1/ai/chat" `
   -d "{\"message\":\"Compare public debt of Vietnam and Thailand from 2010 to 2023\",\"conversationId\":\"cloud-smoke-readme\"}"
 ```
 
-If the Frontend renders but API calls fail, check `CORS_ORIGINS` on `gov-ai-backend` and confirm `NEXT_PUBLIC_API_URL` was set during the Frontend Docker build.
+Nếu Frontend render được nhưng API call lỗi, kiểm tra `CORS_ORIGINS` trên `gov-ai-backend` và xác nhận `NEXT_PUBLIC_API_URL` đã được set lúc Docker build Frontend.
 
-### 9. Rollback and operational commands
+### 9. Rollback và lệnh vận hành
 
-List revisions:
+Liệt kê revision:
 
 ```powershell
 gcloud run revisions list --service gov-ai-backend --region $REGION --project $PROJECT_ID
@@ -835,7 +835,7 @@ gcloud run revisions list --service gov-ai-agent --region $REGION --project $PRO
 gcloud run revisions list --service gov-ai-frontend --region $REGION --project $PROJECT_ID
 ```
 
-Route all traffic back to a previous revision:
+Chuyển toàn bộ traffic về một revision cũ:
 
 ```powershell
 gcloud run services update-traffic gov-ai-backend `
@@ -844,7 +844,7 @@ gcloud run services update-traffic gov-ai-backend `
   --to-revisions REVISION_NAME=100
 ```
 
-Pause scheduled ETL while investigating an issue:
+Pause ETL schedule trong lúc điều tra sự cố:
 
 ```powershell
 gcloud scheduler jobs pause economic-data-pipeline-monthly `
@@ -852,23 +852,23 @@ gcloud scheduler jobs pause economic-data-pipeline-monthly `
   --location $REGION
 ```
 
-## Current Limitations
+## Giới hạn hiện tại
 
-- The fine-tuned parser currently uses a separate demo deployment path and is not yet a production-grade managed service.
-- Parser exact-JSON accuracy is 63.2%, although intent, indicator, and country metrics are substantially higher and downstream guardrails reject unsafe plans.
-- Current analytics are primarily descriptive; forecasting, causal inference, policy simulation, and uncertainty modeling are outside the present scope.
-- Dashboard evaluation is currently based on functional and smoke testing rather than a formal end-user usability study.
-- A production rollout still needs stronger authentication, authorization, rate limiting, audit logging, alerting, rollback automation, and cost monitoring.
+- Parser fine-tuned hiện vẫn dùng deployment path riêng cho demo, chưa phải managed service production-grade.
+- Exact-JSON accuracy của parser là 63.2%, dù các metric quan trọng như intent, indicator và country cao hơn nhiều, và downstream guardrail sẽ chặn kế hoạch truy vấn không an toàn.
+- Analytics hiện tập trung vào mô tả dữ liệu; forecasting, causal inference, policy simulation và uncertainty modeling chưa nằm trong phạm vi hiện tại.
+- Dashboard hiện được đánh giá chủ yếu bằng functional test và smoke test, chưa có nghiên cứu usability với người dùng cuối.
+- Production rollout thực tế vẫn cần authentication, authorization, rate limiting, audit logging, alerting, rollback automation và cost monitoring mạnh hơn.
 
-## Project Status
+## Trạng thái dự án
 
-The end-to-end demo has verified:
+Demo end-to-end đã xác nhận:
 
-- A controlled ETL run with `SUCCESS` metadata
-- Monthly workflow and scheduler configuration
-- BigQuery-backed data freshness through the Backend API
-- AI health check returning HTTP 200
-- AI chat smoke test returning a successful response
-- Dashboard flows for country lookup, comparison, anomalies, clusters, indicators, and AI chat
+- Controlled ETL run ghi metadata `SUCCESS`.
+- Workflow và scheduler hằng tháng đã được cấu hình.
+- Backend API đọc được freshness từ BigQuery.
+- AI health check trả HTTP 200.
+- AI chat smoke test trả response thành công.
+- Dashboard hoạt động cho country lookup, compare, anomalies, clusters, indicators và AI chat.
 
-This repository is an academic/demo implementation. Treat cloud identifiers, external parser endpoints, and model artifacts as environment-specific when adapting it for another deployment.
+Repository này là bản triển khai học thuật/demo. Khi chuyển sang môi trường khác, hãy xem cloud identifier, external parser endpoint và model artifact là cấu hình riêng theo từng deployment.
