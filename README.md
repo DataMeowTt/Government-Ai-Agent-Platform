@@ -101,6 +101,8 @@ AI Agent không có quyền ghi dữ liệu warehouse và không được kích 
 
 Các contract trong [`contracts/`](contracts/) mô tả indicator public, cấu trúc bảng, capability, đơn vị, mapping và rule kiểm tra chất lượng. Artifact sinh từ contract giúp Python pipeline, TypeScript backend và AI catalog dùng cùng một định nghĩa.
 
+Trước khi coi catalog là đồng bộ hoàn toàn, chạy `python scripts/validate_indicator_contract.py` và `python scripts/parser_catalog_audit.py`. Audit parser hiện vẫn có thể báo drift nhỏ giữa parser catalog và runtime catalog; xem phần giới hạn hiện tại để biết các điểm còn mở.
+
 ## AI Agent
 
 Semantic parser chuyển câu hỏi của người dùng thành các trường có cấu trúc, ví dụ:
@@ -289,6 +291,8 @@ Thiết lập API URL trong `fe/.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
+Biến này nên được set rõ ràng khi chạy local. Nếu bỏ trống, code frontend fallback về `http://localhost:3000`, dễ khiến request API đi nhầm vào chính Next.js app thay vì Backend.
+
 Chạy Next.js:
 
 ```powershell
@@ -303,15 +307,15 @@ Dashboard và BigQuery-backed API có thể chạy không cần Gemini. Luồng 
 
 | Method | Endpoint | Mô tả |
 | --- | --- | --- |
-| `GET` | `/api/v1/indicators` | Catalog indicator public và capability |
+| `GET` | `/api/v1/indicators` | Catalog indicator public và capability; hỗ trợ query `category` |
 | `GET` | `/api/v1/countries` | Quốc gia có dữ liệu trong warehouse |
 | `GET` | `/api/v1/countries/:code/full-analytics` | Hồ sơ phân tích đầy đủ của quốc gia |
 | `GET` | `/api/v1/countries/:code/indicators` | Chuỗi chỉ số của quốc gia |
 | `GET` | `/api/v1/countries/:code/anomalies` | Bản ghi anomaly của quốc gia |
-| `GET` | `/api/v1/countries/:code/cluster-benchmark` | So sánh quốc gia với cluster |
-| `GET` | `/api/v1/compare` | So sánh country/indicator theo khoảng năm |
-| `GET` | `/api/v1/analytics/clusters` | Kết quả phân nhóm cấu trúc |
-| `GET` | `/api/v1/analytics/anomalies` | Kết quả anomaly có phân trang |
+| `GET` | `/api/v1/countries/:code/cluster-benchmark` | So sánh quốc gia với cluster; cần query `indicator` và `year` |
+| `GET` | `/api/v1/compare` | So sánh country/indicator; cần `countries`, `indicator`, có thể thêm `from`, `to` |
+| `GET` | `/api/v1/analytics/clusters` | Kết quả phân nhóm cấu trúc; cần query `year` |
+| `GET` | `/api/v1/analytics/anomalies` | Kết quả anomaly có phân trang; hỗ trợ `country`, `indicator`, `threshold`, `limit`, `offset` |
 | `POST` | `/api/v1/ai/chat` | Backend proxy tới AI Agent |
 | `GET` | `/api/v1/ai/health` | Kiểm tra kết nối AI Agent |
 | `GET` | `/api/v1/system/data-freshness` | Metadata lần pipeline thành công gần nhất |
@@ -466,7 +470,17 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
 gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member "serviceAccount:$RUNTIME_SERVICE_ACCOUNT" `
   --role "roles/logging.logWriter"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID `
+  --member "serviceAccount:$RUNTIME_SERVICE_ACCOUNT" `
+  --role "roles/workflows.invoker"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID `
+  --member "serviceAccount:$RUNTIME_SERVICE_ACCOUNT" `
+  --role "roles/run.jobsExecutorWithOverrides"
 ```
+
+`roles/workflows.invoker` cho phép Cloud Scheduler dùng service account này để khởi chạy Workflow. `roles/run.jobsExecutorWithOverrides` cho phép Workflow chạy Cloud Run Job với phần `containerOverrides` của batch pipeline.
 
 Tài khoản dùng để deploy cũng cần Cloud Run Admin, Artifact Registry Writer, Workflows Admin, Cloud Scheduler Admin, Secret Manager Admin và quyền `iam.serviceAccounts.actAs` trên runtime service account.
 
@@ -855,6 +869,7 @@ gcloud scheduler jobs pause economic-data-pipeline-monthly `
 ## Giới hạn hiện tại
 
 - Parser fine-tuned hiện vẫn dùng deployment path riêng cho demo, chưa phải managed service production-grade.
+- Parser catalog audit hiện còn vài drift nhỏ: runtime country catalog có thêm `BRN`/`SGP`, cluster target year giữa parser và runtime chưa khớp hoàn toàn, và parser catalog còn technical fields `decade`/`flag_score`.
 - Exact-JSON accuracy của parser là 63.2%, dù các metric quan trọng như intent, indicator và country cao hơn nhiều, và downstream guardrail sẽ chặn kế hoạch truy vấn không an toàn.
 - Analytics hiện tập trung vào mô tả dữ liệu; forecasting, causal inference, policy simulation và uncertainty modeling chưa nằm trong phạm vi hiện tại.
 - Dashboard hiện được đánh giá chủ yếu bằng functional test và smoke test, chưa có nghiên cứu usability với người dùng cuối.
